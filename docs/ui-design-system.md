@@ -48,8 +48,7 @@ Piezas principales:
 - `presentation/workspace.py`: layout, navegación interna, foco y reflow global.
 - `presentation/job_table.py`: proyección responsive de la cola.
 - `presentation/job_configuration_dialog.py`: transacción de configuración por documento.
-- `presentation/phase_review_dialog.py`, `presentation/revision_dialog.py` y
-  `presentation/markdown_review.py`: decisiones y comparaciones.
+- `presentation/phase_review_dialog.py`: decisiones, comparaciones y recuperación por fase.
 - `presentation/book_editor_dialog.py`: metadatos, portada, estructura y contenido EPUB.
 
 La lógica de aplicación y dominio no importa PySide6. Los widgets reciben proyecciones y emiten
@@ -240,8 +239,6 @@ Los estados no dependen solo del color: incluyen copia, icono, borde, selección
 
 ## Componentes compartidos
 
-- `ChevronComboBox`: selector nativo con chevron vectorial, navegación de teclado y rueda desactivada
-  cuando no tiene foco.
 - `Switch`: interruptor con `Space`, foco visible, nombre accesible y estados on/off/disabled.
 - `StatusMessage`: información, éxito, aviso o error inline; admite acción de recuperación, recibe
   foco cuando requiere atención, calcula altura desde el ancho disponible y nunca sobrevive al
@@ -347,6 +344,21 @@ humano pendiente.
   paleta estándar de Windows.
 
 ## Evidencia y regresión
+
+La confirmación final comparte los tokens de diálogo y `primaryAction`; no conserva una hoja de
+estilo calculada con un tema anterior. La cabecera interna separa contexto y nombre del documento,
+abrevia con puntos suspensivos y conserva el texto completo en ayuda y accesibilidad. El botón de
+volver expresa el destino cuando hay ancho suficiente y mantiene ese nombre en modo de icono.
+
+Confirmación EPUB, actividad y revisión usan contenido desplazable con acciones estables. La
+selección de propuesta incluye una marca y texto explícitos; el contador distingue casos de
+decisiones confirmadas. El texto documental de revisión usa 11 pt. Los estados guardado/error y las
+variantes de idioma son texto visible. El editor compacto reserva el espacio al contenido y despliega
+la organización bajo demanda; el índice final tiene una vista propia dentro del editor.
+
+`tests/test_visual_release.py` reproduce los fallos de la revisión de septiembre: confirmación a
+320 × 520, 320 × 720, 768 × 600 y 911 × 520, cambio de tema en una página abierta y detalles largos
+de actividad. Son comprobaciones de geometría y contraste con Qt, no aceptación humana del producto.
 
 Las pruebas automatizadas cubren tokens, contraste, tema de sistema, teclado del interruptor,
 mensajes recuperables, persistencia de tema, reflow de la cola/configuración/editor/revisiones y

@@ -71,7 +71,8 @@ def build_outcome_summary(
             if linguistic_coverage is not None
             else 0
         ),
-        preserved_segments=len(result.preserved_translation_chunks),
+        preserved_segments=len(result.preserved_translation_chunks)
+        + result.preserved_review_chunks,
         review_units=len(review_units),
         review_changes=sum(
             unit.choice in {ReviewChoice.PROPOSED, ReviewChoice.EDITED} for unit in review_units

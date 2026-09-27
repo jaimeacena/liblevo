@@ -10,6 +10,7 @@ import pytest
 import parsezen.ai_markdown_safety as markdown_safety_module
 import parsezen.improvement as improvement_module
 import parsezen.local_ai_transport as transport_module
+import parsezen.translation_review_patches as review_patches_module
 from parsezen.cancellation import CancellationToken
 from parsezen.errors import (
     ImprovementError,
@@ -29,6 +30,7 @@ from parsezen.improvement import (
     improve_markdown,
     review_translation_markdown,
 )
+from parsezen.local_ai_client import LocalAiClient
 from parsezen.settings import AppSettings
 from parsezen.translation_quality import (
     TranslationIssueKind,
@@ -42,6 +44,50 @@ LOCAL_SETTINGS = AppSettings(
     context_window=8_192,
     timeout_seconds=30,
 )
+
+
+def test_incomplete_optional_review_preserves_input_without_caching_success() -> None:
+    source = "Este párrafo debe conservarse completo cuando la revisión se interrumpe.\n"
+    preserved: list[bool] = []
+    saved: list[tuple[str, str]] = []
+    transport = httpx.MockTransport(
+        lambda _request: httpx.Response(
+            200,
+            json={
+                "message": {"content": "Texto incompleto"},
+                "done": True,
+                "done_reason": "length",
+            },
+        )
+    )
+    result = improve_markdown(
+        source,
+        ImprovementMode.REVIEW_CONTENT,
+        LOCAL_SETTINGS,
+        transport=transport,
+        on_review_preserved=lambda: preserved.append(True),
+        save_checkpoint=lambda key, value: saved.append((key, value)),
+    )
+    assert result == source.strip()
+    assert preserved == [True]
+    assert saved == []
+
+
+def test_optional_review_does_not_swallow_cancellation() -> None:
+    token = CancellationToken()
+
+    def respond(_request: httpx.Request) -> httpx.Response:
+        token.cancel()
+        return httpx.Response(200, json={"message": {"content": "parcial"}, "done": True})
+
+    with pytest.raises(ProcessingCancelledError):
+        improve_markdown(
+            "Este párrafo debe conservarse completo cuando la revisión se interrumpe.\n",
+            ImprovementMode.REVIEW_CONTENT,
+            LOCAL_SETTINGS,
+            transport=httpx.MockTransport(respond),
+            cancellation=token,
+        )
 
 
 def test_translation_localizes_copied_english_ordinal_and_era() -> None:
@@ -568,7 +614,9 @@ def test_bilingual_review_corrects_a_mistranslated_title_from_its_source() -> No
             },
             {"old": "Kor", "new": "Por"},
         ]
-        return httpx.Response(200, json={"message": {"content": json.dumps(corrections)}})
+        return httpx.Response(
+            200, json={"done": True, "message": {"content": json.dumps(corrections)}}
+        )
 
     result = review_translation_markdown(
         source,
@@ -591,7 +639,7 @@ def test_bilingual_review_uses_only_closed_semantic_focus_instructions() -> None
         assert "falsos sentidos" in instructions
         assert "grado formal, coloquial, vulgar" in instructions
         assert "calcos inequívocos" not in instructions
-        return httpx.Response(200, json={"message": {"content": "[]"}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "[]"}})
 
     result = review_translation_markdown(
         source,
@@ -610,7 +658,8 @@ def test_bilingual_review_uses_only_closed_semantic_focus_instructions() -> None
     assert result == translated
 
 
-def test_bilingual_review_rejects_free_text_as_semantic_focus() -> None:
+def test_bilingual_review_rejects_free_text_as_semantic_focus(monkeypatch) -> None:
+    monkeypatch.setattr(improvement_module, "direct_model_present", lambda _model: True)
     with pytest.raises(ImprovementError, match="foco de revisión semántica"):
         review_translation_markdown(
             "Source statement.\n",
@@ -655,7 +704,9 @@ def test_bilingual_review_minimizes_verbose_patch_and_preserves_byline_layout() 
                 "new": "Por Austin Coppock",
             }
         ]
-        return httpx.Response(200, json={"message": {"content": json.dumps(corrections)}})
+        return httpx.Response(
+            200, json={"done": True, "message": {"content": json.dumps(corrections)}}
+        )
 
     result = review_translation_markdown(
         source,
@@ -680,7 +731,7 @@ def test_bilingual_review_retranslates_a_title_after_a_partial_patch_duplicates_
             content = json.dumps([{"old": "del Ajedrez", "new": "de los Decanos"}])
         else:
             content = "Historia, Astrología y Magia de los Decanos"
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     result = review_translation_markdown(
         source,
@@ -717,7 +768,9 @@ def test_bilingual_review_rechecks_unchanged_front_matter_in_a_focused_group() -
             ]
         elif calls == 3:
             corrections = [{"old": "Kor", "new": "Por"}]
-        return httpx.Response(200, json={"message": {"content": json.dumps(corrections)}})
+        return httpx.Response(
+            200, json={"done": True, "message": {"content": json.dumps(corrections)}}
+        )
 
     result = review_translation_markdown(
         source,
@@ -758,7 +811,7 @@ def test_bilingual_review_runs_a_focused_second_pass_for_embedded_source_words()
                     {"old": "scholarship", "new": "tradiciÃ³n acadÃ©mica"},
                 ]
             )
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     result = review_translation_markdown(
         source,
@@ -813,7 +866,7 @@ def test_residual_review_sends_only_each_aligned_line_with_residue() -> None:
                     {"old": "scholarship", "new": "tradición académica"},
                 ]
             )
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     result = review_translation_markdown(
         source,
@@ -1003,6 +1056,7 @@ def test_exact_retranslation_rejects_a_fluent_third_language_response() -> None:
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": json.dumps(
                         {
@@ -1011,11 +1065,11 @@ def test_exact_retranslation_rejects_a_fluent_third_language_response() -> None:
                             )
                         }
                     )
-                }
+                },
             },
         )
 
-    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+    with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         candidate, cacheable = improvement_module._retranslate_exact_source_text_unit(
             client,
             "local-model",
@@ -1094,7 +1148,7 @@ def test_residual_source_text_review_retranslates_the_complete_focused_unit() ->
             content = json.dumps(
                 {"translation": "Esta frase completa en inglés seguía enteramente sin traducir."}
             )
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     result = review_translation_markdown(
         source,
@@ -1171,7 +1225,7 @@ def test_residual_micro_candidate_defers_language_detection_to_the_full_document
     def validate(*_args: object, target_language: str | None, **_kwargs: object) -> None:
         target_languages.append(target_language)
 
-    monkeypatch.setattr(improvement_module, "validate_translation_quality", validate)
+    monkeypatch.setattr(review_patches_module, "validate_translation_quality", validate)
 
     improvement_module._validate_translation_review_candidate(
         part,
@@ -1300,7 +1354,7 @@ def test_bilingual_review_resumes_an_unchanged_validated_chunk() -> None:
 
     def respond(request: httpx.Request) -> httpx.Response:
         json.loads(request.content)
-        return httpx.Response(200, json={"message": {"content": "[]"}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "[]"}})
 
     def save_checkpoint(key: str, value: str) -> bool:
         cache[key] = value
@@ -1342,7 +1396,7 @@ def test_bilingual_review_does_not_count_or_cache_two_unsafe_responses() -> None
     def respond(_request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
-        return httpx.Response(200, json={"message": {"content": "Texto inventado."}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "Texto inventado."}})
 
     def save_checkpoint(key: str, value: str) -> bool:
         cache[key] = value
@@ -1382,7 +1436,7 @@ def test_bilingual_review_stops_after_three_consecutive_invalid_json_contracts(
     def respond(_request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
-        return httpx.Response(200, json={"message": {"content": "respuesta no JSON"}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "respuesta no JSON"}})
 
     result = review_translation_markdown(
         source,
@@ -1442,7 +1496,7 @@ def test_residual_review_caches_safe_preservation_after_rejected_cleanup() -> No
         nonlocal calls
         calls += 1
         content = "[]" if calls == 1 else "Texto inventado."
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     def save_checkpoint(key: str, value: str) -> bool:
         cache[key] = value
@@ -1493,7 +1547,7 @@ def test_bilingual_review_logs_a_private_document_validation_reason(
         LOCAL_SETTINGS,
         "es",
         transport=httpx.MockTransport(
-            lambda _request: httpx.Response(200, json={"message": {"content": "[]"}})
+            lambda _request: httpx.Response(200, json={"done": True, "message": {"content": "[]"}})
         ),
     )
 
@@ -1559,7 +1613,7 @@ def test_bilingual_review_reports_only_the_segments_selected_by_its_adaptive_pla
         LOCAL_SETTINGS,
         "es",
         transport=httpx.MockTransport(
-            lambda _request: httpx.Response(200, json={"message": {"content": "[]"}})
+            lambda _request: httpx.Response(200, json={"done": True, "message": {"content": "[]"}})
         ),
         priority_block_count=0,
         quality_report=report,
@@ -1605,7 +1659,7 @@ def test_bilingual_review_keeps_safe_patches_when_another_patch_changes_a_number
         transport=httpx.MockTransport(
             lambda _request: httpx.Response(
                 200,
-                json={"message": {"content": f"```json\n{json.dumps(patches)}\n```"}},
+                json={"done": True, "message": {"content": f"```json\n{json.dumps(patches)}\n```"}},
             )
         ),
     )
@@ -1634,7 +1688,7 @@ def test_bilingual_review_rejects_email_and_url_mutations_but_keeps_a_safe_patch
         transport=httpx.MockTransport(
             lambda _request: httpx.Response(
                 200,
-                json={"message": {"content": json.dumps(patches)}},
+                json={"done": True, "message": {"content": json.dumps(patches)}},
             )
         ),
     )
@@ -1662,7 +1716,7 @@ def test_bilingual_review_rejects_a_moved_toc_folio_but_keeps_safe_patches() -> 
         transport=httpx.MockTransport(
             lambda _request: httpx.Response(
                 200,
-                json={"message": {"content": json.dumps(patches)}},
+                json={"done": True, "message": {"content": json.dumps(patches)}},
             )
         ),
     )
@@ -1683,7 +1737,9 @@ def test_bilingual_review_recovers_complete_patches_from_a_truncated_array() -> 
         LOCAL_SETTINGS,
         "es",
         transport=httpx.MockTransport(
-            lambda _request: httpx.Response(200, json={"message": {"content": truncated}})
+            lambda _request: httpx.Response(
+                200, json={"done": True, "message": {"content": truncated}}
+            )
         ),
     )
 
@@ -1697,7 +1753,7 @@ def test_validated_chunks_resume_without_calling_ollama_again() -> None:
     def respond(request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content)
         content = payload["messages"][1]["content"].replace("Original", "Improved")
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     def save_checkpoint(key: str, value: str) -> bool:
         cache[key] = value
@@ -1768,7 +1824,7 @@ def test_validated_unchanged_optional_review_resumes_without_calling_ollama_agai
         payload = json.loads(request.content)
         return httpx.Response(
             200,
-            json={"message": {"content": payload["messages"][1]["content"]}},
+            json={"done": True, "message": {"content": payload["messages"][1]["content"]}},
         )
 
     def save_checkpoint(key: str, value: str) -> bool:
@@ -1804,7 +1860,7 @@ def test_optional_review_preserved_after_validation_failure_is_not_cached() -> N
     cache: dict[str, str] = {}
 
     def respond(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"message": {"content": "not-a-directive"}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "not-a-directive"}})
 
     def save_checkpoint(key: str, value: str) -> bool:
         cache[key] = value
@@ -1931,7 +1987,9 @@ def test_optional_review_preserves_the_document_if_final_reassembly_is_unsafe(
 
     def respond(request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content)
-        return httpx.Response(200, json={"message": {"content": payload["messages"][1]["content"]}})
+        return httpx.Response(
+            200, json={"done": True, "message": {"content": payload["messages"][1]["content"]}}
+        )
 
     assert (
         improve_markdown(
@@ -1985,7 +2043,7 @@ def test_optional_review_keeps_safe_chunks_when_only_their_combination_is_unsafe
                 "receive",
             )
         )
-        return httpx.Response(200, json={"message": {"content": proposal}})
+        return httpx.Response(200, json={"done": True, "message": {"content": proposal}})
 
     reviewed = improve_markdown(
         source,
@@ -2038,7 +2096,7 @@ def test_translation_recovers_safe_chunks_when_final_structure_is_unsafe(
     def respond(request: httpx.Request) -> httpx.Response:
         fragment = json.loads(request.content)["messages"][1]["content"]
         translated = first_translation if "careful first" in fragment else second_translation
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     preserved: list[tuple[int, int]] = []
     translated = improve_markdown(
@@ -2064,7 +2122,7 @@ def test_unsafe_translation_chunk_is_preserved_and_reported_for_manual_review() 
     def respond(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
-            json={"message": {"content": "Texto traducido.\n\nPárrafo añadido."}},
+            json={"done": True, "message": {"content": "Texto traducido.\n\nPárrafo añadido."}},
         )
 
     translated = improve_markdown(
@@ -2104,7 +2162,7 @@ def test_local_ai_translation_preserves_an_all_caps_heading() -> None:
     source = "## CREATE YOUR VISION"
 
     def respond(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"message": {"content": "Crea tu visión"}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "Crea tu visión"}})
 
     result = improve_markdown(
         source,
@@ -2137,9 +2195,9 @@ def test_locked_value_fallback_translates_a_short_numeric_label() -> None:
     def respond(request: httpx.Request) -> httpx.Response:
         content = json.loads(request.content)["messages"][1]["content"]
         requests.append(content)
-        return httpx.Response(200, json={"message": {"content": "Tabla"}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "Tabla"}})
 
-    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+    with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         translated = improvement_module._improve_translation_with_locked_values(
             client,
             "parsezen-local",
@@ -2181,7 +2239,7 @@ def test_short_pdf_headings_are_translated_in_one_aligned_batch() -> None:
         ]
         return httpx.Response(
             200,
-            json={"message": {"content": json.dumps({"items": response_items})}},
+            json={"done": True, "message": {"content": json.dumps({"items": response_items})}},
         )
 
     result = improve_markdown(
@@ -2221,10 +2279,10 @@ def test_segmented_list_fallback_reuses_aligned_batching() -> None:
         ]
         return httpx.Response(
             200,
-            json={"message": {"content": json.dumps({"items": response_items})}},
+            json={"done": True, "message": {"content": json.dumps({"items": response_items})}},
         )
 
-    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+    with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         result = improvement_module._improve_translation_segments(
             client,
             "parsezen-local",
@@ -2251,10 +2309,10 @@ def test_segmented_short_titles_receive_bounded_neighbor_context() -> None:
         translated = "ELIGE TU" if content == "CHOOSE YO'" else "PERSONAJE"
         return httpx.Response(
             200,
-            json={"message": {"content": translated}},
+            json={"done": True, "message": {"content": translated}},
         )
 
-    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+    with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         result = improvement_module._improve_translation_segments(
             client,
             "parsezen-local",
@@ -2278,7 +2336,9 @@ def test_translation_discards_an_echoed_list_marker_before_restoring_the_source_
     def respond(request: httpx.Request) -> httpx.Response:
         content = json.loads(request.content)["messages"][1]["content"]
         requests.append(content)
-        return httpx.Response(200, json={"message": {"content": "- Lee la guía completa."}})
+        return httpx.Response(
+            200, json={"done": True, "message": {"content": "- Lee la guía completa."}}
+        )
 
     result = improve_markdown(
         "- Read the complete guide.",
@@ -2301,7 +2361,10 @@ def test_translation_discards_a_list_marker_added_to_an_unmarked_title() -> None
         requests.append(content)
         return httpx.Response(
             200,
-            json={"message": {"content": "- Interpretación de la condición planetaria"}},
+            json={
+                "done": True,
+                "message": {"content": "- Interpretación de la condición planetaria"},
+            },
         )
 
     result = improve_markdown(
@@ -2323,7 +2386,9 @@ def test_translation_expands_unambiguous_english_yo_possessive_only_for_the_mode
     def respond(request: httpx.Request) -> httpx.Response:
         content = json.loads(request.content)["messages"][1]["content"]
         requests.append(content)
-        return httpx.Response(200, json={"message": {"content": "ELIGE TU PERSONAJE"}})
+        return httpx.Response(
+            200, json={"done": True, "message": {"content": "ELIGE TU PERSONAJE"}}
+        )
 
     result = improve_markdown(
         "## CHOOSE YO' CHARACTER",
@@ -2350,7 +2415,10 @@ def test_empty_private_image_reference_never_reaches_the_translation_model() -> 
         calls += 1
         return httpx.Response(
             200,
-            json={"message": {"content": "Este párrafo completo necesita una traducción fiel."}},
+            json={
+                "done": True,
+                "message": {"content": "Este párrafo completo necesita una traducción fiel."},
+            },
         )
 
     result = improve_markdown(
@@ -2401,10 +2469,13 @@ def test_initial_translation_request_receives_source_derived_lexical_attention()
         prompts.append(prompt)
         fragments.append(fragment)
         if "lexicógrafo" in prompt:
-            return httpx.Response(200, json={"message": {"content": "labor académica"}})
+            return httpx.Response(
+                200, json={"done": True, "message": {"content": "labor académica"}}
+            )
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": fragment.replace(
                         "His ",
@@ -2413,7 +2484,7 @@ def test_initial_translation_request_receives_source_derived_lexical_attention()
                         " brought recognition to his work.",
                         " dio reconocimiento a su obra.",
                     )
-                }
+                },
             },
         )
 
@@ -2439,7 +2510,9 @@ def test_initial_translation_request_omits_lexical_attention_without_candidates(
     def respond(request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content)
         prompts.append(payload["messages"][0]["content"])
-        return httpx.Response(200, json={"message": {"content": "Un gráfico sencillo."}})
+        return httpx.Response(
+            200, json={"done": True, "message": {"content": "Un gráfico sencillo."}}
+        )
 
     result = improve_markdown(
         "A simple chart.",
@@ -2468,12 +2541,13 @@ def test_regular_prose_does_not_lock_a_common_established_term_before_translatio
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": (
                         "Cada par proporciona cantidades iguales de día y noche, y sale y se pone "
                         "desde la misma parte del horizonte."
                     )
-                }
+                },
             },
         )
 
@@ -2499,7 +2573,7 @@ def test_focused_source_repair_explicitly_forbids_copying_residual_prose() -> No
         prompts.append(payload["messages"][0]["content"])
         return httpx.Response(
             200,
-            json={"message": {"content": "El horizonte separa ambos hemisferios."}},
+            json={"done": True, "message": {"content": "El horizonte separa ambos hemisferios."}},
         )
 
     result = improve_markdown(
@@ -2530,7 +2604,7 @@ def test_established_term_is_grounded_without_asking_model_to_classify_it() -> N
             " defines an essential planetary dignity.",
             " define una dignidad planetaria esencial.",
         )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -2555,7 +2629,7 @@ def test_short_index_term_uses_the_document_source_language_without_a_model_call
         payload = json.loads(request.content)
         fragment = payload["messages"][1]["content"]
         fragments.append(fragment)
-        return httpx.Response(200, json={"message": {"content": fragment}})
+        return httpx.Response(200, json={"done": True, "message": {"content": fragment}})
 
     monkeypatch.setattr(improvement_module, "detect_language_code", lambda _value: "de")
     result = improve_markdown(
@@ -2578,7 +2652,7 @@ def test_fully_grounded_structural_title_skips_the_model_request() -> None:
         payload = json.loads(request.content)
         fragment = payload["messages"][1]["content"]
         fragments.append(fragment)
-        return httpx.Response(200, json={"message": {"content": fragment}})
+        return httpx.Response(200, json={"done": True, "message": {"content": fragment}})
 
     result = improve_markdown(
         "PART SIX: THE ART OF JUDGMENT 531",
@@ -2625,7 +2699,9 @@ def test_long_translation_with_risky_word_is_segmented_before_initial_generation
         prompt = payload["messages"][0]["content"]
         fragment = payload["messages"][1]["content"]
         if "lexicógrafo" in prompt:
-            return httpx.Response(200, json={"message": {"content": "labor académica"}})
+            return httpx.Response(
+                200, json={"done": True, "message": {"content": "labor académica"}}
+            )
         requested_fragments.append(fragment)
         translated = (
             fragment.replace(
@@ -2645,7 +2721,7 @@ def test_long_translation_with_risky_word_is_segmented_before_initial_generation
                 "Una frase final conserva la conclusión y el orden original.",
             )
         )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -2683,7 +2759,7 @@ def test_translation_restores_exact_paragraph_spacing_around_internal_markers() 
             "XZQ -->",
             "XZQ -->  ",
         )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -2718,7 +2794,7 @@ def test_translation_falls_back_to_individual_paragraphs_after_marker_loss() -> 
                 "This second English paragraph also contains meaningful text for translation.",
                 "Este segundo párrafo también contiene texto con significado para traducir.",
             )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -2757,7 +2833,7 @@ def test_combined_mode_falls_back_to_safe_segments_after_marker_loss() -> None:
                 "This second English paragraph also contains meaningful text for translation.",
                 "Este segundo párrafo también contiene texto con significado para traducir.",
             )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -2797,7 +2873,7 @@ def test_translation_locks_numeric_values_outside_the_final_fallback_requests() 
                 "casas contadas cuidadosamente y suficientes palabras para una validación local "
                 "fiable.",
             )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -2844,7 +2920,7 @@ def test_translation_falls_back_to_sentences_inside_one_paragraph() -> None:
             if content in {first, second}
             else content
         )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -2874,7 +2950,7 @@ def test_translation_segment_fallback_preserves_list_prefixes_locally() -> None:
             translated = "Lee la guía completa."
         else:
             translated = "Conserva cada detalle útil."
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -2927,7 +3003,7 @@ def test_translation_segment_fallback_recurses_into_a_list_paragraph(
         return translations[markdown]
 
     monkeypatch.setattr(improvement_module, "_improve_part", translate_part)
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._improve_translation_segments(
             client,
             "parsezen-local",
@@ -2968,7 +3044,7 @@ def test_translation_segment_fallback_keeps_each_toc_folio_attached() -> None:
                 "SECOND HOUSE",
                 "SEGUNDA CASA",
             )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -3011,7 +3087,7 @@ def test_translation_segment_fallback_preserves_only_the_sentence_that_still_fai
         content = payload["messages"][1]["content"]
         return httpx.Response(
             200,
-            json={"message": {"content": translations.get(content, content)}},
+            json={"done": True, "message": {"content": translations.get(content, content)}},
         )
 
     result = improve_markdown(
@@ -3053,7 +3129,7 @@ def test_translation_segment_fallback_keeps_valid_paragraphs_when_residue_is_lar
         content = payload["messages"][1]["content"]
         return httpx.Response(
             200,
-            json={"message": {"content": translations.get(content, content)}},
+            json={"done": True, "message": {"content": translations.get(content, content)}},
         )
 
     result = improve_markdown(
@@ -3107,10 +3183,10 @@ def test_translation_repairs_individual_lines_in_a_dense_index() -> None:
                 response_items.append({"id": item["id"], "text": translated_text})
             return httpx.Response(
                 200,
-                json={"message": {"content": json.dumps({"items": response_items})}},
+                json={"done": True, "message": {"content": json.dumps({"items": response_items})}},
             )
         translated = translations.get(content, content)
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -3149,7 +3225,7 @@ def test_translation_repairs_a_partially_translated_line_in_a_dense_index() -> N
             .replace("CAPRICORN", "CAPRICORNO")
             .replace(paragraph, translated_paragraph)
         )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -3201,7 +3277,7 @@ def test_translation_repairs_an_unchanged_title_with_one_focused_request() -> No
         else:
             number_marker = protected.split()[0]
             translated = f"DESAFÍO DEL MILLONARIO EN {number_marker} DÍAS"
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -3220,9 +3296,10 @@ def test_bilingual_title_retranslation_allows_a_complete_short_label_translation
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": "Imágenes del Picatrix",
-                }
+                },
             },
         )
 
@@ -3251,9 +3328,10 @@ def test_bilingual_title_retranslation_protects_written_cardinals_semantically()
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": f"PARTE {marker}: CON LOS PIES EN LA TIERRA",
-                }
+                },
             },
         )
 
@@ -3279,12 +3357,13 @@ def test_bilingual_title_retranslation_accepts_one_soft_wrapped_title() -> None:
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": (
                         f"{delimiter.group(0)}\nEL MAPA DEL TESORO:\n"
                         f"UN PROGRAMA DE TRANSFORMACIÓN DE 30 DÍAS\n{delimiter.group(0)}"
                     ),
-                }
+                },
             },
         )
 
@@ -3306,7 +3385,9 @@ def test_bilingual_title_retranslation_preserves_combined_emphasis() -> None:
     def respond(request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content)["messages"][1]["content"]
         requests.append(payload)
-        return httpx.Response(200, json={"message": {"content": "EL MAPA DEL TESORO"}})
+        return httpx.Response(
+            200, json={"done": True, "message": {"content": "EL MAPA DEL TESORO"}}
+        )
 
     result = improvement_module.retranslate_residual_title(
         "***THE TREASURE MAP***",
@@ -3326,9 +3407,10 @@ def test_bilingual_title_retranslation_rejects_an_explanatory_second_line() -> N
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": "EL MAPA DEL TESORO\nEsta es la traducción solicitada.",
-                }
+                },
             },
         )
 
@@ -3350,9 +3432,10 @@ def test_bilingual_title_retranslation_rejects_an_explanation_after_a_colon() ->
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": "EL MAPA DEL TESORO:\nEsta es la traducción solicitada.",
-                }
+                },
             },
         )
 
@@ -3457,7 +3540,7 @@ def test_bilingual_title_retranslation_prefers_one_proven_multiword_residue() ->
         payload = json.loads(request.content)
         content = payload["messages"][1]["content"]
         requests.append(content)
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     result = improvement_module.retranslate_residual_title(
         "## A. CONJUNCTION (sunodos), LYING HIDDEN",
@@ -3518,7 +3601,8 @@ def test_bilingual_residual_title_retry_preserves_list_prefix_and_numbers() -> N
         return httpx.Response(
             200,
             json={
-                "message": {"content": f"APPENDIX {first_number}: LUXURY EDITIONS {last_number}"}
+                "done": True,
+                "message": {"content": f"APPENDIX {first_number}: LUXURY EDITIONS {last_number}"},
             },
         )
 
@@ -3863,7 +3947,10 @@ def test_translation_fallback_recursively_splits_dense_protected_emphasis() -> N
         if len(protected_markers) > MAX_TRANSLATION_PROTECTED_VALUES_PER_CHUNK:
             return httpx.Response(
                 200,
-                json={"message": {"content": content.replace(protected_markers[-1], "", 1)}},
+                json={
+                    "done": True,
+                    "message": {"content": content.replace(protected_markers[-1], "", 1)},
+                },
             )
         translated = re.sub(
             r"[A-Za-z]+",
@@ -3874,10 +3961,10 @@ def test_translation_fallback_recursively_splits_dense_protected_emphasis() -> N
             ),
             content,
         )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     context = improvement_module._TranslationContext("en", "es", True)
-    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+    with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         translated = improvement_module._improve_translation_segments(
             client,
             "parsezen-local",
@@ -3920,7 +4007,7 @@ def test_bilingual_residual_title_retries_once_when_source_words_remain() -> Non
             if calls == 1
             else "APPENDIX 5: LUXURY EDITIONS 427"
         )
-        return httpx.Response(200, json={"message": {"content": title}})
+        return httpx.Response(200, json={"done": True, "message": {"content": title}})
 
     result = improvement_module.retranslate_residual_title(
         "- **APÉNDICE 5: EDICIONES DE LUJO 427**",
@@ -3954,7 +4041,7 @@ def test_translation_repairs_an_unchanged_markdown_heading_without_exposing_its_
             )
         else:
             translated = content
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         f"# THE HOUSES OF ASTROLOGY\n\n{paragraph}",
@@ -4034,7 +4121,7 @@ def test_translation_preserves_uppercase_inside_a_batched_title_run() -> None:
         )
         return httpx.Response(
             200,
-            json={"message": {"content": translated}},
+            json={"done": True, "message": {"content": translated}},
         )
 
     result = improve_markdown(
@@ -4094,7 +4181,7 @@ def test_translation_preserves_numbers_and_level_in_a_markdown_heading() -> None
         requests.append(protected)
         return httpx.Response(
             200,
-            json={"message": {"content": protected.replace("DAYS", "DÍAS")}},
+            json={"done": True, "message": {"content": protected.replace("DAYS", "DÍAS")}},
         )
 
     result = improve_markdown(
@@ -4124,12 +4211,13 @@ def test_translation_protects_the_folio_of_a_single_line_toc_entry() -> None:
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": protected.replace(
                         "LUXURY EDITIONS",
                         "EDICIONES DE LUJO",
                     )
-                }
+                },
             },
         )
 
@@ -4406,7 +4494,7 @@ def test_combined_mode_uses_one_operation_per_safe_fragment() -> None:
         )
         return httpx.Response(
             200,
-            json={"message": {"content": changed}},
+            json={"done": True, "message": {"content": changed}},
         )
 
     result = improve_markdown(
@@ -4539,7 +4627,7 @@ def test_rejects_unsafe_model_output(mutation: str, expected_error: str) -> None
             response_content += "\0"
         return httpx.Response(
             200,
-            json={"message": {"content": response_content}},
+            json={"done": True, "message": {"content": response_content}},
         )
 
     with pytest.raises(ImprovementError, match=expected_error):
@@ -4555,7 +4643,7 @@ def test_preserves_the_original_chunk_when_cleaning_changes_protected_values() -
     source = "Price 10 on 2026-07-17. [Site](https://example.com)"
     changed = "Precio 11 el 2027-08-18. [Sitio](https://changed.example.com)"
     transport = httpx.MockTransport(
-        lambda _request: httpx.Response(200, json={"message": {"content": changed}})
+        lambda _request: httpx.Response(200, json={"done": True, "message": {"content": changed}})
     )
 
     result = improve_markdown(
@@ -4579,7 +4667,7 @@ def test_translation_keeps_reordered_numbers_and_links_attached_to_their_markers
             f"[Bob]({tokens[2]}) tiene {tokens[3]} peras. "
             f"[Alice]({tokens[0]}) tiene {tokens[1]} manzanas."
         )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -4616,7 +4704,7 @@ def test_long_document_is_improved_in_ordered_structural_chunks() -> None:
         payload = json.loads(request.content)
         chunk = payload["messages"][1]["content"]
         requests.append(chunk)
-        return httpx.Response(200, json={"message": {"content": chunk}})
+        return httpx.Response(200, json={"done": True, "message": {"content": chunk}})
 
     result = improve_markdown(
         source,
@@ -4642,7 +4730,7 @@ def test_tables_are_never_split_between_model_requests() -> None:
         payload = json.loads(request.content)
         chunk = payload["messages"][1]["content"]
         requests.append(chunk)
-        return httpx.Response(200, json={"message": {"content": chunk}})
+        return httpx.Response(200, json={"done": True, "message": {"content": chunk}})
 
     improve_markdown(
         source,
@@ -4669,7 +4757,7 @@ def test_structure_review_preserves_an_oversized_table_without_sending_it_to_mod
         numbered = payload["messages"][1]["content"]
         requests.append(numbered)
         assert "| --- | --- |" not in numbered
-        return httpx.Response(200, json={"message": {"content": "PZL1=1"}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "PZL1=1"}})
 
     result = improve_markdown(
         source,
@@ -4713,7 +4801,7 @@ def test_structure_review_plans_from_toc_page_and_semantic_role_globally() -> No
         assert line_number is not None
         return httpx.Response(
             200,
-            json={"message": {"content": f"PZL{line_number.group(1)}=1"}},
+            json={"done": True, "message": {"content": f"PZL{line_number.group(1)}=1"}},
         )
 
     result = improve_markdown(
@@ -4739,7 +4827,7 @@ def test_global_structure_inventory_prioritizes_and_bounds_large_outlines() -> N
         assert len(records) == improvement_module.MAX_GLOBAL_STRUCTURE_CANDIDATES
         assert records[0].startswith("PZL1 CANDIDATA")
         assert records[-1].endswith(": # Heading 179")
-        return httpx.Response(200, json={"message": {"content": "\n"}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "\n"}})
 
     result = improve_markdown(
         source,
@@ -4772,7 +4860,7 @@ def test_global_structure_preserves_document_on_invalid_or_unsafe_directives(
     source = "# Existing title\n\nBody paragraph."
 
     def respond(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"message": {"content": response}})
+        return httpx.Response(200, json={"done": True, "message": {"content": response}})
 
     result = improve_markdown(
         source,
@@ -4814,7 +4902,7 @@ def test_translation_changes_only_markdown_table_cells() -> None:
         }
         return httpx.Response(
             200,
-            json={"message": {"content": json.dumps(translated)}},
+            json={"done": True, "message": {"content": json.dumps(translated)}},
         )
 
     result = improve_markdown(
@@ -4842,7 +4930,7 @@ def test_fenced_code_is_preserved_without_sending_it_to_the_model() -> None:
         payload = json.loads(request.content)
         chunk = payload["messages"][1]["content"]
         requests.append(chunk)
-        return httpx.Response(200, json={"message": {"content": chunk}})
+        return httpx.Response(200, json={"done": True, "message": {"content": chunk}})
 
     result = improve_markdown(
         source,
@@ -4897,7 +4985,7 @@ def test_splits_an_oversized_prose_block_at_safe_boundaries() -> None:
         payload = json.loads(request.content)
         chunk = payload["messages"][1]["content"]
         requests.append(chunk)
-        return httpx.Response(200, json={"message": {"content": chunk}})
+        return httpx.Response(200, json={"done": True, "message": {"content": chunk}})
 
     result = improve_markdown(
         source,
@@ -4986,7 +5074,7 @@ def test_translates_markdown_table_cells_without_changing_its_envelope(
         target_language="es",
         preserve_paragraphs=True,
     )
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_safe_markdown_table(
             client,
             "parsezen-local",
@@ -5011,7 +5099,7 @@ def test_splits_a_number_dense_index_without_changing_it() -> None:
         payload = json.loads(request.content)
         chunk = payload["messages"][1]["content"]
         requests.append(chunk)
-        return httpx.Response(200, json={"message": {"content": chunk}})
+        return httpx.Response(200, json={"done": True, "message": {"content": chunk}})
 
     result = improve_markdown(
         source,
@@ -5053,7 +5141,7 @@ def test_repairs_changed_heading_levels_when_heading_count_is_preserved() -> Non
 
     def respond(_request: httpx.Request) -> httpx.Response:
         changed = "## Main Title\n\n### Section\n\nText remains."
-        return httpx.Response(200, json={"message": {"content": changed}})
+        return httpx.Response(200, json={"done": True, "message": {"content": changed}})
 
     result = improve_markdown(
         source,
@@ -5069,7 +5157,7 @@ def test_removes_headings_invented_in_a_fragment_without_headings() -> None:
     source = "Estado de referencia 58\nCambiar el programa 63"
     changed = "### Estado de referencia 58\n### Cambiar el programa 63"
     transport = httpx.MockTransport(
-        lambda _request: httpx.Response(200, json={"message": {"content": changed}})
+        lambda _request: httpx.Response(200, json={"done": True, "message": {"content": changed}})
     )
 
     result = improve_markdown(
@@ -5094,7 +5182,7 @@ def test_retries_once_when_the_model_removes_a_heading() -> None:
         else:
             payload = json.loads(request.content)
             changed = payload["messages"][1]["content"]
-        return httpx.Response(200, json={"message": {"content": changed}})
+        return httpx.Response(200, json={"done": True, "message": {"content": changed}})
 
     result = improve_markdown(
         source,
@@ -5137,7 +5225,7 @@ def test_cleanup_preserves_a_failing_chunk_without_losing_content() -> None:
         chunk = payload["messages"][1]["content"]
         if requests >= 2:
             chunk = chunk.replace("10", "", 1)
-        return httpx.Response(200, json={"message": {"content": chunk}})
+        return httpx.Response(200, json={"done": True, "message": {"content": chunk}})
 
     result = improve_markdown(
         source,
@@ -5160,7 +5248,7 @@ def test_content_review_locks_internal_markers_and_link_destinations() -> None:
         requests.append(protected)
         return httpx.Response(
             200,
-            json={"message": {"content": protected.replace("un eror", "un error")}},
+            json={"done": True, "message": {"content": protected.replace("un eror", "un error")}},
         )
 
     result = improve_markdown(
@@ -5190,7 +5278,7 @@ def test_content_review_skips_marker_blocks_and_reviews_each_text_segment() -> N
         protected = payload["messages"][1]["content"]
         requests.append(protected)
         response = protected.replace("un eror", "un error")
-        return httpx.Response(200, json={"message": {"content": response}})
+        return httpx.Response(200, json={"done": True, "message": {"content": response}})
 
     result = improve_markdown(
         source,
@@ -5207,7 +5295,7 @@ def test_content_review_skips_marker_blocks_and_reviews_each_text_segment() -> N
 def test_structure_review_accepts_formatting_changes_that_preserve_visible_text() -> None:
     source = "**Chapter One**\n\nText with *exactly* the same words."
     transport = httpx.MockTransport(
-        lambda _request: httpx.Response(200, json={"message": {"content": "PZL1=1"}})
+        lambda _request: httpx.Response(200, json={"done": True, "message": {"content": "PZL1=1"}})
     )
 
     result = improve_markdown(
@@ -5223,7 +5311,7 @@ def test_structure_review_accepts_formatting_changes_that_preserve_visible_text(
 def test_structure_review_keeps_wording_while_accepting_an_aligned_heading_change() -> None:
     source = "## Chapter One\n\nThe original paragraph remains complete."
     transport = httpx.MockTransport(
-        lambda _request: httpx.Response(200, json={"message": {"content": "PZL1=1"}})
+        lambda _request: httpx.Response(200, json={"done": True, "message": {"content": "PZL1=1"}})
     )
 
     result = improve_markdown(
@@ -5239,7 +5327,7 @@ def test_structure_review_keeps_wording_while_accepting_an_aligned_heading_chang
 def test_structure_review_rejects_an_extreme_existing_heading_demotion() -> None:
     source = "# Chapter One\n\nThe original paragraph remains complete."
     transport = httpx.MockTransport(
-        lambda _request: httpx.Response(200, json={"message": {"content": "PZL1=6"}})
+        lambda _request: httpx.Response(200, json={"done": True, "message": {"content": "PZL1=6"}})
     )
 
     result = improve_markdown(
@@ -5255,7 +5343,7 @@ def test_structure_review_rejects_an_extreme_existing_heading_demotion() -> None
 def test_structure_review_maps_a_reordered_heading_back_to_the_exact_source() -> None:
     source = "Opening text.\n\nChapter One\n\nThe original paragraph remains complete."
     transport = httpx.MockTransport(
-        lambda _request: httpx.Response(200, json={"message": {"content": "PZL3=1"}})
+        lambda _request: httpx.Response(200, json={"done": True, "message": {"content": "PZL3=1"}})
     )
 
     result = improve_markdown(
@@ -5276,7 +5364,7 @@ def test_structure_review_preserves_an_unsafe_chunk_instead_of_failing_the_docum
         nonlocal requests
         requests += 1
         changed = "# Different chapter\n\nA rewritten paragraph."
-        return httpx.Response(200, json={"message": {"content": changed}})
+        return httpx.Response(200, json={"done": True, "message": {"content": changed}})
 
     result = improve_markdown(
         source,
@@ -5302,7 +5390,7 @@ def test_structure_review_does_not_promote_a_long_body_paragraph_to_heading() ->
     def respond(_request: httpx.Request) -> httpx.Response:
         nonlocal requests
         requests += 1
-        return httpx.Response(200, json={"message": {"content": proposed}})
+        return httpx.Response(200, json={"done": True, "message": {"content": proposed}})
 
     result = improve_markdown(
         source,
@@ -5328,7 +5416,7 @@ def test_structure_review_recovers_exact_source_words_from_heading_directives() 
         numbered = payload["messages"][1]["content"]
         assert "PZL3 CANDIDATA" in numbered
         assert "Chapter One" in numbered
-        return httpx.Response(200, json={"message": {"content": "PZL3=1"}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "PZL3=1"}})
 
     result = improve_markdown(
         source,
@@ -5345,7 +5433,7 @@ def test_translation_preserves_a_failing_chunk_instead_of_losing_the_document() 
     source = "Total 10."
 
     def respond(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"message": {"content": "Total."}})
+        return httpx.Response(200, json={"done": True, "message": {"content": "Total."}})
 
     assert (
         improve_markdown(
@@ -5364,7 +5452,7 @@ def test_rejects_changes_to_inline_code() -> None:
 
     def respond(_request: httpx.Request) -> httpx.Response:
         changed = "Ejecuta `python app.py` localmente."
-        return httpx.Response(200, json={"message": {"content": changed}})
+        return httpx.Response(200, json={"done": True, "message": {"content": changed}})
 
     with pytest.raises(ImprovementError, match="código en línea"):
         improve_markdown(
@@ -5404,7 +5492,7 @@ def test_rejects_changes_to_markdown_structure(
     expected_error: str,
 ) -> None:
     def respond(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"message": {"content": changed}})
+        return httpx.Response(200, json={"done": True, "message": {"content": changed}})
 
     with pytest.raises(ImprovementError, match=expected_error):
         improve_markdown(
@@ -5428,7 +5516,7 @@ def test_cancellation_after_a_model_response_stops_before_the_next_chunk() -> No
         cancellation.cancel()
         return httpx.Response(
             200,
-            json={"message": {"content": payload["messages"][1]["content"]}},
+            json={"done": True, "message": {"content": payload["messages"][1]["content"]}},
         )
 
     with pytest.raises(ProcessingCancelledError):
@@ -5448,8 +5536,8 @@ def test_cancellation_after_a_model_response_stops_before_the_next_chunk() -> No
 def test_cancellation_interrupts_an_active_stream_before_it_is_published() -> None:
     cancellation = CancellationToken()
 
-    class CancelledStream(httpx.SyncByteStream):
-        def __iter__(self):
+    class CancelledStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
             yield b'{"message":{"content":"Texto parcial"},"done":false}\n'
             cancellation.cancel()
             yield b'{"message":{"content":" que no debe publicarse"},"done":true}\n'
@@ -5483,7 +5571,7 @@ def test_translation_retries_when_the_first_response_stays_in_the_source_languag
         payload = json.loads(request.content)
         requests.append(payload)
         content = source if len(requests) == 1 else spanish
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     result = improve_markdown(
         source,
@@ -5542,7 +5630,7 @@ def test_translation_hides_emphasis_delimiters_from_the_model_and_restores_them(
             f"Traduce {markers[0]}prosa ordinaria{markers[1]} y "
             f"{markers[2]}orientación útil{markers[3]} en esta frase completa."
         )
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     result = improve_markdown(
         source,
@@ -5568,12 +5656,13 @@ def test_translation_hides_combined_bold_italic_delimiters_from_the_model() -> N
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": (
                         f"Traduce {markers[0]}orientación importante y matizada"
                         f"{markers[1]} cuidadosamente."
                     )
-                }
+                },
             },
         )
 
@@ -5602,7 +5691,10 @@ def test_translation_preserves_the_whole_block_when_segmented_coverage_still_fai
         requests += 1
         return httpx.Response(
             200,
-            json={"message": {"content": "El documento contiene varias condiciones."}},
+            json={
+                "done": True,
+                "message": {"content": "El documento contiene varias condiciones."},
+            },
         )
 
     assert (
@@ -5644,7 +5736,7 @@ def test_translation_recovers_coverage_by_retranslating_every_sentence_safely() 
                 "La segunda frase completa explica que todos los alimentos favoritos siguen "
                 "siendo asequibles."
             )
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     translated = improve_markdown(
         source,
@@ -5694,7 +5786,7 @@ def test_translation_splits_a_title_run_after_repeated_hallucinated_expansion() 
                 "SECOND TITLE": "SEGUNDO TÍTULO",
                 "THIRD TITLE": "TERCER TÍTULO",
             }[fragment]
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     translated = improve_markdown(
         source,
@@ -5763,7 +5855,7 @@ def test_translation_skips_target_language_blocks_inside_a_mixed_document() -> N
                 "mientras el aviso en español permanece intacto.",
             )
         )
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -5810,7 +5902,7 @@ def test_translation_keeps_document_language_for_prose_around_a_foreign_citation
         payload = json.loads(request.content)
         requested = payload["messages"][1]["content"]
         translated = spanish_context if english_context in requested else translated_citation
-        return httpx.Response(200, json={"message": {"content": translated}})
+        return httpx.Response(200, json={"done": True, "message": {"content": translated}})
 
     result = improve_markdown(
         source,
@@ -5841,7 +5933,9 @@ def test_translation_accepts_explicit_source_language_for_a_mixed_citation() -> 
         LOCAL_SETTINGS,
         "Español",
         transport=httpx.MockTransport(
-            lambda _request: httpx.Response(200, json={"message": {"content": translated}})
+            lambda _request: httpx.Response(
+                200, json={"done": True, "message": {"content": translated}}
+            )
         ),
         source_language_code="en",
     )
@@ -5940,7 +6034,7 @@ def test_translation_changes_only_text_nodes_of_generated_toc_table() -> None:
         }
         return httpx.Response(
             200,
-            json={"message": {"content": json.dumps(response)}},
+            json={"done": True, "message": {"content": json.dumps(response)}},
         )
 
     translated = improve_markdown(
@@ -6023,14 +6117,14 @@ def test_focused_table_cell_retries_one_damaged_protected_marker() -> None:
     )
 
     def respond(_request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"message": {"content": next(responses)}})
+        return httpx.Response(200, json={"done": True, "message": {"content": next(responses)}})
 
     context = improvement_module._TranslationContext(
         source_language="en",
         target_language="es",
         preserve_paragraphs=True,
     )
-    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+    with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         translated = improvement_module._translate_table_text_batch(
             client,
             "parsezen-local",
@@ -6060,6 +6154,7 @@ def test_table_batch_keeps_numbering_outside_the_model_request() -> None:
         return httpx.Response(
             200,
             json={
+                "done": True,
                 "message": {
                     "content": json.dumps(
                         {
@@ -6069,7 +6164,7 @@ def test_table_batch_keeps_numbering_outside_the_model_request() -> None:
                             ]
                         }
                     )
-                }
+                },
             },
         )
 
@@ -6078,7 +6173,7 @@ def test_table_batch_keeps_numbering_outside_the_model_request() -> None:
         target_language="es",
         preserve_paragraphs=True,
     )
-    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+    with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         translated = improvement_module._translate_table_text_batch(
             client,
             "parsezen-local",
@@ -6107,7 +6202,7 @@ def test_table_batch_preserves_only_an_unaccepted_cell_for_focused_review(
         "_translate_aligned_batch",
         lambda *_args, **_kwargs: {0: "La primera casa"},
     )
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_table_text_batch(
             client,
             "parsezen-local",
@@ -6490,7 +6585,7 @@ def test_table_cell_retries_a_substantive_label_collapsed_to_a_roman_number(
         target_language="es",
         preserve_paragraphs=True,
     )
-    with httpx.Client(
+    with LocalAiClient(
         transport=httpx.MockTransport(lambda _request: httpx.Response(500))
     ) as client:
         translated = improvement_module._translate_safe_html_table(
@@ -6524,7 +6619,7 @@ def test_established_table_cells_do_not_repeat_a_whole_table_language_check(
         raise AssertionError("Validated cells must not be rejected by a redundant table check.")
 
     monkeypatch.setattr(improvement_module, "_validate_translation", unexpected_global_validation)
-    with httpx.Client(
+    with LocalAiClient(
         transport=httpx.MockTransport(lambda _request: httpx.Response(500))
     ) as client:
         translated = improvement_module._translate_safe_html_table(
@@ -6559,7 +6654,7 @@ def test_table_translation_preserves_numeric_html_entities_byte_for_byte(
         return value.replace("First", "Primera").replace("House", "Casa")
 
     monkeypatch.setattr(improvement_module, "_translate_table_text_batch", translate)
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
             "parsezen-local",
@@ -6592,7 +6687,7 @@ def test_html_table_keeps_a_source_internal_linebreak_without_false_failure(
         }[str(args[4])]
 
     monkeypatch.setattr(improvement_module, "_translate_table_text_batch", translate)
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
             "parsezen-local",
@@ -6622,7 +6717,7 @@ def test_html_table_rejects_a_linebreak_added_to_a_single_line_cell(
         "_translate_table_text_batch",
         lambda *_args, **_kwargs: "Primera\nCasa",
     )
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
             "parsezen-local",
@@ -6665,7 +6760,7 @@ def test_table_does_not_retry_a_translated_cell_on_a_short_language_false_positi
 
     monkeypatch.setattr(improvement_module, "_translate_table_text_batch", translated_batch)
     monkeypatch.setattr(improvement_module, "detect_language_code", lambda *_args, **_kwargs: "en")
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
             "parsezen-local",
@@ -6724,7 +6819,7 @@ def test_focused_table_retry_removes_an_added_markup_wrapper(
         return "THE UNKNOWN SOURCE READING" if calls == 1 else "<Título traducido>"
 
     monkeypatch.setattr(improvement_module, "_translate_table_text_batch", translate)
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
             "parsezen-local",
@@ -6772,7 +6867,7 @@ def test_table_residual_uses_bilingual_single_cell_repair(
         "_retranslate_priority_title",
         bilingual_repair,
     )
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
             "parsezen-local",
@@ -6842,7 +6937,7 @@ def test_split_html_table_nodes_receive_the_complete_parent_cell_as_context(
         target_language="es",
         preserve_paragraphs=True,
     )
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
             "parsezen-local",
@@ -6879,7 +6974,7 @@ def test_table_residual_is_preserved_when_bilingual_repair_still_has_source_lang
         "_retranslate_priority_title",
         lambda *_args, **_kwargs: ("The Special Lot of the Moon", True),
     )
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
             "parsezen-local",
@@ -6909,7 +7004,7 @@ def test_table_keeps_and_escapes_source_angle_brackets(
         "_translate_table_text_batch",
         lambda *_args, **_kwargs: "A < B",
     )
-    with httpx.Client() as client:
+    with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
             "parsezen-local",

@@ -868,11 +868,10 @@ def _nest_explicit_chapter_navigation(
             index += 1
             continue
         end = index + 1
-        while (
-            end < len(groups)
-            and groups[end].chapter is not None
-            and groups[end].chapter.role == "chapter"
-        ):
+        while end < len(groups):
+            chapter = groups[end].chapter
+            if chapter is None or chapter.role != "chapter":
+                break
             end += 1
         if end - index - 1 >= 2:
             group.children = list(groups[index + 1 : end])
@@ -1648,8 +1647,8 @@ def _toc_heading_level(title: str, levels: dict[str, int]) -> int | None:
         )
         for key, level in levels.items()
         if key.startswith("compact:")
-        and re.match(r"^(\d{1,3})", key.removeprefix("compact:")) is not None
-        and re.match(r"^(\d{1,3})", key.removeprefix("compact:")).group(1) == number.group(1)
+        and (candidate_number := re.match(r"^(\d{1,3})", key.removeprefix("compact:"))) is not None
+        and candidate_number.group(1) == number.group(1)
     )
     if not candidates or candidates[-1][0] < 0.92:
         return None
@@ -2266,7 +2265,14 @@ h1, h2, h3, h4, h5, h6 {
   word-break: normal;
 }
 p { orphans: 2; widows: 2; }
-img { display: block; height: auto; margin: 1.2em auto; max-width: 100%; }
+img {
+  display: block;
+  height: auto;
+  margin: 1.2em auto;
+  max-height: 85vh;
+  max-width: 100%;
+  object-fit: contain;
+}
 .cover { align-items: center; display: flex; justify-content: center; min-height: 90vh; }
 .cover img { margin: 0; max-height: 90vh; }
 table { border-collapse: collapse; margin: 1em 0; width: 100%; }
@@ -2342,12 +2348,6 @@ def _clean_language(language: str) -> str:
     if not re.fullmatch(r"[a-z]{2,3}(?:-[a-z0-9]{2,8})*|und", cleaned):
         return "und"
     return cleaned
-
-
-def epub_archive_names(content: bytes) -> tuple[str, ...]:
-    """Return archive names for diagnostics and focused tests."""
-    with ZipFile(BytesIO(content)) as archive:
-        return tuple(archive.namelist())
 
 
 def iter_epub_text_documents(content: bytes) -> Iterable[tuple[str, str]]:

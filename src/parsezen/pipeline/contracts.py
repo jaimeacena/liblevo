@@ -5,24 +5,24 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import TYPE_CHECKING
 
-from parsezen.document_model import ConvertedResource
-from parsezen.domain.execution_plan import ExecutionPlan
 from parsezen.domain.jobs import MarkdownOrganization
 from parsezen.domain.process_lifecycle import ProcessStage
-from parsezen.epub_builder import EpubBookMetadata
-from parsezen.final_integrity import FinalIntegrityReport
-from parsezen.glossary import GlossaryEntry
-from parsezen.improvement import ImprovementMode
-from parsezen.pdf_conversion import PdfPageRange, PdfQualityReport
 from parsezen.processing_metrics import BatchTelemetry
-from parsezen.revision import RevisionDraft
-from parsezen.semantic_blocks import SemanticDocument
-from parsezen.translation_quality import (
-    LinguisticReviewCoverage,
-    TranslationQualityReport,
-)
 from parsezen.workflow import OutputFormat
+
+if TYPE_CHECKING:
+    from parsezen.document_model import ConvertedResource
+    from parsezen.domain.execution_plan import ExecutionPlan
+    from parsezen.epub_builder import EpubBookMetadata
+    from parsezen.final_integrity import FinalIntegrityReport
+    from parsezen.glossary import GlossaryEntry
+    from parsezen.improvement_contracts import ImprovementMode
+    from parsezen.pdf_conversion import PdfPageRange, PdfQualityReport
+    from parsezen.revision import RevisionDraft
+    from parsezen.semantic_blocks import SemanticDocument
+    from parsezen.translation_quality import LinguisticReviewCoverage, TranslationQualityReport
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,7 +45,7 @@ class ProcessTelemetry:
 
 @dataclass(frozen=True, slots=True)
 class ProcessSourceRequest:
-    """Source inputs projected from the legacy flat request facade."""
+    """Source inputs projected for batch validation."""
 
     path: Path
     convert_to_markdown: bool
@@ -58,26 +58,8 @@ class ProcessSourceRequest:
 
 
 @dataclass(frozen=True, slots=True)
-class ProcessTranslationRequest:
-    """Translation inputs projected from the legacy flat request facade."""
-
-    improvement_mode: ImprovementMode | None
-    target_language: str | None
-    offline_language: str | None
-    glossary: tuple[GlossaryEntry, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class ProcessReviewRequest:
-    """Review decisions projected from the legacy flat request facade."""
-
-    content: bool
-    structure: bool
-
-
-@dataclass(frozen=True, slots=True)
 class ProcessPublicationRequest:
-    """Publication inputs projected from the legacy flat request facade."""
+    """Publication inputs projected for batch validation."""
 
     output_directory: Path | None
     output_format: OutputFormat
@@ -129,7 +111,7 @@ class ProcessRequest:
 
     @property
     def source(self) -> ProcessSourceRequest:
-        """Temporary adapter while callers migrate away from flat source fields."""
+        """Source view consumed by batch validation."""
 
         return ProcessSourceRequest(
             self.source_path,
@@ -143,25 +125,8 @@ class ProcessRequest:
         )
 
     @property
-    def translation(self) -> ProcessTranslationRequest:
-        """Temporary adapter while callers migrate away from flat translation fields."""
-
-        return ProcessTranslationRequest(
-            self.improvement_mode,
-            self.target_language,
-            self.offline_translation_language,
-            self.glossary,
-        )
-
-    @property
-    def review(self) -> ProcessReviewRequest:
-        """Temporary adapter while callers migrate away from flat review fields."""
-
-        return ProcessReviewRequest(self.review_content, self.review_structure)
-
-    @property
     def publication(self) -> ProcessPublicationRequest:
-        """Temporary adapter while callers migrate away from flat publication fields."""
+        """Publication view consumed by batch validation."""
 
         return ProcessPublicationRequest(
             self.output_directory,
@@ -181,52 +146,6 @@ class ProcessRequest:
 
 
 @dataclass(frozen=True, slots=True)
-class ProcessReviewResult:
-    """Review output projected from the legacy flat result facade."""
-
-    revision_draft: RevisionDraft | None
-    resources: tuple[ConvertedResource, ...]
-    epub_metadata: EpubBookMetadata | None
-    markdown: str | None
-    required: bool
-    approved: bool
-    preserve_epub_package_when_unchanged: bool
-
-
-@dataclass(frozen=True, slots=True)
-class ProcessPublicationResult:
-    """Publication output projected from the legacy flat result facade."""
-
-    final_path: Path
-    raw_markdown_path: Path | None
-    review_original_path: Path | None
-    preserved_images: int
-    epub_chapters: int
-    markdown_organization: MarkdownOrganization
-    markdown_include_metadata: bool
-    markdown_include_page_references: bool
-    markdown_source_name: str | None
-
-
-@dataclass(frozen=True, slots=True)
-class ProcessQualityResult:
-    """Content-free quality evidence projected from the flat result facade."""
-
-    problematic_pdf_pages: tuple[int, ...]
-    pdf_report: PdfQualityReport | None
-    exhaustive_pdf_ocr_used: bool
-    translation_report: TranslationQualityReport | None
-    review_translation_report: TranslationQualityReport | None
-    linguistic_review_coverage: LinguisticReviewCoverage | None
-    preserved_translation_chunks: tuple[int, ...]
-    final_integrity_report: FinalIntegrityReport | None
-
-    @property
-    def translation_for_review(self) -> TranslationQualityReport | None:
-        return self.review_translation_report or self.translation_report
-
-
-@dataclass(frozen=True, slots=True)
 class ProcessResult:
     """Stable facade result returned to application and presentation layers."""
 
@@ -243,6 +162,7 @@ class ProcessResult:
     review_translation_quality_report: TranslationQualityReport | None = None
     linguistic_review_coverage: LinguisticReviewCoverage | None = None
     preserved_translation_chunks: tuple[int, ...] = ()
+    preserved_review_chunks: int = 0
     preserved_images: int = 0
     epub_chapters: int = 0
     revision_draft: RevisionDraft | None = None
@@ -263,55 +183,10 @@ class ProcessResult:
     markdown_source_name: str | None = None
 
     @property
-    def review(self) -> ProcessReviewResult:
-        """Temporary adapter while callers migrate away from flat review fields."""
-
-        return ProcessReviewResult(
-            self.revision_draft,
-            self.revision_resources,
-            self.revision_epub_metadata,
-            self.review_markdown,
-            self.review_required,
-            self.revision_approved,
-            self.preserve_epub_package_on_unchanged_review,
-        )
-
-    @property
-    def publication(self) -> ProcessPublicationResult:
-        """Temporary adapter while callers migrate away from flat publication fields."""
-
-        return ProcessPublicationResult(
-            self.final_path,
-            self.raw_markdown_path,
-            self.review_original_path,
-            self.preserved_images,
-            self.epub_chapters,
-            self.markdown_organization,
-            self.markdown_include_metadata,
-            self.markdown_include_page_references,
-            self.markdown_source_name,
-        )
-
-    @property
-    def quality(self) -> ProcessQualityResult:
-        """Temporary adapter while callers migrate away from flat quality fields."""
-
-        return ProcessQualityResult(
-            self.problematic_pdf_pages,
-            self.pdf_quality_report,
-            self.exhaustive_pdf_ocr_used,
-            self.translation_quality_report,
-            self.review_translation_quality_report,
-            self.linguistic_review_coverage,
-            self.preserved_translation_chunks,
-            self.final_integrity_report,
-        )
-
-    @property
     def translation_quality_for_review(self) -> TranslationQualityReport | None:
         """Return quality evidence aligned with ``review_markdown`` when available."""
 
-        return self.quality.translation_for_review
+        return self.review_translation_quality_report or self.translation_quality_report
 
 
 @dataclass(frozen=True, slots=True)
@@ -343,6 +218,7 @@ class TransformedDocument:
     published_markdown: str
     review_required: bool
     public_markdown: str
+    preserved_review_chunks: int = 0
 
 
 StageCallback = Callable[[ProcessStage], None]
@@ -352,15 +228,10 @@ ProgressCallback = Callable[[int, int], None]
 __all__ = [
     "PreparedDocument",
     "ProcessPublicationRequest",
-    "ProcessPublicationResult",
-    "ProcessQualityResult",
     "ProcessRequest",
-    "ProcessReviewRequest",
-    "ProcessReviewResult",
     "ProcessResult",
     "ProcessSourceRequest",
     "ProcessTelemetry",
-    "ProcessTranslationRequest",
     "ProgressCallback",
     "StageCallback",
     "StageTelemetry",

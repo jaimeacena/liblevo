@@ -1,4 +1,4 @@
-"""Opt-in end-to-end validation with the user's real local Ollama model."""
+"""Opt-in end-to-end validation with a fixed local model and synthetic input."""
 
 from __future__ import annotations
 
@@ -21,10 +21,12 @@ from xml.etree import ElementTree
 from zipfile import ZIP_STORED, BadZipFile, ZipFile
 
 from parsezen.conversion import SUPPORTED_EXTENSIONS
+from parsezen.direct_models import active_direct_profile, direct_profile, verified_direct_model_path
 from parsezen.epub_conversion import inspect_epub_package
 from parsezen.errors import ParsezenError, SettingsError
 from parsezen.glossary import GlossaryEntry, validate_glossary
 from parsezen.improvement import ImprovementMode
+from parsezen.local_ai_policy import ComponentCapability
 from parsezen.local_models import (
     OllamaStatus,
     discover_ollama,
@@ -218,11 +220,27 @@ def select_live_settings(
     *,
     context_window: int | None = None,
 ) -> AppSettings:
-    """Select only a model currently announced by the protected local Ollama server."""
+    """Use the verified integrated translator unless a legacy model is requested."""
     try:
         saved = load_settings()
     except SettingsError:
         saved = AppSettings()
+    direct = (
+        active_direct_profile(ComponentCapability.TRANSLATION)
+        if requested_model is None
+        else direct_profile(requested_model)
+    )
+    if direct is not None:
+        verified_direct_model_path(direct.model_id)
+        resolved_context = context_window or direct.context_window
+        if resolved_context > direct.context_window:
+            raise ValueError("El contexto supera el permitido por el modelo local.")
+        return AppSettings(
+            model=direct.model_id,
+            context_window=resolved_context,
+            timeout_seconds=max(saved.timeout_seconds, 300.0),
+            checkpoint_retention_days=saved.checkpoint_retention_days,
+        )
     preferred = requested_model or saved.model
     connection = discover_ollama(preferred)
     if connection.status is not OllamaStatus.READY:
@@ -1141,6 +1159,15 @@ def _parser() -> argparse.ArgumentParser:
 def _run_from_arguments(arguments: argparse.Namespace) -> int:
     if arguments.models is not None and arguments.model is not None:
         raise ValueError("Usa --model o --models, no ambos.")
+    if (
+        arguments.models is None
+        and (arguments.model is None or direct_profile(arguments.model) is not None)
+        and (arguments.profile != "translation" or arguments.full_matrix)
+    ):
+        raise ValueError(
+            "La comprobación sin Ollama admite solo --profile translation. "
+            "La revisión adicional se prueba dentro de Parsezen."
+        )
     with TemporaryDirectory(prefix="parsezen-real-") as temporary_name:
         temporary = Path(temporary_name)
         if arguments.sources:

@@ -200,16 +200,52 @@ def stop_private_process(
     *,
     exit_timeout_seconds: float,
 ) -> None:
-    """Terminate and, only after the grace period, kill one local child."""
+    """Terminate one local child and any process tree it created."""
 
     if process.poll() is not None:
         return
+    if _terminate_windows_process_tree(process, exit_timeout_seconds):
+        try:
+            process.wait(timeout=exit_timeout_seconds)
+        except subprocess.TimeoutExpired:
+            pass
+        if process.poll() is not None:
+            return
     process.terminate()
     try:
         process.wait(timeout=exit_timeout_seconds)
     except subprocess.TimeoutExpired:
         process.kill()
         process.wait(timeout=exit_timeout_seconds)
+
+
+def _terminate_windows_process_tree(
+    process: subprocess.Popen[bytes],
+    timeout_seconds: float,
+) -> bool:
+    """Ask Windows to close descendants before the parent loses their identities."""
+
+    process_id = getattr(process, "pid", None)
+    if os.name != "nt" or not isinstance(process_id, int) or process_id <= 0:
+        return False
+    system_root = os.environ.get("SystemRoot")
+    if not system_root:
+        return False
+    taskkill = Path(system_root) / "System32" / "taskkill.exe"
+    if not taskkill.is_file():
+        return False
+    try:
+        completed = subprocess.run(
+            [str(taskkill), "/PID", str(process_id), "/T", "/F"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return completed.returncode == 0
 
 
 __all__ = [

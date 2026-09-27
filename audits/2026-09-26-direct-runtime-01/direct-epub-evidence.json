@@ -1,0 +1,20 @@
+{
+  "case": "DIRECT-PDF-EPUB-02",
+  "result": "PASS",
+  "elapsed_seconds": 6.01,
+  "direct_generation_calls": 4,
+  "maximum_allowed_tokens_sum": 641,
+  "output_bytes": 2729,
+  "reported_chapters": 1,
+  "reported_translation_issues": 0,
+  "checks": {
+    "original_unchanged": true,
+    "zip_integrity": true,
+    "has_navigation": true,
+    "numbers_and_names_present": true,
+    "direct_model_called": true
+  },
+  "http_forbidden_in_process": true,
+  "output_logged": false,
+  "semantic_fidelity_human_reviewed": false
+}

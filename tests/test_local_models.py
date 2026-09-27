@@ -5,7 +5,6 @@ import json
 import subprocess
 from collections.abc import Iterator
 from pathlib import Path
-from threading import Event
 from types import SimpleNamespace
 
 import httpx
@@ -18,7 +17,6 @@ from parsezen.local_models import (
     ComponentRequirements,
     ComponentStatus,
     HardwareComponent,
-    LocalAISetupCancelled,
     LocalHardware,
     OllamaConnection,
     OllamaModel,
@@ -27,7 +25,6 @@ from parsezen.local_models import (
     choose_ollama_model,
     configure_ollama_local_only,
     context_for_model,
-    delete_ollama_model,
     detect_local_hardware,
     detect_nvidia_vram_memory_mebibytes,
     detect_system_memory_mebibytes,
@@ -37,7 +34,6 @@ from parsezen.local_models import (
     is_ollama_local_only_configured,
     is_reasoning_model_id,
     list_ollama_models,
-    pull_ollama_model,
     recommend_context_window,
     restart_ollama_local_only,
     start_ollama,
@@ -403,7 +399,7 @@ def test_official_installer_rejects_an_unverified_or_failed_executable(monkeypat
         local_models_module._install_ollama_from_official_download(None)
 
 
-def test_signature_readiness_and_model_disk_helpers_handle_system_failures(
+def test_signature_and_readiness_helpers_handle_system_failures(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -431,9 +427,6 @@ def test_signature_readiness_and_model_disk_helpers_handle_system_failures(
     ready_client = httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(200)))
     monkeypatch.setattr(local_models_module.httpx, "Client", lambda **_kwargs: ready_client)
     assert local_models_module._ollama_api_is_ready()
-
-    monkeypatch.setenv("OLLAMA_MODELS", str(tmp_path / "missing" / "models"))
-    assert local_models_module._ollama_model_free_bytes() > 0
 
 
 def test_guided_install_is_explicitly_limited_to_windows(monkeypatch) -> None:
@@ -531,167 +524,6 @@ def test_guided_restart_applies_privacy_and_restarts_known_processes(monkeypatch
     assert ["taskkill", "/IM", "ollama app.exe", "/T", "/F"] in calls
     assert ["taskkill", "/IM", "ollama.exe", "/T", "/F"] in calls
     assert calls[-1] == ("start", None)
-
-
-def test_guided_model_pull_reports_progress_and_uses_only_the_local_api() -> None:
-    requests: list[httpx.Request] = []
-
-    def respond(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        assert request.url == f"{OLLAMA_BASE_URL}/api/pull"
-        assert json.loads(request.content) == {"model": "qwen3:4b", "stream": True}
-        return httpx.Response(
-            200,
-            content=(
-                b'{"status":"downloading","total":100,"completed":25}\n'
-                b'{"status":"verifying sha256 digest"}\n'
-                b'{"status":"success"}\n'
-            ),
-        )
-
-    progress: list[tuple[int | None, str]] = []
-    pull_ollama_model(
-        "qwen3:4b",
-        on_progress=lambda percent, message: progress.append((percent, message)),
-        transport=httpx.MockTransport(respond),
-        available_bytes=10_000_000_000,
-    )
-
-    assert requests[0].method == "POST"
-    assert progress[0] == (25, "Descargando el modelo…")
-    assert progress[-1] == (100, "Modelo instalado.")
-
-
-def test_model_delete_uses_only_the_local_ollama_api() -> None:
-    requests: list[httpx.Request] = []
-
-    def respond(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        return httpx.Response(200)
-
-    delete_ollama_model(
-        "qwen3:4b",
-        transport=httpx.MockTransport(respond),
-    )
-
-    assert len(requests) == 1
-    assert requests[0].method == "DELETE"
-    assert requests[0].url == f"{OLLAMA_BASE_URL}/api/delete"
-    assert json.loads(requests[0].content) == {"model": "qwen3:4b"}
-
-
-@pytest.mark.parametrize(
-    ("response", "message"),
-    [
-        (httpx.Response(307, headers={"Location": "https://example.com"}), "redirigir"),
-        (httpx.Response(404), "no encuentra"),
-        (httpx.Response(503), "HTTP 503"),
-    ],
-)
-def test_model_delete_explains_invalid_local_responses(
-    response: httpx.Response,
-    message: str,
-) -> None:
-    with pytest.raises(LocalModelUnavailableError, match=message):
-        delete_ollama_model(
-            "qwen3:4b",
-            transport=httpx.MockTransport(lambda _request: response),
-        )
-
-
-def test_guided_model_pull_can_be_cancelled() -> None:
-    cancellation = Event()
-    cancellation.set()
-    transport = httpx.MockTransport(
-        lambda _request: httpx.Response(200, content=b'{"status":"downloading"}\n')
-    )
-
-    with pytest.raises(LocalAISetupCancelled, match="cancelada"):
-        pull_ollama_model(
-            "qwen3:1.7b",
-            cancellation=cancellation,
-            transport=transport,
-            available_bytes=10_000_000_000,
-        )
-
-
-@pytest.mark.parametrize(
-    ("model_id", "available_bytes", "expected_size", "message"),
-    [
-        ("https://ollama.com/model", 10_000_000_000, None, "formato"),
-        ("qwen3:8b", 1, 5_200_000_000, "GB libres"),
-    ],
-)
-def test_model_pull_rejects_unsafe_names_or_insufficient_space(
-    model_id: str,
-    available_bytes: int,
-    expected_size: int | None,
-    message: str,
-) -> None:
-    with pytest.raises(LocalModelUnavailableError, match=message):
-        pull_ollama_model(
-            model_id,
-            available_bytes=available_bytes,
-            expected_download_size_bytes=expected_size,
-        )
-
-
-@pytest.mark.parametrize(
-    ("response", "message"),
-    [
-        (httpx.Response(307, headers={"Location": "https://example.com"}), "redirigir"),
-        (httpx.Response(503), "HTTP 503"),
-        (httpx.Response(200, content=b"not-json\n"), "incompatible"),
-        (httpx.Response(200, content=b'{"status":"downloading"}\n'), "no confirmó"),
-        (httpx.Response(200, content=b'{"error":"failed"}\n'), "no pudo completar"),
-    ],
-)
-def test_guided_model_pull_explains_invalid_local_responses(
-    response: httpx.Response,
-    message: str,
-) -> None:
-    with pytest.raises(LocalModelUnavailableError, match=message):
-        pull_ollama_model(
-            "qwen3:1.7b",
-            transport=httpx.MockTransport(lambda _request: response),
-            available_bytes=10_000_000_000,
-        )
-
-
-def test_guided_model_pull_accepts_any_valid_local_catalog_name() -> None:
-    requests: list[httpx.Request] = []
-
-    def respond(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        return httpx.Response(
-            200,
-            content=(
-                b'{"status":"downloading","total":2000000000,"completed":1000000000}\n'
-                b'{"status":"success"}\n'
-            ),
-        )
-
-    pull_ollama_model(
-        "example/modern-model:7b-q4_K_M",
-        transport=httpx.MockTransport(respond),
-        available_bytes=10_000_000_000,
-    )
-
-    assert json.loads(requests[0].content)["model"] == "example/modern-model:7b-q4_K_M"
-
-
-def test_custom_model_pull_stops_when_ollama_announces_an_unsafe_size() -> None:
-    response = httpx.Response(
-        200,
-        content=b'{"status":"downloading","total":10000000000,"completed":1}\n',
-    )
-
-    with pytest.raises(LocalModelUnavailableError, match="espacio suficiente"):
-        pull_ollama_model(
-            "modern-model:latest",
-            transport=httpx.MockTransport(lambda _request: response),
-            available_bytes=1_000_000_000,
-        )
 
 
 @pytest.mark.parametrize(

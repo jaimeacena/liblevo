@@ -1234,3 +1234,12 @@ def test_epub_rejects_a_cover_that_is_not_in_its_resources() -> None:
                 cover_resource=PurePosixPath("cover/missing.png"),
             ),
         )
+
+
+def test_explicit_epub_markers_control_short_chapters_but_never_enter_chapter_text() -> None:
+    markdown = f"# One\n\nShort.\n\n{EPUB_CHAPTER_MARKER}\n\n# Two\n\nAlso short.\n"
+
+    plan = plan_epub(markdown, "Book")
+
+    assert len(plan.chapters) == 2
+    assert all(EPUB_CHAPTER_MARKER not in chapter.markdown for chapter in plan.chapters)

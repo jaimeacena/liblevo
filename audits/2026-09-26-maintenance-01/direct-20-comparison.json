@@ -1,0 +1,17 @@
+{
+  "identical_epub_bytes": false,
+  "identical_member_names": true,
+  "member_count": 14,
+  "different_member_count": 1,
+  "different_xhtml_member_count": 0,
+  "identical_normalized_reading_text": true,
+  "normalized_text_sha256": [
+    "452e3b9727c28f4d78dc5862e4e88e63572ca7d78a0e07a744b2f48d4869bc46",
+    "452e3b9727c28f4d78dc5862e4e88e63572ca7d78a0e07a744b2f48d4869bc46"
+  ],
+  "normalized_text_characters": [
+    15232,
+    15232
+  ],
+  "text_similarity_ratio": 1.0
+}

@@ -566,7 +566,7 @@ class JobTableModel(QAbstractTableModel):
         ):
             column = COLUMNS[section]
             if self._compact and column is JobColumn.DOCUMENT:
-                return "Documento y flujo"
+                return "Documento"
             return HEADERS[column]
         return None
 
@@ -690,8 +690,11 @@ class JobCellDelegate(QStyledItemDelegate):
         presentation: CellPresentation,
     ) -> None:
         icon_rect = QRectF(option.rect.left() + 14, option.rect.center().y() - 17, 28, 34)
-        cls._paint_document_icon(painter, icon_rect, presentation.document_format)
-        left = icon_rect.right() + 14
+        if option.rect.width() >= 220:
+            cls._paint_document_icon(painter, icon_rect, presentation.document_format)
+            left = icon_rect.right() + 14
+        else:
+            left = option.rect.left() + 6
         width = max(0, option.rect.right() - left - 12)
         title_font = QFont(option.font)
         title_font.setWeight(QFont.Weight.DemiBold)
@@ -1132,6 +1135,7 @@ class JobTableView(QTableView):
     open_folder_requested = Signal(str)
     result_summary_requested = Signal(str)
     remove_requested = Signal(str)
+    new_version_requested = Signal(str)
     move_requested = Signal(str, int)
     job_selected = Signal(str)
 
@@ -1380,10 +1384,12 @@ class JobTableView(QTableView):
         open_result: QAction | None = None
         open_folder: QAction | None = None
         result_summary: QAction | None = None
+        new_version: QAction | None = None
         if job.result_path is not None and job.status is JobStatus.COMPLETED:
             open_result = menu.addAction("Abrir resultado")
             open_folder = menu.addAction("Abrir carpeta")
             result_summary = menu.addAction("Ver resumen")
+            new_version = menu.addAction("Crear otra versión…")
             targeted_review = (
                 menu.addAction("Revisar señales con IA")
                 if job.review_recommendation is not None
@@ -1426,6 +1432,8 @@ class JobTableView(QTableView):
             self.result_summary_requested.emit(job_id)
         elif targeted_review is not None and selected is targeted_review:
             self.ai_review_requested.emit(job_id)
+        elif new_version is not None and selected is new_version:
+            self.new_version_requested.emit(job_id)
         elif remove is not None and selected is remove:
             self.remove_requested.emit(job_id)
 

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog, QLabel
 
 from parsezen.domain.books import BookDocument, BookMetadata, BookSection
 from parsezen.infrastructure.artifact_store import ArtifactStore
@@ -29,7 +29,8 @@ def test_lightweight_confirmation_shows_every_essential_book_fact(qtbot, tmp_pat
 
     assert dialog.title_input.text() == "Original title"
     assert dialog.author_input.text() == "Original author"
-    assert dialog.language_input.text() == "en"
+    assert dialog.language_input.language_code() == "en"
+    assert dialog.language_input.currentText() == "Inglés"
     assert dialog.cover_value.text() == "Sin portada"
     assert dialog.chapter_value.text() == "1"
 
@@ -40,7 +41,7 @@ def test_lightweight_confirmation_updates_metadata_and_publishes(qtbot, tmp_path
     qtbot.addWidget(dialog)
     dialog.title_input.setText("Final title")
     dialog.author_input.setText("Final author")
-    dialog.language_input.setText("es")
+    dialog.language_input.setCurrentIndex(dialog.language_input.findData("es"))
 
     dialog.publish_button.click()
 
@@ -48,6 +49,17 @@ def test_lightweight_confirmation_updates_metadata_and_publishes(qtbot, tmp_path
     assert dialog.book.metadata == BookMetadata("Final title", "es", "Final author")
     assert not dialog.open_editor_requested
     assert not dialog.saved_for_later
+
+
+def test_confirmation_discloses_incomplete_optional_review(qtbot, tmp_path: Path) -> None:
+    book, store = _book(tmp_path)
+    dialog = EpubConfirmationDialog(book, store, job_id="job", preserved_review_chunks=2)
+    qtbot.addWidget(dialog)
+    warning = dialog.findChild(QLabel, "reviewIncompleteWarning")
+    assert warning is not None
+    assert "2 fragmentos" in warning.text()
+    assert "no pudo completarse" in warning.text()
+    assert dialog.publish_button.isEnabled()
 
 
 def test_full_editor_opens_only_when_explicitly_requested(qtbot, tmp_path: Path) -> None:

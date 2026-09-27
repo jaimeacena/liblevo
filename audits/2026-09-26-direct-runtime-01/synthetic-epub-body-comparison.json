@@ -1,0 +1,9 @@
+{
+  "case": "DIRECT-OLLAMA-SYNTHETIC-BODY-01",
+  "same_visible_text": true,
+  "ollama_text_sha256": "e9ffbaa964a1ff592332020140cb2921759235cb645568ef543c3a836fa3f1c2",
+  "direct_text_sha256": "e9ffbaa964a1ff592332020140cb2921759235cb645568ef543c3a836fa3f1c2",
+  "ollama_characters": 421,
+  "direct_characters": 421,
+  "document_text_logged": false
+}

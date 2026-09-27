@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -9,6 +10,7 @@ import parsezen.infrastructure.state_store as state_store_module
 from parsezen.application.planner import activate_next_stage
 from parsezen.domain.books import BookDocument, BookMetadata, BookSection
 from parsezen.domain.estimates import ProcessingMetric, WorkloadProfile
+from parsezen.domain.job_events import JobEvent, JobEventKind
 from parsezen.domain.jobs import (
     AIProfileConfiguration,
     DocumentFormat,
@@ -399,6 +401,62 @@ def test_state_store_reorders_jobs_without_losing_related_review_state(tmp_path:
     assert tuple(job.id for job in store.load_jobs()) == ("two", "one")
     assert store.load_reviews(job_id=one.id) == (review,)
     assert store.load_result_snapshot(one.id) == "manifest"
+
+
+def test_queue_update_writes_only_changed_rows_and_preserves_unchanged_timestamps(
+    tmp_path: Path, monkeypatch
+) -> None:
+    store = StateStore(tmp_path / "state.db")
+    jobs = tuple(make_job(f"job-{index}", index) for index in range(500))
+    store.replace_jobs(jobs)
+    changes: list[int] = []
+    transaction = store._transaction
+
+    @contextmanager
+    def measured_transaction():
+        with transaction() as connection:
+            before = connection.total_changes
+            yield connection
+            changes.append(connection.total_changes - before)
+
+    monkeypatch.setattr(store, "_transaction", measured_transaction)
+    store.replace_jobs(jobs)
+    updated = (*jobs[:250], replace(jobs[250], configuration_revision=2), *jobs[251:])
+    store.replace_jobs(updated)
+
+    assert changes == [0, 1]
+    assert store.load_jobs() == updated
+
+
+def test_queue_replaces_a_deleted_order_and_observes_other_store_updates(tmp_path: Path) -> None:
+    store = StateStore(tmp_path / "state.db")
+    first, second = make_job("first", 0), make_job("second", 1)
+    store.replace_jobs((first, second))
+    replacement = make_job("replacement", 0)
+    store.replace_jobs((replacement, second))
+    assert store.load_jobs() == (replacement, second)
+
+    other = StateStore(store.path)
+    other.upsert_job(replace(second, configuration_revision=2))
+    store.replace_jobs((replacement, second))
+    assert store.load_jobs() == (replacement, second)
+
+
+def test_failed_event_rolls_back_changed_and_deleted_jobs(tmp_path: Path, monkeypatch) -> None:
+    store = StateStore(tmp_path / "state.db")
+    first, second = make_job("first", 0), make_job("second", 1)
+    store.replace_jobs((first, second))
+
+    def fail_event(*_args, **_kwargs) -> None:
+        raise sqlite3.IntegrityError("synthetic event failure")
+
+    monkeypatch.setattr(state_store_module, "_insert_job_event", fail_event)
+    with pytest.raises(StateStoreError):
+        store.replace_jobs(
+            (replace(second, order=0),),
+            events=(JobEvent(second.id, JobEventKind.CONFIGURATION_CHANGED, 1),),
+        )
+    assert store.load_jobs() == (first, second)
 
 
 def test_state_store_rolls_back_every_temporary_order_when_replacement_fails(

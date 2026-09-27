@@ -28,6 +28,8 @@ class DocumentFormat(StrEnum):
     @classmethod
     def from_path(cls, path: Path) -> DocumentFormat:
         suffix = path.suffix.casefold().lstrip(".")
+        if suffix == "markdown":
+            return cls.MARKDOWN
         try:
             return cls(suffix)
         except ValueError as exc:

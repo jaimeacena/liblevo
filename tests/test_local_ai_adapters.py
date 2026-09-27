@@ -5,6 +5,7 @@ from typing import Any
 import httpx
 
 import parsezen.local_ai_adapters as adapters
+from parsezen.local_ai_client import LocalAiClient
 
 
 def test_product_lfm_alias_uses_raw_chatml_and_strips_completed_reasoning(
@@ -29,7 +30,7 @@ def test_product_lfm_alias_uses_raw_chatml_and_strips_completed_reasoning(
         return "<think>extra private reasoning</think>Final text."
 
     monkeypatch.setattr(adapters, "request_local_ai_raw", raw)
-    client = httpx.Client()
+    client = LocalAiClient()
     try:
         result = adapters.request_adapted_local_ai(
             client,
@@ -56,6 +57,7 @@ def test_product_lfm_alias_uses_raw_chatml_and_strips_completed_reasoning(
     options = captured["options"]
     assert isinstance(options, dict)
     assert options["prediction_characters"] > 90
+    assert options["minimum_prediction_tokens"] == 4_096
 
 
 def test_unknown_model_keeps_established_chat_transport(monkeypatch: Any) -> None:
@@ -67,7 +69,7 @@ def test_unknown_model_keeps_established_chat_transport(monkeypatch: Any) -> Non
         return "unchanged"
 
     monkeypatch.setattr(adapters, "request_local_ai", chat)
-    client = httpx.Client()
+    client = LocalAiClient()
     try:
         result = adapters.request_adapted_local_ai(
             client,
@@ -103,7 +105,7 @@ def test_only_product_specialized_alias_is_explicitly_released(monkeypatch: Any)
         "release_local_ai_model",
         lambda _client, model: released.append(model),
     )
-    client = httpx.Client()
+    client = LocalAiClient()
     try:
         assert adapters.release_adapted_local_ai_model(client, "qwen3.5:9b") is False
         assert (
@@ -141,7 +143,7 @@ def test_unapproved_specialized_alias_keeps_established_chat_transport(
         return "unchanged"
 
     monkeypatch.setattr(adapters, "request_local_ai", chat)
-    client = httpx.Client()
+    client = LocalAiClient()
     try:
         result = adapters.request_adapted_local_ai(
             client,
@@ -180,7 +182,7 @@ def test_product_hymt_alias_uses_official_raw_translation_prompt(monkeypatch: An
         return "El informe está listo."
 
     monkeypatch.setattr(adapters, "request_local_ai_raw", raw)
-    client = httpx.Client()
+    client = LocalAiClient()
     try:
         result = adapters.request_adapted_local_ai(
             client,
@@ -218,7 +220,7 @@ def test_lfm_adapter_removes_only_added_heading_before_line_marker(
         "request_local_ai_raw",
         lambda *_args, **_kwargs: "# ZPZDOCAXZQ HEADING\n\nKeep # ZPZDOCBXZQ inline.",
     )
-    client = httpx.Client()
+    client = LocalAiClient()
     try:
         result = adapters.request_adapted_local_ai(
             client,
@@ -244,7 +246,7 @@ def test_lfm_adapter_discards_reasoning_and_one_outer_markdown_fence(
             "<think>synthetic reasoning</think>```markdown\nTexto corregido.\n```"
         ),
     )
-    client = httpx.Client()
+    client = LocalAiClient()
     try:
         result = adapters.request_adapted_local_ai(
             client,
@@ -269,7 +271,7 @@ def test_lfm_adapter_extracts_complete_final_json_value(monkeypatch: Any) -> Non
             '[{"old":"cerrado","new":"listo"}]\nFin.'
         ),
     )
-    client = httpx.Client()
+    client = LocalAiClient()
     try:
         result = adapters.request_adapted_local_ai(
             client,
@@ -301,7 +303,7 @@ def test_lfm_translation_review_keeps_approved_reasoning_template(monkeypatch: A
         return "[]"
 
     monkeypatch.setattr(adapters, "request_local_ai_raw", raw)
-    client = httpx.Client()
+    client = LocalAiClient()
     try:
         result = adapters.request_adapted_local_ai(
             client,

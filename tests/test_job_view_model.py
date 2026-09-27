@@ -125,6 +125,16 @@ def test_header_processes_only_configured_documents() -> None:
     assert view.primary_label == "Procesar 1 documento"
 
 
+def test_last_announced_chunk_does_not_claim_completion_while_running() -> None:
+    job = activate_next_stage(make_job("running"))
+    stage = job.stage(StageKind.PREPARE).transition(StageStatus.RUNNING)
+    stage = stage.with_progress(1, 1, "converting")
+    view = next_step_view(job.replace_stage(stage))
+    assert view.label == "Preparando"
+    assert view.progress is None
+    assert view.tone == "running"
+
+
 def test_current_activity_follows_the_canonical_flow_order() -> None:
     job = DocumentJob.create(
         DocumentSource(Path("flow.pdf"), DocumentFormat.PDF, 1_000, 2),

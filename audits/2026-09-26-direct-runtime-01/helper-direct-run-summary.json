@@ -1,0 +1,13 @@
+{
+  "case": "HELPER-DIRECT-01",
+  "exit_code": 0,
+  "elapsed_seconds": 26.625,
+  "report_exists": true,
+  "profile_isolated": true,
+  "document_source": "script synthetic 20-page PDF, interval 1-2",
+  "last_output_lines": [
+    "OK muestra 1 · epub-solo-traduccion · 22.7 s",
+    "Informe local sin contenido documental: [ruta local omitida]"
+  ],
+  "error_type": "2026-09-26 21:21:24,868 INFO parsezen.processing processing_completed attempt_id=68ce3a01c3fd0e8747f069ed973ba006 phase=completion extension=.pdf output_format="
+}

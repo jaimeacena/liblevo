@@ -49,7 +49,7 @@ from parsezen.domain.stages import StageKind
 from parsezen.failure_recovery import RecoveryAction, RecoveryPlan
 from parsezen.final_integrity import FinalIntegrityReport
 from parsezen.local_models import OllamaStatus
-from parsezen.presentation.components import StatusMessage
+from parsezen.presentation.components import ElidedLabel, StatusMessage
 from parsezen.presentation.design_system import (
     BREAKPOINTS,
     COLORS,
@@ -133,6 +133,14 @@ class InternalBackButton(QPushButton):
         self.setFlat(True)
         self.setIconSize(QSize(20, 20))
 
+    def apply_theme(self) -> None:
+        self.setIcon(back_icon())
+
+    def set_expanded(self, expanded: bool) -> None:
+        label = self.accessibleName()
+        self.setText(label if expanded else "")
+        self.setFixedWidth(self.fontMetrics().horizontalAdvance(label) + 34 if expanded else 38)
+
     def event(self, event: QEvent) -> bool:
         handled = super().event(event)
         if event.type() is QEvent.Type.Enter:
@@ -189,7 +197,7 @@ class DocumentDropArea(QFrame):
         self.primary_label.setTextFormat(Qt.TextFormat.PlainText)
         self.primary_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.secondary_label = QLabel(
-            "TXT · MD · DOCX · PDF · EPUB",
+            "Convierte, traduce y crea un EPUB en tu equipo.\nTXT · MD · DOCX · PDF · EPUB",
             self.text_host,
         )
         self.secondary_label.setObjectName("dropAreaSecondary")
@@ -223,7 +231,7 @@ class DocumentDropArea(QFrame):
         """Reflow the empty-state action without changing its meaning."""
 
         if compact:
-            self.setFixedHeight(140)
+            self.setFixedHeight(180)
             self.content_layout.setDirection(QBoxLayout.Direction.TopToBottom)
             self.content_layout.setContentsMargins(12, 10, 12, 10)
             self.content_layout.setSpacing(6)
@@ -235,7 +243,7 @@ class DocumentDropArea(QFrame):
                 Qt.AlignmentFlag.AlignHCenter,
             )
         else:
-            self.setFixedHeight(92)
+            self.setFixedHeight(112)
             self.content_layout.setDirection(QBoxLayout.Direction.LeftToRight)
             self.content_layout.setContentsMargins(18, 10, 18, 10)
             self.content_layout.setSpacing(14)
@@ -285,6 +293,7 @@ class ParsezenWorkspace(QWidget):
     open_folder_requested = Signal(str)
     result_summary_requested = Signal(str)
     remove_requested = Signal(str)
+    new_version_requested = Signal(str)
     move_requested = Signal(str, int)
     primary_requested = Signal(str)
     output_directory_requested = Signal()
@@ -426,6 +435,7 @@ class ParsezenWorkspace(QWidget):
         self.job_table.open_folder_requested.connect(self.open_folder_requested)
         self.job_table.result_summary_requested.connect(self.result_summary_requested)
         self.job_table.remove_requested.connect(self.remove_requested)
+        self.job_table.new_version_requested.connect(self.new_version_requested)
         self.job_table.move_requested.connect(self.move_requested)
         table_layout.addWidget(self.job_table)
         queue_layout.addWidget(self.table_panel)
@@ -434,6 +444,8 @@ class ParsezenWorkspace(QWidget):
         self.drop_area.activated.connect(self.add_requested)
         queue_layout.addWidget(self.drop_area)
         queue_layout.setAlignment(self.drop_area, Qt.AlignmentFlag.AlignHCenter)
+        self.source_message = StatusMessage(self.queue_pane)
+        queue_layout.addWidget(self.source_message)
         self.recovery_warning = QLabel(self.queue_pane)
         self.recovery_warning.setObjectName("recoveryWarning")
         self.recovery_warning.setWordWrap(True)
@@ -446,7 +458,12 @@ class ParsezenWorkspace(QWidget):
         self.job_message.actionRequested.connect(self._run_primary_recovery)
         self.job_message.secondaryActionRequested.connect(self._run_secondary_recovery)
         queue_layout.addWidget(self.job_message)
-        for message in (self.recovery_warning, self.batch_message, self.job_message):
+        for message in (
+            self.source_message,
+            self.recovery_warning,
+            self.batch_message,
+            self.job_message,
+        ):
             message.setMaximumWidth(_CONTENT_RAIL_MAX_WIDTH)
             queue_layout.setAlignment(message, Qt.AlignmentFlag.AlignHCenter)
         queue_layout.addStretch(1)
@@ -475,6 +492,10 @@ class ParsezenWorkspace(QWidget):
         self._apply_local_styles()
         self._refresh_queue_commands()
         self.job_table.viewport().update()
+        for back in self.findChildren(InternalBackButton):
+            back.apply_theme()
+        for button in self._internal_settings_buttons.values():
+            button.setIcon(settings_icon())
         self.update()
 
     def _apply_logo(self) -> None:
@@ -549,11 +570,16 @@ class ParsezenWorkspace(QWidget):
         self.app_header.setFixedWidth(rail_width)
         self.queue_summary.setFixedWidth(rail_width)
         self.table_panel.setFixedWidth(rail_width)
+        self.source_message.setFixedWidth(
+            rail_width if self._jobs else min(_EMPTY_DROP_MAX_WIDTH, available_width)
+        )
         self.recovery_warning.setFixedWidth(rail_width)
         self.batch_message.setFixedWidth(rail_width)
         self.job_message.setFixedWidth(rail_width)
         for header in self.findChildren(QFrame, "internalPageHeader"):
             header.setFixedWidth(rail_width)
+            for back in header.findChildren(InternalBackButton):
+                back.set_expanded(rail_width >= 960)
         self.drop_area.setFixedWidth(min(_EMPTY_DROP_MAX_WIDTH, available_width))
         self.drop_area.set_display_mode(compact=compact)
         self.queue_layout.invalidate()
@@ -658,6 +684,19 @@ class ParsezenWorkspace(QWidget):
         elif reset is not None and selected is reset:
             self.output_directory_reset_requested.emit()
 
+    def set_source_addition_feedback(self, skipped: int, *, focus: bool = False) -> None:
+        if skipped == 0:
+            self.source_message.hide()
+            return
+        subject = "1 elemento" if skipped == 1 else f"{skipped} elementos"
+        verb = "Se omitió" if skipped == 1 else "Se omitieron"
+        self.source_message.show_message(
+            f"{verb} {subject}. Añade archivos TXT, MD, MARKDOWN, DOCX, PDF o EPUB.",
+            tone="warning",
+        )
+        if focus:
+            self.source_message.setFocus(Qt.FocusReason.OtherFocusReason)
+
     def set_recovery_warning(self, message: str | None) -> None:
         self.recovery_warning.setText(message or "")
         self.recovery_warning.setToolTip(message or "")
@@ -749,9 +788,10 @@ class ParsezenWorkspace(QWidget):
     ) -> None:
         """Present a workflow inside the main window."""
 
-        previous = self.content_stack.currentWidget()
+        previous = self.content_stack.currentWidget() or self.queue_pane
         focus_target = self.focusWidget()
         page = QWidget(self.content_stack)
+        page.setProperty("navigationTitle", title)
         page_layout = QVBoxLayout(page)
         page_layout.setContentsMargins(0, 0, 0, 0)
         page_layout.setSpacing(0)
@@ -762,16 +802,35 @@ class ParsezenWorkspace(QWidget):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(8, 6, 8, 10)
         back = InternalBackButton(header)
-        back.setAccessibleName("Volver")
-        back.setToolTip("Volver")
+        previous_title = str(previous.property("navigationTitle") or "")
+        back_label = (
+            "Volver a la cola"
+            if previous is self.queue_pane
+            else (
+                "Volver a la configuración" if previous_title.startswith("Configurar") else "Volver"
+            )
+        )
+        back.setAccessibleName(back_label)
+        back.setToolTip(back_label)
         back.setIcon(back_icon())
         back.setCursor(Qt.CursorShape.PointingHandCursor)
         back.clicked.connect(lambda: self.internal_back_requested.emit(widget))
         header_layout.addWidget(back)
-        heading = QLabel(title, header)
+        heading_host = QWidget(header)
+        heading_layout = QVBoxLayout(heading_host)
+        heading_layout.setContentsMargins(0, 0, 0, 0)
+        heading_layout.setSpacing(2)
+        heading_text, separator, document_name = title.partition(" · ")
+        is_configuration = heading_text == "Configurar" and bool(separator)
+        heading = ElidedLabel(heading_text if is_configuration else title, heading_host)
         heading.setObjectName("internalPageTitle")
-        header_layout.addWidget(heading)
-        header_layout.addStretch(1)
+        heading_layout.addWidget(heading)
+        if is_configuration:
+            subtitle = ElidedLabel(document_name, heading_host)
+            subtitle.setObjectName("internalPageSubtitle")
+            heading_layout.addWidget(subtitle)
+        heading_host.setMinimumWidth(0)
+        header_layout.addWidget(heading_host, 1)
         settings = QPushButton(header)
         settings.setObjectName("globalMenu")
         settings.setAccessibleName("Abrir ajustes y actividad")
@@ -791,6 +850,7 @@ class ParsezenWorkspace(QWidget):
             )
         )
         page_layout.addWidget(header, 0, Qt.AlignmentFlag.AlignHCenter)
+        back.set_expanded(header.width() >= 960)
         if scroll:
             viewport = QScrollArea(page)
             viewport.setWidgetResizable(True)
@@ -816,7 +876,9 @@ class ParsezenWorkspace(QWidget):
         self.primary_button.hide()
         widget.show()
         if hasattr(widget, "set_compact_mode"):
-            widget.set_compact_mode(bool(self._compact_layout))
+            widget.set_compact_mode(
+                widget.width() <= getattr(widget, "compact_breakpoint", BREAKPOINTS.compact)
+            )
         QTimer.singleShot(0, back.setFocus)
 
     def close_internal_view(self, widget: QWidget) -> None:
@@ -980,9 +1042,12 @@ class ParsezenWorkspace(QWidget):
         self._apply_queue_state_layout()
         self.batch_message.set_compact_mode(compact)
         self.job_message.set_compact_mode(compact)
+        self.source_message.set_compact_mode(compact)
         current = self.current_internal_widget
         if current is not None and hasattr(current, "set_compact_mode"):
-            current.set_compact_mode(compact)
+            current.set_compact_mode(
+                current.width() <= getattr(current, "compact_breakpoint", BREAKPOINTS.compact)
+            )
 
     def _apply_header_action_layout(self, *, compact: bool) -> None:
         if compact:
@@ -1142,8 +1207,6 @@ class ParsezenWorkspace(QWidget):
                 font-weight: 650;
             }}
             QPushButton#internalBack {{
-                min-width: 38px;
-                max-width: 38px;
                 min-height: 34px;
                 max-height: 34px;
                 padding: 0;

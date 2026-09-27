@@ -1,0 +1,9 @@
+{
+  "case": "DIRECT-OLLAMA-SYNTHETIC-TEXT-01",
+  "same_visible_text": false,
+  "ollama_text_sha256": "cf23f91ec9ab691999c819cad66d33ea33004b73a2273010351733e066998442",
+  "direct_text_sha256": "bff0b4661f7ea7987aeec46e44af553238772615b532381f069a088aa3dbfefe",
+  "ollama_characters": 509,
+  "direct_characters": 505,
+  "document_text_logged": false
+}

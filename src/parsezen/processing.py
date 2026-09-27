@@ -12,7 +12,7 @@ from collections.abc import Callable, Iterator
 from contextlib import AbstractContextManager, contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, replace
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from tempfile import gettempdir, mkstemp
 from time import monotonic
 from typing import TypedDict
@@ -24,7 +24,8 @@ from parsezen.conversion import (
     SUPPORTED_EXTENSIONS,
     convert_document,
 )
-from parsezen.document_model import ConvertedDocument, ConvertedResource
+from parsezen.cover_images import MAX_COVER_BYTES
+from parsezen.document_model import ConvertedDocument
 from parsezen.domain.attempt_activity import (
     AttemptPhase,
     is_safe_token,
@@ -55,6 +56,7 @@ from parsezen.epub_checkpoints import (
 from parsezen.epub_conversion import (
     convert_epub,
     inspect_epub_package,
+    read_epub_bytes,
     replace_epub_metadata,
     translate_epub,
 )
@@ -119,6 +121,7 @@ from parsezen.pipeline.publish import (
     EPUB_COVER_MEDIA_TYPES,
     finish_work_checkpoints,
     publish_transformed_document,
+    read_epub_cover,
 )
 from parsezen.pipeline.transform import (
     effective_ai_improvement_mode as _effective_ai_improvement_mode,
@@ -184,7 +187,7 @@ _CURRENT_ATTEMPT_ID: ContextVar[str | None] = ContextVar(
     "parsezen_current_attempt_id",
     default=None,
 )
-_MAX_EPUB_COVER_BYTES = 32 * 1024 * 1024
+_MAX_EPUB_COVER_BYTES = MAX_COVER_BYTES
 
 
 class _ProcessingTelemetryCollector:
@@ -806,7 +809,7 @@ def _prepare_translated_epub_review(
             if resource.relative_path != package_metadata.cover_path
         )
     if request.epub_cover_path is not None:
-        cover_resource = _read_epub_cover(request.epub_cover_path)
+        cover_resource = read_epub_cover(request.epub_cover_path)
         normalized_resources = (
             *(
                 resource
@@ -1296,7 +1299,7 @@ def _process_epub_personalization(
     semantic_document = analyze_markdown(markdown)
     check_cancelled(cancellation)
     _notify(on_stage, ProcessStage.WRITING)
-    source_content = request.source_path.read_bytes()
+    source_content = read_epub_bytes(request.source_path)
     integrity = binary_integrity_capture(
         source_content,
         format_label="EPUB",
@@ -1473,7 +1476,7 @@ def _open_pdf_conversion_checkpoints(
     # sharing data between different source bytes or OCR strategies.
     # Bump this whenever deterministic native-page reconciliation changes. Reusing
     # an older page payload would otherwise retain already-fixed TOC glyph errors.
-    resume_key = repr(("pdf-conversion-v11", request.force_pdf_ocr))
+    resume_key = repr(("pdf-conversion-v12", request.force_pdf_ocr))
     return open_work_checkpoints(
         request.source_path,
         resume_key,
@@ -1873,21 +1876,7 @@ def _validate_epub_metadata(request: ProcessRequest) -> None:
     except OSError as exc:
         raise RequestValidationError("No se pudo leer la portada seleccionada.") from exc
     if cover_size <= 0 or cover_size > _MAX_EPUB_COVER_BYTES:
-        raise RequestValidationError("La portada debe ocupar entre 1 byte y 32 MiB.")
-
-
-def _read_epub_cover(path: Path) -> ConvertedResource:
-    suffix = path.suffix.lower()
-    media_type = EPUB_COVER_MEDIA_TYPES[suffix]
-    try:
-        content = path.read_bytes()
-    except OSError as exc:
-        raise RequestValidationError("No se pudo leer la portada seleccionada.") from exc
-    return ConvertedResource(
-        PurePosixPath(f"cover/cover{suffix}"),
-        content,
-        media_type,
-    )
+        raise RequestValidationError("La portada debe ocupar entre 1 byte y 20 MiB.")
 
 
 def _validate_ai_settings(

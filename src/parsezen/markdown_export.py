@@ -4,17 +4,22 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+from markdown_it import MarkdownIt
+from markdown_it.helpers import parseLinkDestination
+from markdown_it.token import Token
+
+from parsezen.document_model import RESOURCE_REFERENCE_PREFIX
 from parsezen.domain.jobs import MarkdownOrganization
+from parsezen.errors import FinalIntegrityError
 
 _HEADING = re.compile(r"^(#{1,6})[ \t]+(.+?)\s*$")
 _PAGE_MARKER = re.compile(r"<!--\s*PZDOC PDF PAGE (\d+)\s*-->", re.IGNORECASE)
 _UNSAFE_FILENAME = re.compile(r"[^a-z0-9]+")
-_MARKDOWN_LINK = re.compile(
-    r"(?P<prefix>!?\[[^\]]*\]\()(?P<angle><)?(?P<target>[^)>]+)(?(angle)>)(?P<suffix>\))"
-)
+_MARKDOWN_LINK_START = re.compile(r"!?\[(?:\\.|[^\[\]\\])*\]\(\s*")
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,50 +46,95 @@ def prepare_markdown_export(
 ) -> MarkdownExport:
     """Create a publication variant without mutating the canonical transformed text."""
 
-    canonical = markdown.strip()
+    canonical = markdown
     prepared = _page_references(markdown, visible=include_page_references)
     metadata = _metadata_block(prepared, source_name) if include_metadata else ""
     if organization is not MarkdownOrganization.BY_CHAPTER:
         return MarkdownExport(_join(metadata, prepared) if metadata else prepared)
 
-    chapters = tuple(
-        MarkdownChapter(
-            chapter.filename,
-            chapter.title,
-            _page_references(chapter.markdown, visible=include_page_references).strip() + "\n",
+    preamble, source_chapters = _split_chapters(canonical)
+    if source_chapters and preamble + "".join(c.markdown for c in source_chapters) != canonical:
+        raise FinalIntegrityError("La división Markdown no conserva todo el contenido aprobado.")
+    chapters_list: list[MarkdownChapter] = []
+    for chapter in source_chapters:
+        relocated = rebase_relative_markdown_links(chapter.markdown)
+        if relocated is None:
+            # Keep the portable single document when relocation cannot be demonstrated.
+            return MarkdownExport(_join(metadata, prepared) if metadata else prepared)
+        chapters_list.append(
+            MarkdownChapter(
+                chapter.filename,
+                chapter.title,
+                _page_references(relocated, visible=include_page_references).strip("\r\n") + "\n",
+            )
         )
-        for chapter in _split_chapters(canonical)
-    )
+    chapters = tuple(chapters_list)
     if len(chapters) < 2:
         return MarkdownExport(_join(metadata, prepared) if metadata else prepared)
 
     document_title = _document_title(prepared) or Path(source_name).stem
-    index_content = [f"# {document_title}", "", "## Índice", ""]
+    introduction = _page_references(preamble, visible=include_page_references).strip("\r\n")
+    if not _document_title(introduction):
+        introduction = _join(f"# {document_title}", introduction).strip("\r\n")
+    index_content = [introduction, "", "## Índice", ""]
     index_lines = [metadata.rstrip(), "", *index_content] if metadata else index_content
     for chapter in chapters:
         target = (
             f"{chapter_directory}/{chapter.filename}" if chapter_directory else chapter.filename
         )
         index_lines.append(f"- [{_markdown_link_text(chapter.title)}](<{target}>)")
-    return MarkdownExport("\n".join(index_lines).strip() + "\n", chapters)
+    return MarkdownExport("\n".join(index_lines).strip("\r\n") + "\n", chapters)
 
 
-def rebase_relative_markdown_links(markdown: str) -> str:
-    """Move local links one directory up when content is placed in a chapter folder."""
+def rebase_relative_markdown_links(markdown: str) -> str | None:
+    """Relocate inline destinations only if the parser confirms no other rendered change."""
 
-    def replace(match: re.Match[str]) -> str:
-        target = match.group("target").strip()
-        if (
-            not target
-            or target.startswith(("#", "/", "\\", "../", "./"))
-            or re.match(r"^[a-z][a-z0-9+.-]*:", target, re.IGNORECASE)
-        ):
-            return match.group(0)
-        angle = "<" if match.group("angle") else ""
-        closing = ">" if angle else ""
-        return f"{match.group('prefix')}{angle}../{target}{closing}{match.group('suffix')}"
+    parser = _markdown_parser()
+    tokens = parser.parse(markdown)
+    insertions: list[int] = []
+    for match in _MARKDOWN_LINK_START.finditer(markdown):
+        start = match.end()
+        destination = parseLinkDestination(markdown, start, len(markdown))
+        if destination.ok and _rebased_target(destination.str) != destination.str:
+            insertions.append(start + (1 if markdown[start : start + 1] == "<" else 0))
+    pieces: list[str] = []
+    previous = 0
+    for position in insertions:
+        pieces.extend((markdown[previous:position], "../"))
+        previous = position
+    pieces.append(markdown[previous:])
+    relocated = "".join(pieces)
+    for token in _walk_tokens(tokens):
+        attribute = (
+            "href" if token.type == "link_open" else "src" if token.type == "image" else None
+        )
+        if attribute is not None:
+            target = token.attrGet(attribute)
+            if isinstance(target, str):
+                token.attrSet(attribute, parser.normalizeLink(_rebased_target(target)))
+    expected = parser.renderer.render(tokens, parser.options, {})
+    return relocated if parser.render(relocated) == expected else None
 
-    return _MARKDOWN_LINK.sub(replace, markdown)
+
+def _rebased_target(target: str) -> str:
+    if (
+        not target
+        or target.startswith(("#", "/", "\\", RESOURCE_REFERENCE_PREFIX))
+        or re.match(r"^[a-z][a-z0-9+.-]*:", target, re.IGNORECASE)
+    ):
+        return target
+    return f"../{target}"
+
+
+def _markdown_parser() -> MarkdownIt:
+    return MarkdownIt("commonmark").enable(["table", "strikethrough"])
+
+
+def _walk_tokens(tokens: list[Token]) -> Iterator[Token]:
+    for token in tokens:
+        yield token
+        if token.children:
+            yield from _walk_tokens(token.children)
 
 
 def _page_references(markdown: str, *, visible: bool) -> str:
@@ -116,17 +166,35 @@ def _metadata_block(markdown: str, source_name: str) -> str:
     )
 
 
-def _split_chapters(markdown: str) -> tuple[MarkdownChapter, ...]:
-    lines = markdown.splitlines()
-    headings = _heading_positions(lines)
+def _split_chapters(markdown: str) -> tuple[str, tuple[MarkdownChapter, ...]]:
+    lines = markdown.splitlines(keepends=True)
+    if re.match(r"\A---[ \t]*\r?\n[\s\S]*?\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)", markdown):
+        return markdown, ()
+    environment: dict[str, object] = {}
+    tokens = _markdown_parser().parse(markdown, environment)
+    # References and fragment links depend on the original document's scope. Keep that scope.
+    if environment.get("references") or any(
+        (
+            isinstance(target := token.attrGet("href") or token.attrGet("src"), str)
+            and target.startswith("#")
+        )
+        or (token.type.startswith("html") and re.search(r"\b(?:href|src)\s*=", token.content, re.I))
+        for token in _walk_tokens(tokens)
+    ):
+        return markdown, ()
+    headings = [
+        (token.map[0], int(token.tag[1:]), tokens[index + 1].content)
+        for index, token in enumerate(tokens)
+        if token.type == "heading_open" and token.level == 0 and token.map is not None
+    ]
     if not headings:
-        return ()
+        return markdown, ()
     counts: dict[int, int] = {}
     for _, level, _ in headings:
         counts[level] = counts.get(level, 0) + 1
     split_level = next((level for level in sorted(counts) if counts[level] >= 2), None)
     if split_level is None:
-        return ()
+        return markdown, ()
     heading_starts = [
         (position, title) for position, level, title in headings if level == split_level
     ]
@@ -134,37 +202,16 @@ def _split_chapters(markdown: str) -> tuple[MarkdownChapter, ...]:
         (_include_leading_page_marker(lines, position), title) for position, title in heading_starts
     ]
     if len(starts) < 2:
-        return ()
+        return markdown, ()
 
     chapters: list[MarkdownChapter] = []
-    preamble = "\n".join(lines[: starts[0][0]]).strip()
-    if _contains_prose(preamble):
-        chapters.append(_chapter(len(chapters) + 1, "Introducción", preamble))
+    preamble = "".join(lines[: starts[0][0]])
     for index, (start, title) in enumerate(starts):
         end = starts[index + 1][0] if index + 1 < len(starts) else len(lines)
-        content = "\n".join(lines[start:end]).strip()
+        content = "".join(lines[start:end])
         if content:
             chapters.append(_chapter(len(chapters) + 1, title, content))
-    return tuple(chapters)
-
-
-def _heading_positions(lines: list[str]) -> list[tuple[int, int, str]]:
-    positions: list[tuple[int, int, str]] = []
-    fence: str | None = None
-    for index, line in enumerate(lines):
-        stripped = line.lstrip()
-        if stripped.startswith(("```", "~~~")):
-            marker = stripped[:3]
-            fence = None if fence == marker else marker if fence is None else fence
-            continue
-        if fence is not None:
-            continue
-        match = _HEADING.match(line)
-        if match is not None:
-            positions.append(
-                (index, len(match.group(1)), match.group(2).strip().rstrip("#").strip())
-            )
-    return positions
+    return preamble, tuple(chapters)
 
 
 def _include_leading_page_marker(lines: list[str], heading_position: int) -> int:
@@ -179,7 +226,7 @@ def _include_leading_page_marker(lines: list[str], heading_position: int) -> int
 def _chapter(number: int, title: str, markdown: str) -> MarkdownChapter:
     normalized = unicodedata.normalize("NFKD", title).encode("ascii", "ignore").decode("ascii")
     slug = _UNSAFE_FILENAME.sub("-", normalized.casefold()).strip("-")[:64] or "capitulo"
-    return MarkdownChapter(f"{number:02d}-{slug}.md", title, markdown.rstrip() + "\n")
+    return MarkdownChapter(f"{number:02d}-{slug}.md", title, markdown)
 
 
 def _yaml_text(value: str) -> str:
@@ -201,17 +248,6 @@ def _document_title(markdown: str) -> str | None:
     )
 
 
-def _contains_prose(markdown: str) -> bool:
-    for line in markdown.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped == "---" or _HEADING.match(stripped):
-            continue
-        if re.match(r"^[A-Za-z_][\w-]*:\s*", stripped):
-            continue
-        return True
-    return False
-
-
 def _join(prefix: str, markdown: str) -> str:
-    parts = [part for part in (prefix.strip(), markdown.strip()) if part]
+    parts = [part for part in (prefix.strip("\r\n"), markdown.strip("\r\n")) if part]
     return "\n\n".join(parts) + "\n"

@@ -57,6 +57,7 @@ _HTML_MEDIA_TYPES = frozenset({"application/xhtml+xml", "text/html"})
 _NAVIGATION_MEDIA_TYPES = frozenset({"application/x-dtbncx+xml"})
 _MAX_ARCHIVE_ENTRIES = 10_000
 _MAX_ARCHIVE_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
+MAX_EPUB_FILE_BYTES = 512 * 1024 * 1024
 _MAX_ARCHIVE_MEMBER_BYTES = 128 * 1024 * 1024
 _MAX_ARCHIVE_COMPRESSION_RATIO = 1_000
 _MAX_XML_BYTES = 10 * 1024 * 1024
@@ -332,7 +333,7 @@ def read_editable_epub_package(
     check_cancelled(cancellation)
     _validate_epub_container(source_path)
     try:
-        content = source_path.read_bytes()
+        content = read_epub_bytes(source_path)
         with ZipFile(BytesIO(content)) as archive:
             members = _validate_archive_limits(archive, source_path.name)
             opf_path = _read_rootfile_path(archive, members, source_path.name)
@@ -1851,11 +1852,23 @@ def _zip_member_digest(archive: ZipFile, filename: str) -> bytes:
 
 def _validate_epub_container(source_path: Path) -> None:
     try:
+        if source_path.stat().st_size > MAX_EPUB_FILE_BYTES:
+            raise ConversionError("El archivo EPUB supera el límite de 512 MB.")
         valid_container = is_zipfile(source_path)
     except OSError as exc:
         raise ConversionError(f"No se pudo abrir el EPUB {source_path.name}.") from exc
     if not valid_container:
         raise ConversionError(f"{source_path.name} no es un documento EPUB válido.")
+
+
+def read_epub_bytes(source_path: Path) -> bytes:
+    """Read an EPUB with a physical bound independent of its ZIP directory."""
+    _validate_epub_container(source_path)
+    with source_path.open("rb") as stream:
+        content = stream.read(MAX_EPUB_FILE_BYTES + 1)
+    if len(content) > MAX_EPUB_FILE_BYTES:
+        raise ConversionError("El archivo EPUB supera el límite de 512 MB.")
+    return content
 
 
 def _validate_epub_encryption(

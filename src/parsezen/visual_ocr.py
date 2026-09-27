@@ -11,7 +11,9 @@ from dataclasses import dataclass
 import httpx
 
 from parsezen.cancellation import CancellationToken, check_cancelled
+from parsezen.direct_models import direct_model_present
 from parsezen.errors import ImprovementError, LocalModelUnavailableError
+from parsezen.local_ai_client import LocalAiClient
 from parsezen.local_ai_transport import request_local_ai
 from parsezen.local_models import (
     OLLAMA_BASE_URL,
@@ -62,10 +64,8 @@ class LocalVisualTextArbiter:
             f"OCR candidate: {json.dumps(ocr_text, ensure_ascii=False)}"
         )
         try:
-            with httpx.Client(
+            with LocalAiClient(
                 timeout=self.timeout_seconds,
-                follow_redirects=False,
-                trust_env=False,
             ) as client:
                 response = request_local_ai(
                     client,
@@ -113,6 +113,10 @@ def build_local_visual_text_arbiter(
     graceful no-op because PDF conversion must not depend on the optional arbiter.
     """
 
+    if transport is None and preferred_model is not None and direct_model_present(preferred_model):
+        # The direct text-only runtime has no verified visual model. Never
+        # silently contact another service while processing in direct mode.
+        return None
     if not is_ollama_local_only_configured() and transport is None:
         return None
     try:

@@ -251,3 +251,72 @@ def test_heading_helpers_ignore_fences_and_invalid_edits() -> None:
     assert set_heading_level("   \n", 1, 2) == "   \n"
     with pytest.raises(ValueError, match="between 1 and 6"):
         set_heading_level(markdown, 1, 7)
+
+
+@pytest.mark.parametrize("position", [0, 4000, 7999])
+def test_nearly_identical_repeated_paragraphs_have_one_selectable_change(position, monkeypatch):
+    import parsezen.revision as module
+
+    real_matcher = module.SequenceMatcher
+
+    def bounded_matcher(*args, **kwargs):
+        assert len(kwargs["a"]) * len(kwargs["b"]) <= module._MAX_ALIGNMENT_PAIRS
+        return real_matcher(*args, **kwargs)
+
+    monkeypatch.setattr(module, "SequenceMatcher", bounded_matcher)
+    paragraph = (
+        "This paragraph contains a small typo and enough ordinary words to compare safely.\n\n"
+    )
+    blocks = [paragraph] * 8000
+    original = "".join(blocks)
+    blocks[position] = paragraph.replace("small typo", "minor typo")
+    proposed = "".join(blocks)
+    draft = build_revision_draft(original, proposed, kinds=frozenset({RevisionKind.CONTENT}))
+    assert len(draft.changes) == 1
+    assert draft.changes[0].proposal_selectable
+    assert draft.render({draft.changes[0].identifier: RevisionDecision.ACCEPTED}) == proposed
+    assert draft.render({draft.changes[0].identifier: RevisionDecision.REJECTED}) == original
+
+
+def test_large_alignment_keeps_every_block_in_order_with_bounded_work(monkeypatch):
+    import parsezen.revision as module
+
+    real_matcher = module.SequenceMatcher
+
+    def bounded_matcher(*args, **kwargs):
+        assert len(kwargs["a"]) * len(kwargs["b"]) <= module._MAX_ALIGNMENT_PAIRS
+        return real_matcher(*args, **kwargs)
+
+    monkeypatch.setattr(module, "SequenceMatcher", bounded_matcher)
+    cases = [
+        (["same", "old"] * 2000, ["same", "new"] * 2000),
+        (["old"] * 2000, ["new"] * 1999),
+        (["old"] * 2000, ["new"] * 2000),
+        (["same"] * 2000, ["same"] * 2000 + ["new"]),
+        ([], ["new"]),
+        (["old"], []),
+    ]
+    for original, proposed in cases:
+        opcodes = module._bounded_opcodes(original, proposed)
+        assert [item for _, start, end, _, _ in opcodes for item in original[start:end]] == original
+        assert [item for _, _, _, start, end in opcodes for item in proposed[start:end]] == proposed
+        for tag, start, end, other_start, other_end in opcodes:
+            if tag == "equal":
+                assert original[start:end] == proposed[other_start:other_end]
+
+
+def test_large_repetitive_single_paragraph_uses_bounded_word_comparison(monkeypatch):
+    import parsezen.revision as module
+
+    real_matcher = module.SequenceMatcher
+
+    def bounded_matcher(*args, **kwargs):
+        assert len(kwargs["a"]) * len(kwargs["b"]) <= module._MAX_ALIGNMENT_PAIRS
+        return real_matcher(*args, **kwargs)
+
+    monkeypatch.setattr(module, "SequenceMatcher", bounded_matcher)
+    original = "ordinary words repeat quietly " * 10000
+    proposed = original.replace("quietly", "softly", 1)
+    draft = build_revision_draft(original, proposed, kinds=frozenset({RevisionKind.CONTENT}))
+    assert draft.changes[0].proposal_selectable
+    assert draft.render({draft.changes[0].identifier: RevisionDecision.ACCEPTED}) == proposed

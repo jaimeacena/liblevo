@@ -1,0 +1,32 @@
+{
+  "cancelled_after_translation_progress": [
+    5,
+    40
+  ],
+  "cancelled_seconds": 18.289,
+  "intermediate_checkpoint_files": 24,
+  "premature_epub": false,
+  "resume_seconds": 29659.579,
+  "improvement_counts": [
+    [
+      40,
+      36,
+      4
+    ],
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      1,
+      1,
+      0
+    ]
+  ],
+  "source_unchanged": true,
+  "epub_zip_valid": true,
+  "navigation_present": true,
+  "missing_synthetic_numbers": [],
+  "semantic_quality_human_checked": false
+}

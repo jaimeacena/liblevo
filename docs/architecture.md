@@ -24,6 +24,26 @@ backlog ni un diario de experimentos. La orientación para agentes está en
 [`work-plan.md`](work-plan.md), y los criterios de publicación en
 [`acceptance-checklist.md`](acceptance-checklist.md).
 
+### Motor de IA para trabajos nuevos (26 de septiembre de 2026)
+
+La ventana principal usa el motor integrado `llama-cpp-python` con archivos GGUF locales: no consulta
+ni inicia Ollama para preparar o ejecutar nuevos trabajos. `direct_models.py` fija dos perfiles
+versionados de traducción y revisión con archivo, tamaño, SHA-256, contexto y adaptador de prompt.
+La tabla de perfiles conserva identidades anteriores, mientras `ACTIVE_DIRECT_MODEL_IDS` decide la
+versión ofrecida a trabajos nuevos. Así se puede evaluar otro LLM sin cambiar la cola, las guardas o
+el formato EPUB: se añade un perfil revisado, se cambia la selección activa después de validarlo y
+se añade un adaptador solo si cambia su contrato de petición. La identidad del motor directo difiere
+de la de Ollama para que sus checkpoints nunca se mezclen.
+
+`direct_ai_runtime.py` carga únicamente GGUF con digest verificado, limita tiempo y salida, transmite
+fragmentos al procesador y libera el modelo al terminar cada fase. La preparación puede copiar un
+blob local previamente instalado con Ollama o descargar el artefacto público fijo; valida tamaño y
+SHA-256 antes de publicar el archivo en la carpeta de modelos de Parsezen. Solo se transmite una
+petición de descarga del modelo público, nunca contenido documental. `improvement.py` elige el motor
+por la identidad guardada en el trabajo; la ruta Ollama se conserva para trabajos antiguos, pero no
+es una dependencia de los nuevos. Argos y OCR siguen siendo locales. La ruta directa no usa por ahora
+el árbitro visual opcional de Ollama para regiones ambiguas de PDF; esos casos deben revisarse.
+
 Para evitar releer todo el documento, se entra por la pregunta:
 
 | Pregunta | Sección |
@@ -86,6 +106,47 @@ solo cuando puede cambiar una decisión.
 
 ## Capas
 
+La evaluación de desarrollo se mantiene fuera del producto en `scripts/evaluate_app.py` y su página
+local de revisión. Usa el procesador real, planes congelados y resultados separados por versión;
+no introduce un juez de IA ni una aprobación semántica automática. El catálogo anterior no se importa
+ni se considera fiable por defecto. La revisión humana del original y de cada resultado es distinta
+de los contratos automáticos y de las observaciones de referencias pendientes de validar. El
+procedimiento y el formato del catálogo viven en `docs/evaluation.md`.
+
+La revisión presenta original y resultado legible lado a lado, con valoración y comentario por salida.
+`scripts/evaluation_preview.py` genera vistas pasivas de Markdown/HTML y hasta seis páginas del PDF
+seleccionado. Conserva tablas y énfasis mediante una lista permitida de etiquetas; elimina código,
+estilos y navegación del documento. Solo admite imágenes raster locales acotadas y regeneradas.
+Es una vista de lectura, no una reproducción exacta del CSS de EPUB ni del diseño de cualquier lector.
+Los formatos sin vista completa requieren un lector local o quedan como no evaluables.
+
+Si ambos resultados completos tienen el mismo archivo y todos sus recursos idénticos por huella,
+se presenta una sola valoración vinculada a ambos intentos. `human_review_units` cuenta los grupos
+revisados, sin hacer pasar una observación compartida por dos revisiones independientes. Las cuatro
+etiquetas no vienen marcadas; confirmar y copiar expresa la inspección, mientras un borrador queda
+sin confirmar. Los comentarios de hasta 2000 caracteres se guardan con el juicio privado y nunca
+se incluyen en el informe agregado. Se eliminan el campo de tiempo, las confirmaciones repetidas y
+la vista de código; copiar no transmite nada ni importa decisiones automáticamente.
+
+Los contratos de `pipeline/contracts.py` se pueden importar sin cargar los motores PDF, EPUB o IA.
+Los tipos usados solo en anotaciones se importan para el comprobador estático; `pipeline/__init__.py`
+expone contratos y los consumidores importan cada etapa desde su módulo propietario. Las llamadas
+de transformación a mejora y traducción usan sus firmas explícitas, incluidos callbacks y checkpoints.
+La solicitud conserva solo las vistas agrupadas de origen y publicación que consume la validación
+de lotes. Traducción, revisión y resultado usan sus campos directos; no hay proyecciones de migración
+sin consumidores ni se construye una proyección completa para consultar el informe de traducción.
+
+La lectura y validación de nuevas portadas pertenece a `cover_images.py`, compartida por el
+editor y `pipeline/publish.read_epub_cover`; la detección de daño
+que orienta la revisión pertenece a `revision.contains_conversion_damage`. Preparación y publicación
+no mantienen copias independientes de esas reglas. Las revisiones activas usan
+`presentation/phase_review_dialog.py` y el editor `presentation/book_editor_dialog.py`; las antiguas
+pantallas de revisión Markdown y su editor de divisiones desconectado han sido retirados.
+
+El entorno canónico y su variante CPU se fijan con hashes y se mantienen con el procedimiento de
+[`development.md`](development.md). La distribución incluye los gráficos generados y las fuentes;
+los maestros gráficos se conservan únicamente en el repositorio.
+
 ```text
 presentation/ ───────→ application/ ───────→ domain/
       │                      │
@@ -103,7 +164,7 @@ Las flechas representan dependencias de código, no una cadena de llamadas. Las 
 - `infrastructure` implementa persistencia local sin depender de presentación o aplicación;
 - `presentation` contiene todos los adaptadores Qt. `main_window.py` es además la raíz de composición
   que conecta los casos de uso con SQLite, artefactos e instantáneas;
-- los procesadores específicos siguen siendo módulos pequeños y directos. No existe una interfaz
+- los procesadores específicos conservan sus contratos propios. No existe una interfaz
   universal de conversión: PDF, DOCX y EPUB tienen invariantes diferentes y abstraerlos hoy ocultaría
   requisitos reales. En particular, EPUB permanece en `epub_conversion.py` y su reanudación en
   `epub_checkpoints.py`.
@@ -134,12 +195,18 @@ Los dos procesadores más grandes conservan una fachada estable, pero sus subsis
 propias ya no están mezclados:
 
 - `improvement.py` coordina fragmentos y revisión bilingüe; `improvement_contracts.py` contiene sus
-  tipos compartidos, `local_ai_transport.py` es el único transporte de transformación hacia Ollama y
+  tipos compartidos, `local_ai_transport.py` conserva el transporte heredado hacia Ollama y
+  `direct_ai_runtime.py` ejecuta el GGUF integrado; ambos entregan respuestas a las mismas guardas.
+  `direct_models.py` fija identidades y digest de los modelos directos. Por su parte,
   `ai_markdown_safety.py` protege, reconcilia y valida Markdown sin depender de red ni selección de
-  modelos;
+  modelos. `table_translation.py` concentra normalización y conservación de celdas ya traducidas;
+  `translation_review_patches.py` aplica propuestas acotadas bajo las guardas compartidas. Estos dos
+  módulos no llaman a modelos ni deciden cuándo pedir una traducción o revisión;
 - `pdf_conversion.py` coordina extracción, OCR y renderizado; `pdf_layout.py` contiene el modelo
   inmutable de página y `pdf_checkpoints.py` serializa y valida su reanudación sin abrir PDFs ni
-  invocar OCR.
+  invocar OCR. `pdf_tables.py` posee geometría, reconstrucción y representación de tablas;
+  `pdf_text_reconciliation.py` reconcilia texto nativo y evidencia OCR ya obtenida. Las decisiones
+  de selección de página y de invocación de OCR permanecen en el coordinador.
 
 El límite de dos millones de caracteres pertenece únicamente a las superficies interactivas de
 revisión. El análisis semántico determinista y el libro mayor de integridad no lo reutilizan: un PDF
@@ -149,8 +216,9 @@ IA permanecen independientes y se aplican antes de cualquier petición al modelo
 
 OCR y Argos conservan protocolos, límites y máquinas de estado independientes. Comparten únicamente
 las primitivas mecánicas de `workers/private_channel.py`: JSON acotado sin pickle, listener local
-autenticado, arranque oculto, espera cancelable y cierre terminate/kill. Esta pieza no conoce páginas,
-Markdown, diagnósticos ni resultados, y por tanto no constituye un framework común de workers.
+autenticado, arranque oculto, espera cancelable y cierre del árbol de procesos en Windows con respaldo
+terminate/kill. Esta pieza no conoce páginas, Markdown, diagnósticos ni resultados, y por tanto no
+constituye un framework común de workers.
 
 En presentación, `local_ai_workflow.py` posee tanto el estado visible como el flujo de descubrir,
 recomendar, instalar, seleccionar y borrar modelos. Recibe dependencias y callbacks tipados, conecta
@@ -190,11 +258,34 @@ contenido específico continúan en su pantalla.
 
 La configuración de IA local se presenta como dos filas compactas de capacidades fijas
 (`Traducción IA` y `Revisión IA`).
-`presentation/component_setup.py` solo proyecta estados evaluados por `component_readiness.py`:
-`Preparado`, `Descargable` o `Equipo insuficiente`. No lista modelos arbitrarios, no acepta tags ni
+`presentation/component_setup.py` solo proyecta estados evaluados por el catálogo directo o, para
+trabajos heredados, por `component_readiness.py`:
+`Preparado`, `Descargable` o un bloqueo explicado. Reserva `Equipo insuficiente` para límites de
+recursos; una verificación ausente o fallida muestra `Pendiente de comprobar`. En el recorrido nuevo,
+`LocalAIController` comprueba los GGUF y el motor integrado sin contactar Ollama; ofrece preparación
+con progreso y bloqueo de acciones repetidas. El controlador conserva acciones Ollama para el
+recorrido heredado. No lista modelos arbitrarios, no acepta tags ni
 endpoints y solo emite una solicitud de preparación; la descarga y la comprobación local pertenecen
 a los coordinadores externos. El diálogo admite un catálogo o una instantánea de estados explícitos
 para mantener la capa Qt fuera de la decisión de disponibilidad.
+
+La configuración conserva como borrador durable el idioma, rango y plan cuando solo falta la IA;
+el borrador no es procesable. Al verificar los componentes, también se actualiza la identidad de
+IA del editor abierto sin reemplazar sus elecciones. Volver desde la preparación valida y guarda
+ese borrador; elegir un idioma que necesita IA abre directamente su preparación.
+
+La revisión opcional conserva el fragmento anterior si la respuesta de IA está incompleta o no
+supera las guardas. No guarda esa respuesta como checkpoint válido: contabiliza la revisión no
+completada en el resultado durable y la muestra antes de publicar EPUB y en Actividad. Cancelar
+o perder la conexión siguen siendo situaciones recuperables explícitas. El adaptador LFM reserva
+4.096 tokens de generación, acotados a la mitad del contexto, para que el razonamiento previo no
+agote el presupuesto proporcional de una respuesta corta. No cambia el prompt ni el traductor.
+La cola no muestra 100 % mientras una fase sigue activa: los callbacks de fragmentos anuncian
+su inicio, y aún pueden quedar generación, comprobaciones o reparaciones.
+
+La hoja de estilo de los EPUB generados limita las imágenes de contenido al 85 % de la altura
+visible, además del ancho disponible, conservando su proporción y sus bytes. Evita que una imagen
+vertical exceda la página y provoque una página vacía en lectores paginados como Calibre.
 
 El shell tiene composiciones de escritorio, intermedia y compacta en 960 y 640 px, y todos los
 flujos esenciales aceptan reflow hasta 320 px. Una sola región superior muestra marca, destino y
@@ -206,6 +297,11 @@ reducir el ancho, agrupa herramientas secundarias en un menú en vez de introduc
 horizontal. El contrato, paleta y matriz de contraste están en `docs/ui-design-system.md`.
 
 ## Trabajo independiente
+
+La entrada de documentos interpreta `.md` y `.markdown` como el mismo formato Markdown. Al
+arrastrar varios elementos, la ventana incorpora los archivos locales compatibles, omite carpetas
+y formatos no admitidos y muestra cuántos se omitieron sin interrumpir los válidos. Esta validación
+de la interacción no cambia la recuperación de fuentes antiguas ausentes en una cola guardada.
 
 `DocumentJob` contiene:
 
@@ -227,7 +323,8 @@ fila de etiqueta, valor y chevron. Los documentos nuevos presentan
 `STANDARD`; una configuración guardada conserva su plan. IA local y OCR automático
 son valores iniciales. Traductor y glosario dependen del idioma; Páginas y OCR aparecen solo para
 PDF. El intervalo se edita en un diálogo efímero y la fila conserva únicamente su valor resumido.
-Solo Markdown y EPUB son resultados de producto. La página no incorpora scroll ni vuelve a
+Solo Markdown y EPUB son resultados de producto. La página solo desplaza verticalmente el contenido
+cuando la altura no permite mostrarlo completo; no vuelve a
 proyectar destino. Tampoco añade un resumen técnico permanente del recorrido: el interruptor conserva
 una descripción accesible y contextual sobre la corrección o verificación efectiva. La presentación
 no duplica reglas del procesador.
@@ -238,6 +335,27 @@ combinaciones independientes de corrección y estructura. Cada elección válida
 atómica la configuración del documento y se persiste inmediatamente; una elección incompleta por
 falta de IA conserva su valor visible y dirige a `Componentes de IA local` sin publicar una
 configuración inválida.
+
+La confirmación visible de guardado depende del resultado de la persistencia, no solo de la
+emisión de una señal. Un error deja un aviso explícito en la página. Al elegir un intervalo PDF,
+un trabajo Qt en segundo plano consulta el número real de páginas mediante el lector local existente;
+el cuadro limita ambos extremos y bloquea Aplicar si no puede verificar el archivo. Cuenta las
+páginas físicas, incluida la portada, y no interpreta la numeración impresa.
+
+`JobQueue.create_version` sustituye únicamente el puesto de un trabajo terminado por una identidad
+nueva con las mismas opciones. Conserva la unicidad de origen en cola. La ventana comprueba el
+original y persiste la nueva identidad antes de retirar el estado transitorio anterior; si falla,
+restaura la cola. No borra el resultado anterior ni la actividad y abre Configurar sin iniciar el
+procesamiento. El destino final sigue usando la política existente de nombres sin colisiones.
+
+La confirmación EPUB, el detalle de actividad y las revisiones mantienen acciones fuera de su
+contenido desplazable. Los títulos largos se abrevian deliberadamente, con nombre completo accesible.
+Idioma se presenta con nombres conservando la etiqueta del libro, incluidas variantes regionales.
+La comparación visual separa selección provisional y decisiones confirmadas; resalta diferencias
+solo en corrección/estructura y hasta 4.000 caracteres por versión, sin cambiar el texto ni las
+decisiones. El editor compacto usa un selector de capítulo y organización desplegable. Su vista de
+índice reutiliza las reglas de navegación de publicación mediante `preview_book_navigation`, sin
+generar un EPUB ni promover encabezados a capítulos nuevos.
 
 La revisión adicional es una decisión reversible y nunca se aplica a configuraciones ya guardadas ni
 a trabajos nuevos sin que la persona la active. La evaluación local no demostró recall suficiente
@@ -581,7 +699,11 @@ puede guardar la instantánea, la revisión sigue disponible en memoria y la int
 podrá recuperarse tras cerrar.
 
 `ReviewFinalizationCoordinator` valida todas las decisiones aprobadas antes de escribirlas, completa
-el trabajo y elimina después el material temporal cifrado. Un fallo de limpieza posterior no
+el trabajo en memoria y confirma en `StateStore` el estado completado y la ruta final antes de
+eliminar material temporal cifrado. Si esa confirmación falla, restaura la proyección anterior y
+conserva el borrador y la instantánea para reintentar; el archivo ya publicado sigue intacto.
+Una interrupción anterior a la confirmación mantiene revisión recuperable; una posterior mantiene
+un resultado final reconocido aunque quede material por limpiar. Un fallo de limpieza posterior no
 convierte un resultado ya publicado en error; queda registrado para el mantenimiento seguro del
 siguiente arranque. La ventana solo presenta el resultado y los avisos de estos coordinadores.
 
@@ -606,6 +728,29 @@ persistible solo contiene controles y contadores estructurales, nunca texto ni r
 de `output` ejecutan esta comprobación después de sincronizar el temporal y antes del enlace o
 reemplazo atómico; una diferencia conserva intacto el resultado anterior.
 
+La exportación Markdown por capítulos conserva el preámbulo completo en el índice. Sus cortes
+proceden de encabezados de primer nivel de anidamiento reconocidos por CommonMark, sin interpretar
+como capítulos el código ni las citas. Antes de aplicar metadatos, referencias de página o rutas,
+la concatenación del preámbulo y las partes debe ser idéntica al texto canónico. `output` vuelve a
+leer el índice y cada capítulo y exige bytes idénticos al plan materializado; solo entonces aplica
+el contrato del contenido aprobado. Comprobar una copia del canónico por sí sola no valida esta
+exportación derivada. Esta barrera cubre conversión, mejora y publicación de una revisión.
+
+Los destinos relativos ordinarios se trasladan un nivel, incluidos `./` y `../`, también cuando hay
+imágenes extraídas. Los marcadores de recursos se materializan una única vez. El cambio de rutas
+debe conservar la representación CommonMark salvo los destinos previstos. Si esto no se puede
+demostrar, o hay enlaces a fragmentos, referencias compartidas, enlaces HTML o un bloque inicial de
+metadatos YAML, se conserva el documento único. No se inventan identificadores de encabezados
+dependientes del lector Markdown.
+
+Al reemplazar una publicación dividida, cada revisión prepara una carpeta nueva
+`<resultado>.chapters-<identificador aleatorio>`. La carpeta anterior permanece disponible hasta
+reemplazar atómicamente el índice, que actúa como punto de publicación. Después solo se retiran los
+archivos de capítulos reconocibles que enlazaba el índice anterior y su carpeta si queda vacía;
+no se borran archivos ajenos ni se recorren generaciones huérfanas. Un cierre abrupto puede dejar
+una carpeta sin uso, pero el índice conserva una generación completa. Esta garantía cubre la
+interrupción del proceso; no acredita durabilidad frente a un fallo físico del almacenamiento.
+
 Los fallos atraviesan el límite del trabajador como `ProcessingFailure`, con una clasificación
 estable y un detalle efímero para la interfaz actual. Ese detalle nunca se copia al historial;
 `recovery_plan` deriva la explicación y las acciones válidas:
@@ -619,6 +764,16 @@ una fase que estaba ejecutándose pasa a pausa segura, y una revisión cuyo mate
 reinicia sin presentar resultados parciales como finales.
 
 ## Revisión por fase
+
+`build_revision_draft` mantiene el límite de entrada y devuelve directamente una revisión sin
+cambios cuando ambos textos son idénticos. Para documentos distintos recorta prefijos y sufijos
+iguales antes de alinear el centro, evitando interpretar una sustitución local entre párrafos
+repetidos como inserción y borrado. La alineación de bloques y la similitud de palabras limitan
+`SequenceMatcher` a 100.000 parejas por intervalo. Los intervalos mayores del mismo tamaño usan
+coincidencias en la misma posición; los huecos ambiguos permanecen como sustituciones conservadoras.
+No se descartan repeticiones como ruido ni se relajan las guardas compartidas: los cambios dudosos
+pueden quedar rechazados. Esta cota cubre también la reconstrucción de instantáneas al arrancar.
+
 
 `ReviewSession` pertenece a un trabajo, una fase y una revisión de configuración. Sus unidades
 referencian artefactos inmutables:
@@ -1143,8 +1298,27 @@ fragmentos posteriores cuyo contenido no cambió.
 
 ## Conversión PDF
 
+Antes de cargar Docling, `ocr_dependency_guard.py` desactiva las dos entradas de Accelerate que
+cargan checkpoints arbitrarios y todos sus alias públicos conocidos. El pipeline OCR de Parsezen
+no las utiliza. La protección también se instala en la comprobación del paquete; su alcance y la
+excepción temporal versionada se definen en [seguridad de dependencias](dependency-security.md).
+
+
+`pdf_conversion.py` conserva la entrada pública y las decisiones de orquestación. Las reglas de
+geometría, límites, reconstrucción y representación de tablas viven en `pdf_tables.py`. La
+normalización del texto nativo y la reconciliación corroborada de cifras, índices y espaciado con
+OCR viven en `pdf_text_reconciliation.py`. Las tablas comparten sus primitivas de texto y los tipos
+inmutables de `pdf_layout.py`; ninguno de esos módulos llama al orquestador ni al motor OCR.
+Las extracciones conservan los cuerpos de las reglas y los puntos de entrada existentes: mover una
+regla no autoriza cambiar umbrales ni interpretar texto sin respaldo del documento.
+
 La extracción nativa mantiene geometría de caracteres y líneas. Reconstruye palabras con tracking
-artificial a partir de distancias relativas, separa líneas que contienen columnas incluso cuando el
+artificial a partir de distancias relativas. Una pareja de letras iniciales aisladas se reúne solo
+si la primera es mayúscula, la segunda minúscula de tamaño reducido, comparten línea base y su
+distancia es pequeña y como máximo la mitad del espacio hasta la palabra siguiente, cuyo tamaño
+recupera el de la primera letra. No usa sustituciones por palabra ni cambia el resto de separadores;
+conserva pares sin esa evidencia. La identidad de reanudación PDF invalida extracciones anteriores
+a esta reparación. La extracción separa líneas que contienen columnas incluso cuando el
 canal entre ellas es moderado y ordena de dos a cuatro bandas contiguas sin mover títulos, pies o
 separadores de ancho completo. En una página de índice, una columna de folios separada se vuelve a
 asociar por fila con sus entradas antes de retirar márgenes o ruido: exige al menos tres pares, una
@@ -1199,14 +1373,39 @@ ordinal ausente; sin ese consenso, el texto nativo permanece intacto.
 
 Las enumeraciones nativas solo se convierten en listas ordenadas cuando una página contiene al menos
 tres ordinales consecutivos que comienzan en uno y mantienen marcador, sangría, tamaño y proximidad
-visual. Las líneas siguientes se incorporan al mismo ítem únicamente con una sangría colgante
+visual. Una pareja 1–2 también se admite con esas guardas si la línea inmediatamente anterior
+termina en dos puntos y está próxima y alineada. Las líneas siguientes se incorporan al mismo ítem únicamente con una sangría colgante
 explícita; los años, párrafos numerados aislados, índices y secciones distantes permanecen como texto.
 Si el espaciado tipográfico fragmenta el rótulo anterior a dos puntos, sus fragmentos se recomponen
 solo cuando la palabra completa aparece también como evidencia nativa en esa página. Una cursiva o
 negrita común a varias líneas se mantiene como un único tramo para no crear marcadores Markdown en
 medio de una palabra partida.
+Una continuación en minúscula, de tamaño compatible y todavía partida con guion, no se trata como
+título si continúa otra palabra partida de prosa y no tiene un nivel explícito de índice. Así se
+conservan sus tramos de énfasis antes de unirlos; no se reconstruye negrita a partir del contenido.
 
 Los folios nativos aislados se retiran tanto del margen superior como del inferior. La detección
+inferior reconoce además una etiqueta breve en cursiva, centrada y aislada, cuando comparte la
+última fila con un folio decimal exterior separado. Admite cifras dentro de la etiqueta, pero exige
+que empiece por letras; una cifra inicial no se acepta mediante esta regla. Usa geometría de esa
+misma página, sin exigir repetición ni leer páginas adicionales. Conserva etiquetas con enlaces o nivel de índice, notas
+marcadas, filas ambiguas, índices y texto con continuación inferior. No elimina palabras por nombre.
+El patrón anterior de número y texto no elimina frases terminadas en puntuación de cierre, para
+evitar confundir una nota breve numerada con un rótulo. Estas reglas son conservadoras; no acreditan
+la detección universal de cabeceras o pies.
+
+Al recomponer prosa nativa dentro de una página, una línea que sigue a una frase cerrada y se
+desplaza a la derecha más que el mayor tamaño entre cuerpo y línea anterior inicia otro párrafo.
+La sangría se mide respecto a la tipografía, no como porcentaje del ancho de página. Los pequeños
+desajustes y las continuaciones sin cierre de frase siguen uniéndose; los criterios independientes
+para palabras partidas y continuidad entre páginas no cambian. Es una señal geométrica conservadora,
+no una detección semántica universal de párrafos.
+Además, fuera de índices, al menos tres continuaciones de prosa en la misma columna y tamaño
+permiten estimar el espacio normal entre líneas. Se usa la mediana y una tolerancia que incluye su
+dispersión; un espacio claramente mayor tras cierre de frase, cita o introducción con dos puntos
+separa párrafos aunque la sangría sea pequeña. Sin suficientes continuaciones, esta señal no actúa.
+No se cambia la regla entre páginas ni se insertan saltos para cada línea visual del PDF.
+La detección
 superior acepta además una banda exterior más profunda para numeraciones alternas de páginas pares
 e impares y encabezados no centrados donde el folio aparece unido a una etiqueta de capítulo, pero
 no números centrados que puedan identificar una sección. El folio puede preceder la etiqueta o
@@ -1369,9 +1568,21 @@ las páginas opcionales que siguen fallando se marcan como poison pages. Las pá
 pendientes continúan bloqueando la conversión; ambas clases quedan separadas en el informe sin
 introducir texto documental en el historial.
 
+En páginas con lectura completa forzada, `ocr_conversion` intenta primero la ruta de imagen cuyo
+resultado antes sustituía a la pasada PDF. Solo prepara la pasada PDF para páginas vacías o fallidas;
+las páginas normales mantienen PDF primero y recuperación por imagen cuando falta resultado.
+Se conserva la cancelación y la emisión única de resultados por página. Un error no produce un
+checkpoint negativo; un resultado PDF útil sirve de respaldo si la imagen falla o está vacía.
+Esto evita cargar ambos pipelines cuando basta el de imagen, sin cambiar los motores ni sus opciones.
+El checkpoint OCR v5 conserva resultados v4 no vacíos y reintenta los antiguos vacíos, que pudieron
+ocultar un respaldo PDF útil. Los vacíos comprobados por el flujo actual siguen siendo reutilizables;
+la extracción nativa y las páginas positivas no se invalidan por este cambio.
+
 Una muestra proporcional de hasta el 25 % del intervalo y un máximo de seis páginas con imagen
-completa y capa textual útil también pasa por OCR cuando contiene índices, tablas, fórmulas, muchas
-cifras o codificaciones sospechosas. El OCR no
+completa y capa textual útil también pasa por OCR cuando contiene índices, fórmulas, muchas cifras,
+codificaciones sospechosas o una tabla cuya estructura nativa no sea fiable. Una tabla nativa explícita
+con texto abundante, buena legibilidad, sin glifos sospechosos y sin inferencia raster evita esa segunda
+lectura completa: repetir un OCR de varios minutos no añade evidencia proporcional. El OCR no
 sustituye por ello la capa nativa: actúa como evidencia de auditoría. Solo esas páginas inciertas se
 leen además con PDFium como segunda implementación nativa; una grafía OCR se acepta directamente
 cuando PDFium coincide exactamente y supera las mismas guardas conservadoras.
@@ -1427,6 +1638,10 @@ Cada bloque Markdown conserva una provenance interna con sus páginas de origen.
 párrafo entre páginas solo se permite cuando la primera línea termina cerca del margen inferior,
 la siguiente empieza cerca del margen superior en minúscula, mantiene columna y tamaño tipográfico
 y no hay una frontera de frase; encabezados, listas y tablas no se reconcilian por esta vía.
+En una continuación nativa confirmada entre páginas consecutivas, la marca de página intermedia
+permanece en línea dentro del párrafo unido y se acumulan ambas páginas de origen. La marca no crea
+un párrafo vacío en la salida publicada. Anclas, avisos y otros bloques intermedios siguen siendo
+fronteras; las palabras partidas con guion conservan su tratamiento específico anterior.
 
 En páginas gráficas completas, el reconocimiento puede incluir letras decorativas o marcas diminutas
 aisladas. Antes de limpiar el Markdown se descartan solo las líneas de una a cuatro letras cuya altura
@@ -1472,6 +1687,17 @@ reparación. El checkpoint OCR no se modifica: el consenso se aplica únicamente
 
 ## Libro normalizado y EPUB
 
+Los EPUB de entrada tienen un límite físico de 512 MiB antes de analizar su directorio ZIP; las
+rutas que necesitan sus bytes acotan también la lectura para cubrir un crecimiento concurrente.
+Los límites internos de miembros, descompresión y XML se mantienen.
+
+Las nuevas portadas se leen con un límite de 20 MiB, se comprueba su formato real y se decodifican
+antes de almacenarlas o publicarlas. Las imágenes raster deben ser estáticas y no superar 16
+millones de píxeles. SVG admite vectores autocontenidos con XML protegido y hasta 10.000 elementos,
+sin scripts, animaciones ni referencias externas. Se conservan los bytes de una imagen aceptada;
+esta validación no reescribe los recursos binarios ya presentes en un EPUB de origen.
+
+
 `BookDocument` desacopla el editor del origen:
 
 - metadatos;
@@ -1494,6 +1720,15 @@ crear copias temporales sin protección. Todo resultado EPUB pasa primero por
 `EpubConfirmationDialog`: muestra los datos esenciales, la portada y el número de capítulos. Desde
 ahí se publica directamente o se solicita el editor completo; un bloqueo conserva el borrador para
 revisión en vez de publicar.
+
+El editor compara el cuerpo representado por Qt con su estado inicial antes de guardar: abrir,
+navegar, cambiar zoom o editar solo metadatos no vuelve a serializar el XHTML del capítulo. Una
+lista conservadora limita qué elementos, atributos y estilos se pueden editar. MathML, SVG,
+cabeceras semánticas de tabla, roles EPUB, clases CSS y otros elementos no representables dejan el
+capítulo en una vista simplificada de solo lectura con aviso; el artefacto original se conserva.
+Se deshabilitan formato y división en esa vista, y el guardado rechaza también una modificación
+programática. Los metadatos y la organización del libro siguen disponibles. Renombrar guarda antes
+la edición de texto pendiente.
 
 La planificación Markdown→EPUB usa la clasificación de preliminares e índice. Los títulos del
 índice se normalizan y se comparan con encabezados reales; esas coincidencias y los patrones de
@@ -1552,10 +1787,39 @@ los recursos.
 
 Tanto la confirmación como el editor ofrecen `Guardar y salir`. La primera conserva los metadatos;
 el segundo guarda además portada, estructura y sección visible. Escape, volver y el rechazo externo
-siguen el camino recuperable. `Descartar cambios` en el editor solo abandona sin guardar después de
-confirmar cuando el borrador está sucio; ninguna salida modifica el original.
+siguen el camino recuperable. Los diálogos reciben del coordinador una función de persistencia:
+solo se cierran tras confirmar el guardado durable. Un fallo mantiene la página abierta con sus
+cambios para reintentar. La misma confirmación protege la salida hacia publicación y la apertura
+del editor desde la confirmación ligera. Cerrar la aplicación guarda primero el editor activo;
+si falla, el cierre no continúa. Una escritura pendiente de la cola exige confirmación al cerrar,
+incluso con todos los trabajos completados. `Descartar cambios` en el editor solo abandona sin
+guardar después de confirmar cuando el borrador está sucio; ninguna salida modifica el original.
 
 ## Persistencia
+
+El arranque normal adquiere un `QLockFile` por perfil antes de construir la ventana y leer o
+modificar su cola. `presentation/desktop_instance.py` mantiene el bloqueo durante toda la sesión;
+un segundo arranque activa la ventana existente mediante un canal local del usuario y no construye
+otra cola. Un proceso muerto permite recuperar el bloqueo, pero una conversión larga no lo caduca.
+El smoke de empaquetado usa un perfil temporal independiente.
+
+Los guardados conservan el orden síncrono exigido por las instantáneas y sus claves foráneas.
+Cada conexión SQLite espera como máximo 50 ms por contención, en vez de 15 segundos. Un fallo
+mantiene los cambios y eventos pendientes, muestra recuperación no disponible y reintenta desde
+el temporizador; entre reintentos ordinarios pasa al menos un segundo. Una acción que exige
+persistencia puede forzar el intento. Esto acota la espera por bloqueo de SQLite, sin prometer un
+límite universal ante disco averiado o descifrado de grandes artefactos.
+
+
+La recuperación de una generación de revisión lee y descifra cada texto compartido una sola vez.
+La reutilización vive únicamente dentro de esa carga: otra recuperación vuelve a validar sus
+artefactos y no recibe texto de una caché global.
+
+`StateStore.replace_jobs` compara la proyección completa con las filas persistidas y escribe solo
+los trabajos nuevos o modificados. Las posiciones temporales se reservan para los trabajos que
+cambian de orden; los retirados liberan su posición dentro de la misma transacción. La comparación
+sigue recorriendo y serializando la cola, sin una caché que pueda ocultar cambios del almacén.
+Trabajos, orden y eventos conservan la atomicidad y las revisiones de los trabajos retenidos.
 
 SQLite usa WAL, `synchronous=FULL`, claves foráneas y transacciones:
 
@@ -1664,9 +1928,23 @@ añade cifrado de SQLite sin diseñar primero índices, migración y recuperaci�
 
 En el streaming de Ollama, el timeout de lectura de `httpx` limita la inactividad entre datos; no es
 un reloj total de la respuesta. El transporte admite además un límite total explícito e independiente
-para consumidores que lo necesiten. Al no configurarlo, una generación activa puede durar más que el
-timeout de lectura sin ser tratada como bloqueada; `num_predict` y el límite de salida siguen acotando
-su tamaño.
+para consumidores que lo necesiten. Sin un valor explícito, deriva un presupuesto total acotado del
+timeout de lectura. Una generación activa puede durar más que el timeout de lectura sin ser tratada
+como bloqueada; `num_predict` y el límite de salida siguen acotando su tamaño.
+`local_ai_client.py` posee un bucle asíncrono y un pool por fase, detrás de una entrada síncrona
+para el trabajador. La cancelación se comprueba cada 50 ms y el plazo total incluye la espera de
+cabeceras y de líneas incompletas. Antes de regresar se cancela y espera la solicitud, cerrando la
+conexión. Cada línea NDJSON admite como máximo seis veces el límite de caracteres de salida más
+64 KiB de envoltura, y el flujo completo el doble de ese límite; se comprueba antes de decodificar.
+La liberación final del modelo tiene un presupuesto independiente de 500 ms. Las métricas conservan
+el contexto del documento que hizo cada llamada, aunque se reutilice el cliente.
+
+Tanto `/api/chat` como `/api/generate` exigen el evento terminal `done: true`. El motivo `length`
+rechaza la respuesta truncada; solo se admite `stop` o la ausencia de motivo para respuestas que no
+incluyen ese campo opcional. EOF sin evento terminal, motivos desconocidos y errores del servidor
+producen errores locales sin copiar su contenido. El evento terminal cierra la lectura y conserva
+su fragmento final; únicamente una finalización válida registra métricas de éxito o entrega texto
+a las guardas y checkpoints superiores.
 
 Los errores inesperados del ejecutor físico se registran únicamente por tipo técnico. No se incluyen
 mensajes de excepción, rutas ni contenido documental; el usuario recibe un mensaje estable y seguro.
@@ -1678,7 +1956,7 @@ mantiene coste y alturas estables al crecer la cola.
 
 El sistema visual se centraliza en `presentation/design_system.py`:
 
-- temas oscuro (predeterminado) y claro con tokens compartidos;
+- temas oscuro y claro con tokens compartidos; la preferencia predeterminada sigue al sistema;
 - superficies, bordes y estados semánticos;
 - espaciado, radios, controles e iconos;
 - Inter incluida bajo OFL;

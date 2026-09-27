@@ -5,12 +5,14 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
-
-import httpx
+from typing import Any
 
 from parsezen.cancellation import CancellationToken
 from parsezen.component_catalog import REVIEW_MODEL_NAME, TRANSLATION_MODEL_NAME
+from parsezen.direct_ai_runtime import DirectAiClient
+from parsezen.direct_models import direct_profile
 from parsezen.errors import ImprovementError
+from parsezen.local_ai_client import LocalAiClient
 from parsezen.local_ai_transport import (
     LocalAiMetrics,
     release_local_ai_model,
@@ -34,7 +36,7 @@ _MILMMT_LANGUAGE_NAMES = {
 
 
 def request_adapted_local_ai(
-    client: httpx.Client,
+    client: LocalAiClient | DirectAiClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -60,13 +62,19 @@ def request_adapted_local_ai(
     """
 
     normalized_model = model.casefold()
-    if normalized_model == TRANSLATION_MODEL_NAME.casefold() and image is None:
+    profile = direct_profile(model)
+    if profile is not None and not isinstance(client, DirectAiClient):
+        raise ImprovementError("El modelo directo necesita el motor local integrado.")
+    adapter = profile.prompt_adapter if profile is not None else None
+    if (
+        adapter == "hymt-translation-v1" or normalized_model == TRANSLATION_MODEL_NAME.casefold()
+    ) and image is None:
         target_name = _MILMMT_LANGUAGE_NAMES.get((target_language_code or "").casefold())
         if target_name is None:
             raise ImprovementError("Hy-MT2 necesita un idioma de destino compatible.")
         if json_response:
             raise ImprovementError("Hy-MT2 no admite respuestas JSON agrupadas.")
-        response = request_local_ai_raw(
+        response = _request_raw(
             client,
             model,
             context_window,
@@ -81,17 +89,20 @@ def request_adapted_local_ai(
             top_k=20,
         )
         return _strip_outer_markdown_fence(response).strip()
-    if normalized_model == REVIEW_MODEL_NAME.casefold() and image is None:
+    if (
+        adapter == "lfm-review-v1" or normalized_model == REVIEW_MODEL_NAME.casefold()
+    ) and image is None:
         expected_characters = (
             len(document_fragment) if prediction_characters is None else prediction_characters
         )
-        response = request_local_ai_raw(
+        response = _request_raw(
             client,
             model,
             context_window,
             _lfm_review_prompt(instructions, document_fragment),
             cancellation,
             prediction_characters=expected_characters + _LFM_REASONING_OVERHEAD_CHARACTERS,
+            minimum_prediction_tokens=4_096,
             max_generation_seconds=max_generation_seconds,
             operation=operation,
             on_metrics=on_metrics,
@@ -102,6 +113,8 @@ def request_adapted_local_ai(
         )
         needs_json = json_response or operation in {"translation_review", "translation_repair"}
         return _extract_json_response(normalized) if needs_json else normalized
+    if isinstance(client, DirectAiClient):
+        raise ImprovementError("El modelo local elegido no admite esta operación.")
     return request_local_ai(
         client,
         model,
@@ -118,9 +131,24 @@ def request_adapted_local_ai(
     )
 
 
-def release_adapted_local_ai_model(client: httpx.Client, model: str) -> bool:
+def _request_raw(
+    client: LocalAiClient | DirectAiClient,
+    model: str,
+    context_window: int,
+    prompt: str,
+    cancellation: CancellationToken | None,
+    **options: Any,
+) -> str:
+    if isinstance(client, DirectAiClient):
+        return client.generate_raw(model, context_window, prompt, cancellation, **options)
+    return request_local_ai_raw(client, model, context_window, prompt, cancellation, **options)
+
+
+def release_adapted_local_ai_model(client: LocalAiClient | DirectAiClient, model: str) -> bool:
     """Unload a specialized phase model; generic models keep their legacy lifecycle."""
 
+    if isinstance(client, DirectAiClient):
+        return direct_profile(model) is not None
     normalized_model = model.casefold()
     if normalized_model not in {
         REVIEW_MODEL_NAME.casefold(),

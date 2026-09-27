@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections import Counter
 
 from parsezen.domain.jobs import DocumentFormat, DocumentJob, ReviewRecommendation, ReviewSignal
@@ -15,6 +14,7 @@ from parsezen.pipeline.transform import (
     review_block_fingerprint,
     review_scope_fingerprint,
 )
+from parsezen.revision import contains_conversion_damage
 from parsezen.semantic_blocks import SemanticBlock, SemanticRole, analyze_markdown
 from parsezen.translation_quality import (
     TranslationIssueKind,
@@ -54,7 +54,7 @@ def recommend_targeted_review(result: ProcessResult) -> ReviewRecommendation | N
     selected: set[int] = set()
     counts: Counter[ReviewSignal] = Counter()
 
-    damaged = tuple(block for block in reviewable if _contains_conversion_damage(block.markdown))
+    damaged = tuple(block for block in reviewable if contains_conversion_damage(block.markdown))
     if damaged:
         selected.update(review_indexes[block.position] for block in damaged)
         counts[ReviewSignal.CONVERSION_DAMAGE] += len(damaged)
@@ -232,14 +232,4 @@ def _review_index_for_issue(
             if block.position == target_position
         ),
         None,
-    )
-
-
-def _contains_conversion_damage(markdown: str) -> bool:
-    visible = re.sub(r"<!--[\s\S]*?-->", "", markdown)
-    return bool(
-        "\ufffd" in visible
-        or re.search(r"(?i)\b(?:aviso|warning)\s+OCR\b", visible)
-        or re.search(r"\b(?:[^\W\d_]\s+){5,}[^\W\d_]\b", visible)
-        or re.search(r"(?i)\b([^\W\d_]{3,})(?:\s+\1){2,}\b", visible)
     )

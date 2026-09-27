@@ -1,0 +1,12 @@
+{
+  "case": "DIRECT-UI-02",
+  "result": "PASS",
+  "checks": {
+    "translation_prepared": true,
+    "direct_identity": true,
+    "screenshot_saved": true,
+    "discovery_finished": true
+  },
+  "human_visual_acceptance": false,
+  "personal_documents_loaded": false
+}

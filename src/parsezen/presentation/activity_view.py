@@ -15,11 +15,14 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QLabel,
+    QLayout,
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSplitter,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -60,11 +63,10 @@ _EVENT_STATUS_LABELS = {
 _REUSABLE_WORK_LABELS = {
     ReusableWork.NONE: "No se conservó trabajo reutilizable de este intento.",
     ReusableWork.PREPARATION_CHECKPOINTS: (
-        "Los checkpoints válidos de preparación se conservan y se reutilizarán al reintentar."
+        "El trabajo de preparación guardado se reutilizará al reintentar."
     ),
     ReusableWork.PREVIOUS_PHASES: (
-        "Las fases anteriores y sus checkpoints válidos se conservan y se reutilizarán al "
-        "reintentar."
+        "El trabajo válido de las fases anteriores se conserva para reintentar."
     ),
 }
 
@@ -77,6 +79,7 @@ class ActivityView(QWidget):
     return_to_document_requested = Signal(str)
     diagnostic_copied = Signal()
     clear_requested = Signal()
+    compact_breakpoint = 760
 
     def __init__(
         self,
@@ -110,6 +113,7 @@ class ActivityView(QWidget):
         description.setWordWrap(True)
         description.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         root.addWidget(description)
+        description.setVisible(allow_clear)
 
         self.panels = QSplitter(Qt.Orientation.Horizontal, self)
         self.panels.setObjectName("activityPanels")
@@ -150,12 +154,26 @@ class ActivityView(QWidget):
 
         self.details = QFrame(self.panels)
         self.details.setObjectName("activityDetails")
-        details_layout = QVBoxLayout(self.details)
+        outer_details_layout = QVBoxLayout(self.details)
+        outer_details_layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
+        self.details_scroll = QScrollArea(self.details)
+        self.details_scroll.setWidgetResizable(True)
+        self.details_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.details_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.details_scroll.setAccessibleName(
+            "Detalle del resultado; desplázate para leerlo completo"
+        )
+        details_content = QWidget()
+        details_content.setMinimumWidth(0)
+        self.details_scroll.setWidget(details_content)
+        outer_details_layout.addWidget(self.details_scroll, 1)
+        details_layout = QVBoxLayout(details_content)
+        details_layout.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
         details_layout.setContentsMargins(
-            SPACING.lg,
-            SPACING.md,
-            SPACING.lg,
-            SPACING.md,
+            0,
+            0,
+            SPACING.sm,
+            0,
         )
         details_layout.setSpacing(SPACING.sm)
         self.details_title = QLabel(self.details)
@@ -169,6 +187,18 @@ class ActivityView(QWidget):
         self._make_selectable(self.details_status)
         details_layout.addWidget(self.details_status)
 
+        self.result_overview = QLabel(details_content)
+        self.result_overview.setObjectName("activityOverview")
+        self.result_overview.setWordWrap(True)
+        self._make_selectable(self.result_overview)
+        details_layout.addWidget(self.result_overview)
+        self.summary_details_button = QToolButton(details_content)
+        self.summary_details_button.setText("Ver detalles del proceso")
+        self.summary_details_button.setCheckable(True)
+        self.summary_details_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.summary_details_button.setArrowType(Qt.ArrowType.RightArrow)
+        details_layout.addWidget(self.summary_details_button)
+
         self.details_summary = QLabel(self.details)
         self.details_summary.setObjectName("activitySummary")
         self.details_summary.setWordWrap(True)
@@ -179,6 +209,7 @@ class ActivityView(QWidget):
             QSizePolicy.Policy.Preferred,
         )
         details_layout.addWidget(self.details_summary)
+        self.summary_details_button.toggled.connect(self._toggle_summary_details)
 
         self.failure_heading = QLabel("Qué ocurrió", self.details)
         self.failure_heading.setObjectName("activityFailureHeading")
@@ -257,7 +288,7 @@ class ActivityView(QWidget):
         self.actions_layout.addWidget(self.copy_diagnostic_button, 0, 3)
         self.actions_layout.setColumnStretch(4, 1)
         self.actions_layout.addWidget(self.clear_button, 0, 5)
-        details_layout.addLayout(self.actions_layout)
+        outer_details_layout.addLayout(self.actions_layout)
 
         self.copy_feedback = QLabel(self.details)
         self.copy_feedback.setObjectName("activityFeedback")
@@ -265,7 +296,7 @@ class ActivityView(QWidget):
         self._make_selectable(self.copy_feedback)
         self.copy_feedback.hide()
         self._feedback_timer.timeout.connect(self.copy_feedback.hide)
-        details_layout.addWidget(self.copy_feedback)
+        outer_details_layout.addWidget(self.copy_feedback)
 
         self.panels.addWidget(self.details)
         self.panels.setStretchFactor(0, 0)
@@ -277,6 +308,11 @@ class ActivityView(QWidget):
         # a compact minimum width before its first show/resize event.
         self.set_compact_mode(True)
         self.set_jobs(jobs)
+        if not allow_clear:
+            self.history_panel.hide()
+        for label in details_content.findChildren(QLabel):
+            label.setMinimumWidth(0)
+            label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Minimum)
 
     @property
     def jobs(self) -> tuple[RecentJob, ...]:
@@ -327,15 +363,17 @@ class ActivityView(QWidget):
             self.actions_layout.removeWidget(widget)
         if compact:
             self.panels.setOrientation(Qt.Orientation.Vertical)
-            self.panels.setSizes((190, 430))
+            self.history_panel.setMaximumHeight(150)
+            self.panels.setSizes((140, 430))
             self.actions_layout.addWidget(self.open_button, 0, 0)
-            self.actions_layout.addWidget(self.folder_button, 0, 1)
-            self.actions_layout.addWidget(self.return_button, 0, 0, 1, 2)
-            self.actions_layout.addWidget(self.copy_diagnostic_button, 1, 0, 1, 2)
-            self.actions_layout.addWidget(self.clear_button, 2, 0, 1, 2)
+            self.actions_layout.addWidget(self.folder_button, 1, 0)
+            self.actions_layout.addWidget(self.return_button, 0, 0)
+            self.actions_layout.addWidget(self.copy_diagnostic_button, 1, 0)
+            self.actions_layout.addWidget(self.clear_button, 2, 0)
             self.actions_layout.setColumnStretch(2, 0)
             self.actions_layout.setColumnStretch(4, 0)
         else:
+            self.history_panel.setMaximumHeight(16777215)
             self.panels.setOrientation(Qt.Orientation.Horizontal)
             self.panels.setSizes((360, 920))
             self.actions_layout.addWidget(self.open_button, 0, 0)
@@ -382,15 +420,60 @@ class ActivityView(QWidget):
             self._show_non_failure_details(job)
 
     def _show_non_failure_details(self, job: RecentJob) -> None:
-        self.details_summary.setVisible(True)
+        self.summary_details_button.setChecked(False)
+        self.summary_details_button.show()
+        self.result_overview.show()
+        self.details_summary.hide()
         self.details_summary.setText(_summary_html(outcome_summary_lines(job.summary)))
+        if job.status is RecentJobStatus.COMPLETED:
+            summary = job.summary
+            issues = (
+                (
+                    summary.translation_issues
+                    + summary.conversion_issues
+                    + summary.integrity_warnings
+                )
+                if summary
+                else 0
+            )
+            pending = summary is not None and (
+                issues
+                or summary.preserved_segments
+                or summary.translation_unreviewed_blocks
+                or summary.ai_review_recommended
+            )
+            self.result_overview.setText(
+                "Archivo creado.\n\nQué conviene revisar\n"
+                + (
+                    "Hay avisos o partes sin revisión completa. "
+                    "Consulta los detalles antes de dar el texto por definitivo."
+                    if pending
+                    else "Comprueba la lectura y el índice antes de compartir el libro. "
+                    "La comprobación técnica no garantiza la calidad del texto."
+                )
+            )
+        else:
+            self.result_overview.setText(
+                "Trabajo cancelado. Puedes volver a la cola para continuar con tus documentos."
+            )
         self._set_failure_widgets_visible(False)
         self._set_action_state(job)
+
+    def _toggle_summary_details(self, expanded: bool) -> None:
+        self.details_summary.setVisible(expanded)
+        self.summary_details_button.setArrowType(
+            Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow
+        )
+        self.summary_details_button.setText(
+            "Ocultar detalles del proceso" if expanded else "Ver detalles del proceso"
+        )
 
     def _show_failure_details(self, job: RecentJob) -> None:
         failure = job.failure
         self.details_summary.clear()
         self.details_summary.hide()
+        self.result_overview.hide()
+        self.summary_details_button.hide()
         self._set_failure_widgets_visible(True)
         self.failure_heading.setText("Qué ocurrió")
         self.failure_message.setText(

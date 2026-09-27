@@ -44,6 +44,32 @@ def make_review(store: ArtifactStore) -> ReviewSession:
     )
 
 
+def test_selection_is_distinct_from_confirmation_and_diff_preserves_text(qtbot, tmp_path):
+    store = ArtifactStore(tmp_path / "artifacts", protect=reversible, unprotect=reversible)
+    review = make_review(store)
+    dialog = PhaseReviewDialog(review, store)
+    qtbot.addWidget(dialog)
+    assert "0 decisiones confirmadas" in dialog.decision_status.text()
+    assert dialog.proposed_pane.selector.text() == "✓ Seleccionada"
+    assert dialog.review.units[0].choice is None
+    assert dialog.proposed_pane.editor.extraSelections()
+    assert dialog.proposed_pane.text() == "Texto corregido"
+    dialog._next()
+    assert dialog.review.resolved_count == 1
+    assert dialog.review.units[0].choice is ReviewChoice.PROPOSED
+
+
+def test_large_comparison_keeps_text_without_expensive_highlighting(qtbot, tmp_path):
+    store = ArtifactStore(tmp_path / "artifacts", protect=reversible, unprotect=reversible)
+    dialog = PhaseReviewDialog(make_review(store), store)
+    qtbot.addWidget(dialog)
+    text = "Texto extenso. " * 1000
+    dialog.proposed_pane.editor.setPlainText(text)
+    dialog._highlight_changes()
+    assert not dialog.proposed_pane.editor.extraSelections()
+    assert dialog.proposed_pane.text() == text
+
+
 def test_phase_review_keeps_manual_edit_as_encrypted_artifact(qtbot, tmp_path: Path) -> None:
     store = ArtifactStore(tmp_path / "artifacts", protect=reversible, unprotect=reversible)
     dialog = PhaseReviewDialog(make_review(store), store)
@@ -167,7 +193,7 @@ def test_single_common_case_keeps_only_essential_context_and_actions(qtbot, tmp_
     assert dialog.approve_all_button.isHidden()
     assert dialog.next_button.text() == "Aplicar correcciones"
     assert dialog.original_pane.selector.text() == "Conservar"
-    assert dialog.proposed_pane.selector.text() == "Usar"
+    assert dialog.proposed_pane.selector.text() == "✓ Seleccionada"
 
 
 def test_translation_bulk_action_keeps_important_context_only_cases_pending(
@@ -252,7 +278,7 @@ def test_translation_review_describes_the_flagged_result_without_calling_it_a_pr
 
     assert dialog.original_pane.heading.text() == "Extracto original · Contexto"
     assert dialog.proposed_pane.heading.text() == "Resultado actual · Editable"
-    assert dialog.proposed_pane.selector.text() == "Confirmar"
+    assert dialog.proposed_pane.selector.text() == "✓ Seleccionada"
     assert dialog.proposed_pane.restore_button is not None
     assert dialog.proposed_pane.restore_button.text() == "Restaurar resultado"
     assert "Corrige el resultado" in dialog.instruction_label.text()
@@ -394,7 +420,7 @@ def test_reopened_complete_review_walks_every_case_before_finishing(qtbot, tmp_p
 
     assert dialog._manual_navigation
     assert dialog._index == 0
-    assert dialog.next_button.text() == "Siguiente"
+    assert dialog.next_button.text() == "Confirmar y seguir"
 
     dialog._next()
     assert dialog._index == 1

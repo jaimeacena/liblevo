@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import json
-from collections.abc import Iterator
+from collections.abc import AsyncIterator
+from threading import Timer
+from time import perf_counter
 
 import httpx
 import pytest
@@ -10,15 +13,17 @@ import parsezen.local_ai_transport as transport_module
 from parsezen.cancellation import CancellationToken
 from parsezen.errors import ImprovementError, ProcessingCancelledError
 from parsezen.improvement_contracts import MAX_LOCAL_AI_OUTPUT_CHARACTERS
+from parsezen.local_ai_client import LocalAiClient
 from parsezen.processing_metrics import capture_batch_telemetry
 
 
-class _PeriodicStream(httpx.SyncByteStream):
+class _PeriodicStream(httpx.AsyncByteStream):
     def __init__(self, chunks: tuple[bytes, ...]) -> None:
         self._chunks = chunks
 
-    def __iter__(self) -> Iterator[bytes]:
-        yield from self._chunks
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        for chunk in self._chunks:
+            yield chunk
 
 
 def _transport_with_periodic_chunks(*chunks: bytes) -> httpx.MockTransport:
@@ -38,9 +43,10 @@ def test_active_stream_can_outlive_the_configured_idle_timeout_within_total_dead
     transport = _transport_with_periodic_chunks(
         b'{"message":{"content":"respuesta "}}\n',
         b'{"message":{"content":"completa"}}\n',
+        b'{"message":{"content":""},"done":true,"done_reason":"stop"}\n',
     )
 
-    with httpx.Client(timeout=httpx.Timeout(1), transport=transport) as client:
+    with LocalAiClient(timeout=httpx.Timeout(1), transport=transport) as client:
         result = transport_module.request_local_ai(
             client,
             "parsezen-local",
@@ -53,6 +59,22 @@ def test_active_stream_can_outlive_the_configured_idle_timeout_within_total_dead
     assert result == "respuesta completa"
 
 
+@pytest.mark.parametrize("context,expected", [(8192, 4096), (2048, 1024)])
+def test_reasoning_reserve_is_explicit_and_bounded_by_context(context: int, expected: int) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        assert payload["options"]["num_predict"] == expected
+        return httpx.Response(200, json={"response": "complete", "done": True})
+
+    with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
+        assert (
+            transport_module.request_local_ai_raw(
+                client, "review", context, "short", None, minimum_prediction_tokens=4096
+            )
+            == "complete"
+        )
+
+
 def test_stream_has_a_default_total_deadline_derived_from_the_read_timeout(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -62,7 +84,7 @@ def test_stream_has_a_default_total_deadline_derived_from_the_read_timeout(
         b'{"message":{"content":"partial"}}\n',
     )
 
-    with httpx.Client(timeout=httpx.Timeout(120), transport=transport) as client:
+    with LocalAiClient(timeout=httpx.Timeout(120), transport=transport) as client:
         with pytest.raises(ImprovementError, match="máximo total de generación"):
             transport_module.request_local_ai(
                 client,
@@ -83,7 +105,7 @@ def test_stream_fails_only_after_explicit_total_generation_limit(
         b'{"message":{"content":"partial"}}\n',
     )
 
-    with httpx.Client(timeout=httpx.Timeout(30), transport=transport) as client:
+    with LocalAiClient(timeout=httpx.Timeout(30), transport=transport) as client:
         with pytest.raises(ImprovementError, match="máximo total de generación"):
             transport_module.request_local_ai(
                 client,
@@ -105,7 +127,7 @@ def test_stream_reports_only_privacy_safe_local_inference_metrics() -> None:
     )
     metrics = []
 
-    with httpx.Client(timeout=httpx.Timeout(120), transport=transport) as client:
+    with LocalAiClient(timeout=httpx.Timeout(120), transport=transport) as client:
         result = transport_module.request_local_ai(
             client,
             "parsezen-local",
@@ -139,7 +161,9 @@ def test_chat_request_keeps_its_existing_payload_contract() -> None:
             stream=_PeriodicStream((b'{"message":{"content":"ok"},"done":true}\n',)),
         )
 
-    with httpx.Client(timeout=httpx.Timeout(120), transport=httpx.MockTransport(handler)) as client:
+    with LocalAiClient(
+        timeout=httpx.Timeout(120), transport=httpx.MockTransport(handler)
+    ) as client:
         result = transport_module.request_local_ai(
             client,
             "parsezen-local",
@@ -188,7 +212,9 @@ def test_raw_generation_uses_the_generate_contract_and_reports_metrics(
 
     metrics = []
     private_prompt = "PRIVATE RAW PROMPT"
-    with httpx.Client(timeout=httpx.Timeout(120), transport=httpx.MockTransport(handler)) as client:
+    with LocalAiClient(
+        timeout=httpx.Timeout(120), transport=httpx.MockTransport(handler)
+    ) as client:
         with capture_batch_telemetry() as telemetry:
             result = transport_module.request_local_ai_raw(
                 client,
@@ -225,8 +251,8 @@ def test_raw_generation_uses_the_generate_contract_and_reports_metrics(
 def test_raw_generation_honors_cancellation_between_stream_chunks() -> None:
     cancellation = CancellationToken()
 
-    class _CancellingStream(httpx.SyncByteStream):
-        def __iter__(self) -> Iterator[bytes]:
+    class _CancellingStream(httpx.AsyncByteStream):
+        async def __aiter__(self) -> AsyncIterator[bytes]:
             yield b'{"response":"partial","done":false}\n'
             cancellation.cancel()
             yield b'{"response":"never published","done":true}\n'
@@ -234,7 +260,7 @@ def test_raw_generation_honors_cancellation_between_stream_chunks() -> None:
     transport = httpx.MockTransport(
         lambda _request: httpx.Response(200, stream=_CancellingStream())
     )
-    with httpx.Client(timeout=httpx.Timeout(120), transport=transport) as client:
+    with LocalAiClient(timeout=httpx.Timeout(120), transport=transport) as client:
         with pytest.raises(ProcessingCancelledError, match="canceló"):
             transport_module.request_local_ai_raw(
                 client,
@@ -250,7 +276,7 @@ def test_raw_generation_rejects_an_oversized_streamed_response() -> None:
     transport = _transport_with_periodic_chunks(
         (f'{{"response":{json.dumps(oversized)},"done":false}}\n').encode()
     )
-    with httpx.Client(timeout=httpx.Timeout(120), transport=transport) as client:
+    with LocalAiClient(timeout=httpx.Timeout(120), transport=transport) as client:
         with pytest.raises(ImprovementError, match="tamaño permitido"):
             transport_module.request_local_ai_raw(
                 client,
@@ -261,6 +287,67 @@ def test_raw_generation_rejects_an_oversized_streamed_response() -> None:
             )
 
 
+@pytest.mark.parametrize("raw", [False, True])
+@pytest.mark.parametrize("ending", ["missing", "length", "unknown", "error"])
+def test_incomplete_generations_never_report_success(
+    raw: bool, ending: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    payload: dict[str, object] = (
+        {"response": "PRIVATE partial"} if raw else {"message": {"content": "PRIVATE partial"}}
+    )
+    if ending == "length":
+        payload.update(done=True, done_reason="length")
+    elif ending == "unknown":
+        payload.update(done=True, done_reason="unexpected")
+    elif ending == "error":
+        payload = {"error": "PRIVATE server detail"}
+    else:
+        payload["done"] = False
+    transport = _transport_with_periodic_chunks((json.dumps(payload) + "\n").encode())
+    metrics: list[transport_module.LocalAiMetrics] = []
+    with LocalAiClient(transport=transport) as client:
+        with pytest.raises(ImprovementError) as error:
+            if raw:
+                transport_module.request_local_ai_raw(
+                    client, "model", 8_192, "PRIVATE prompt", None, on_metrics=metrics.append
+                )
+            else:
+                transport_module.request_local_ai(
+                    client,
+                    "model",
+                    8_192,
+                    "Instructions",
+                    "PRIVATE prompt",
+                    None,
+                    on_metrics=metrics.append,
+                )
+    assert not metrics
+    assert "PRIVATE" not in str(error.value)
+    assert "PRIVATE" not in caplog.text
+    assert "local_ai_completed" not in caplog.text
+
+
+@pytest.mark.parametrize("raw", [False, True])
+def test_done_is_terminal_and_keeps_content_from_the_final_event(raw: bool) -> None:
+    final = {"response": "complete"} if raw else {"message": {"content": "complete"}}
+    final.update(done=True, done_reason="stop")
+
+    class TerminalStream(httpx.AsyncByteStream):
+        async def __aiter__(self) -> AsyncIterator[bytes]:
+            yield (json.dumps(final) + "\n").encode()
+            raise AssertionError("The terminal event must close the response stream.")
+
+    transport = httpx.MockTransport(lambda _: httpx.Response(200, stream=TerminalStream()))
+    with LocalAiClient(transport=transport) as client:
+        if raw:
+            result = transport_module.request_local_ai_raw(client, "model", 8_192, "Prompt", None)
+        else:
+            result = transport_module.request_local_ai(
+                client, "model", 8_192, "Instructions", "Prompt", None
+            )
+    assert result == "complete"
+
+
 def test_release_model_is_explicit_and_does_not_delete_weights() -> None:
     requests: list[httpx.Request] = []
 
@@ -268,7 +355,9 @@ def test_release_model_is_explicit_and_does_not_delete_weights() -> None:
         requests.append(request)
         return httpx.Response(200, json={"model": "specialized-translator:latest", "done": True})
 
-    with httpx.Client(timeout=httpx.Timeout(120), transport=httpx.MockTransport(handler)) as client:
+    with LocalAiClient(
+        timeout=httpx.Timeout(120), transport=httpx.MockTransport(handler)
+    ) as client:
         transport_module.release_local_ai_model(client, "specialized-translator:latest")
 
     assert len(requests) == 1
@@ -280,3 +369,137 @@ def test_release_model_is_explicit_and_does_not_delete_weights() -> None:
         "stream": False,
         "keep_alive": 0,
     }
+
+
+@pytest.mark.parametrize("phase", ["headers", "body", "partial_line"])
+@pytest.mark.parametrize("stop", ["cancel", "deadline"])
+def test_silent_connections_are_interrupted_and_closed(phase, stop) -> None:
+    token = CancellationToken()
+    closed = []
+
+    class SilentStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            if phase == "partial_line":
+                yield b'{"response":"unfinished'
+            await asyncio.Event().wait()
+
+        async def aclose(self):
+            closed.append(True)
+
+    async def handler(_request):
+        if phase == "headers":
+            try:
+                await asyncio.Event().wait()
+            finally:
+                closed.append(True)
+        return httpx.Response(200, stream=SilentStream())
+
+    timer = Timer(0.1, token.cancel)
+    if stop == "cancel":
+        timer.start()
+    expected = ProcessingCancelledError if stop == "cancel" else ImprovementError
+    try:
+        with LocalAiClient(transport=httpx.MockTransport(handler), timeout=120) as client:
+            started = perf_counter()
+            with pytest.raises(expected):
+                transport_module.request_local_ai_raw(
+                    client,
+                    "local-model",
+                    8_192,
+                    "Synthetic",
+                    token,
+                    max_generation_seconds=1 if stop == "deadline" else 120,
+                )
+            assert perf_counter() - started < (0.8 if stop == "cancel" else 1.8)
+            assert closed == [True]
+    finally:
+        timer.cancel()
+        if timer.ident is not None:
+            timer.join()
+
+
+def test_unfinished_ndjson_is_bounded_before_parsing(monkeypatch) -> None:
+    monkeypatch.setattr(transport_module, "MAX_LOCAL_AI_OUTPUT_CHARACTERS", 10)
+
+    class OversizedStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            for _ in range(100):
+                yield b"x" * 1_024
+            pytest.fail("The oversized unfinished line was consumed without a bound")
+
+    with LocalAiClient(
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, stream=OversizedStream()))
+    ) as client:
+        with pytest.raises(ImprovementError, match="tamaño permitido"):
+            transport_module.request_local_ai_raw(client, "model", 8_192, "Synthetic", None)
+
+
+def test_unload_does_not_wait_for_a_silent_server() -> None:
+    closed = []
+
+    async def handler(_request):
+        try:
+            await asyncio.Event().wait()
+        finally:
+            closed.append(True)
+
+    with LocalAiClient(transport=httpx.MockTransport(handler)) as client:
+        started = perf_counter()
+        with pytest.raises(ImprovementError, match="a tiempo"):
+            transport_module.release_local_ai_model(client, "model")
+        assert perf_counter() - started < 1
+        assert closed == [True]
+
+
+@pytest.mark.parametrize("partial_body", [False, True])
+def test_cancellation_closes_a_real_loopback_socket(monkeypatch, partial_body) -> None:
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from threading import Event, Thread
+
+    received, released, disconnected = Event(), Event(), Event()
+    token = CancellationToken()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802
+            self.rfile.read(int(self.headers["Content-Length"]))
+            if partial_body:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'{"response":"')
+                self.wfile.flush()
+            received.set()
+            self.connection.settimeout(3)
+            if self.connection.recv(1) == b"":
+                disconnected.set()
+            released.wait(3)
+            self.close_connection = True
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server.daemon_threads = True
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    monkeypatch.setattr(
+        transport_module, "OLLAMA_BASE_URL", f"http://127.0.0.1:{server.server_port}"
+    )
+
+    def cancel_after_request():
+        if received.wait(2):
+            token.cancel()
+
+    canceller = Thread(target=cancel_after_request, daemon=True)
+    canceller.start()
+    try:
+        with LocalAiClient(timeout=120) as client:
+            with pytest.raises(ProcessingCancelledError):
+                transport_module.request_local_ai_raw(client, "model", 8_192, "Synthetic", token)
+        assert received.is_set()
+        assert disconnected.wait(1), "The cancelled HTTP connection remained open"
+    finally:
+        released.set()
+        server.shutdown()
+        server.server_close()
+        thread.join(2)
+        canceller.join(2)

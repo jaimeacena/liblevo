@@ -121,6 +121,9 @@ def next_step_view(job: DocumentJob) -> NextStepView:
     if stage.status is StageStatus.RUNNING:
         progress = stage.progress_ratio
         label = _STAGE_ACTIVITY[stage.kind]
+        # Chunk callbacks announce work before it finishes. A full count is not completion.
+        if progress is not None and progress >= 1:
+            return NextStepView(label, "running", stage=stage.kind, progress=None)
         if progress is not None:
             label = f"{label} · {round(progress * 100)} %"
         elif stage.progress_message and stage.kind is not StageKind.PREPARE:

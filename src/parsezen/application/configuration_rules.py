@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from parsezen.component_catalog import REVIEW_COMPONENT_MANIFEST, TRANSLATION_COMPONENT_MANIFEST
+from parsezen.direct_models import direct_profile
 from parsezen.domain.jobs import (
     CoverStrategy,
     DocumentFormat,
@@ -37,7 +38,7 @@ class ConfigurationIssue:
 
 
 def requires_ai(configuration: JobConfiguration) -> bool:
-    """Whether the selected plan or translation engine needs global Ollama."""
+    """Whether the selected plan or translation engine needs a local model."""
 
     return configuration.plan is ProcessingPlan.LOCAL_AI_REVIEWED or (
         configuration.translation.enabled
@@ -158,6 +159,13 @@ def configuration_issues(
 
 
 def _matches_product_manifest(component: object, manifest: ComponentManifest) -> bool:
+    direct = direct_profile(getattr(component, "model", None))
+    if direct is not None and direct.capability is manifest.capability:
+        return (
+            getattr(component, "policy_version", None) == manifest.policy_version
+            and getattr(component, "digest", None) == direct.sha256
+            and getattr(component, "context_window", None) == direct.context_window
+        )
     return (
         getattr(component, "policy_version", None) == manifest.policy_version
         and getattr(component, "model", None) == manifest.model_name

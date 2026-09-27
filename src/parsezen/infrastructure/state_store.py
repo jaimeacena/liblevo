@@ -140,7 +140,9 @@ class StateStore:
         return store
 
     def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.path, timeout=15.0)
+        # Queue saves are synchronous to preserve snapshot/foreign-key ordering.
+        # Never wait seconds on the UI thread: fail promptly and let its timer retry.
+        connection = sqlite3.connect(self.path, timeout=0.05)
         try:
             connection.row_factory = sqlite3.Row
             connection.execute("PRAGMA foreign_keys = ON")
@@ -295,29 +297,46 @@ class StateStore:
         if len(orders) != len(set(orders)):
             raise ValueError("Job order values must be unique.")
         identifiers = tuple(job.id for job in jobs)
-        if len(identifiers) != len(set(identifiers)):
+        retained = set(identifiers)
+        if len(identifiers) != len(retained):
             raise ValueError("Job ids must be unique.")
-        if any(event.job_id not in identifiers for event in events):
+        if any(event.job_id not in retained for event in events):
             raise ValueError("A job event cannot outlive its document job.")
 
         with self._transaction() as connection:
-            retained = set(identifiers)
-            existing = connection.execute(
-                "SELECT id, order_index FROM jobs ORDER BY order_index, id"
-            ).fetchall()
-            if existing:
+            existing = {
+                row["id"]: row
+                for row in connection.execute("SELECT id, order_index, payload FROM jobs")
+            }
+            for identifier in existing.keys() - retained:
+                connection.execute("DELETE FROM jobs WHERE id = ?", (identifier,))
+            moved = [
+                existing[job.id]
+                for job in jobs
+                if job.id in existing and existing[job.id]["order_index"] != job.order
+            ]
+            if moved:
                 lowest_order = min(
-                    *(int(row["order_index"]) for row in existing),
+                    *(int(row["order_index"]) for row in existing.values()),
                     *orders,
                     0,
                 )
-                temporary_start = lowest_order - len(existing) - 1
-                for offset, row in enumerate(existing):
+                temporary_start = lowest_order - len(moved) - 1
+                for offset, row in enumerate(moved):
                     connection.execute(
                         "UPDATE jobs SET order_index = ? WHERE id = ?",
                         (temporary_start - offset, row["id"]),
                     )
+            now = datetime.now().astimezone().isoformat()
             for job in jobs:
+                payload = _json_dump(_job_to_json(job))
+                previous = existing.get(job.id)
+                if (
+                    previous is not None
+                    and previous["payload"] == payload
+                    and previous["order_index"] == job.order
+                ):
+                    continue
                 connection.execute(
                     """
                     INSERT INTO jobs(id, order_index, payload, updated_at)
@@ -330,14 +349,10 @@ class StateStore:
                     (
                         job.id,
                         job.order,
-                        _json_dump(_job_to_json(job)),
-                        datetime.now().astimezone().isoformat(),
+                        payload,
+                        now,
                     ),
                 )
-            for row in existing:
-                if row["id"] not in retained:
-                    connection.execute("DELETE FROM jobs WHERE id = ?", (row["id"],))
-            now = datetime.now().astimezone().isoformat()
             for event in events:
                 _insert_job_event(connection, event, created_at=now)
 

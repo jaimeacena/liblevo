@@ -1,0 +1,16 @@
+{
+  "case": "PRODUCT-DIRECT-02",
+  "result": "PASS",
+  "elapsed_seconds": 16.608,
+  "output_bytes": 2727,
+  "checks": {
+    "original_unchanged": true,
+    "epub_zip_integrity": true,
+    "epub_navigation": true,
+    "facts_preserved": true
+  },
+  "http_forbidden": true,
+  "model_sha256": "9f96256500f3fc1ab4d64336b58f52a949a95ad7516b0c229476eef782f9f77b",
+  "content_logged": false,
+  "human_quality_checked": false
+}

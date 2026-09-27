@@ -1,0 +1,17 @@
+{
+  "case": "PACKAGE-DIRECT-02",
+  "status": "PASS",
+  "exit_code": 0,
+  "elapsed_seconds": 37.75,
+  "runtime_dlls": [
+    "ggml-base.dll",
+    "ggml-cpu.dll",
+    "ggml-vulkan.dll",
+    "ggml.dll",
+    "llama.dll",
+    "mtmd.dll"
+  ],
+  "foreign_icu_root_dlls": [],
+  "offscreen": true,
+  "personal_profile_used": false
+}

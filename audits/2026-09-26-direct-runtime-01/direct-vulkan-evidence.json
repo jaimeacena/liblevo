@@ -1,0 +1,22 @@
+{
+  "case": "DIRECT-VULKAN-01",
+  "result": "PASS",
+  "runtime": "llama-cpp-python 0.3.35 Vulkan",
+  "model_sha256": "9f96256500f3fc1ab4d64336b58f52a949a95ad7516b0c229476eef782f9f77b",
+  "model_load_seconds": 10.01,
+  "total_seconds": 14.362,
+  "prompt_tokens": 39,
+  "completion_tokens": 24,
+  "finish_reason": "stop",
+  "output_sha256": "f0dbac06da5a9cc4816f450046cb3bcd1c124193497f41d1ec5c444c9eab85e8",
+  "checks": {
+    "nonempty": true,
+    "ana_preserved": true,
+    "number_12_preserved": true,
+    "bridge_translated": true,
+    "not_identical_to_source": true,
+    "finished_without_token_limit": true
+  },
+  "output_logged": false,
+  "ollama_api_called": false
+}

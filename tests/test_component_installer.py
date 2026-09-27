@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Event, Thread
 from typing import Any
 
 import httpx
@@ -17,7 +19,7 @@ from parsezen.component_catalog import (
 )
 from parsezen.errors import LocalModelUnavailableError
 from parsezen.local_ai_policy import ComponentCapability, ComponentVerification
-from parsezen.local_models import LocalHardware
+from parsezen.local_models import LocalAISetupCancelled, LocalHardware
 
 
 def _hardware() -> LocalHardware:
@@ -129,3 +131,98 @@ def test_installer_rejects_non_product_capability() -> None:
             hardware=_hardware(),
             local_only_configured=True,
         )
+
+
+@pytest.mark.parametrize("send_partial_body", [False, True])
+def test_cancel_closes_a_silent_local_connection(monkeypatch, send_partial_body: bool) -> None:
+    received = Event()
+    release = Event()
+    expired = Event()
+    cancellation = Event()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:  # noqa: N802
+            self.rfile.read(int(self.headers["Content-Length"]))
+            if send_partial_body:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'{"status":')
+                self.wfile.flush()
+            received.set()
+            if not release.wait(4):
+                expired.set()
+            self.close_connection = True
+
+        def log_message(self, _format: str, *args: object) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server.daemon_threads = True
+    server_thread = Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    monkeypatch.setattr(installer, "OLLAMA_BASE_URL", f"http://127.0.0.1:{server.server_port}")
+
+    def cancel_after_request() -> None:
+        if received.wait(2):
+            cancellation.set()
+
+    cancel_thread = Thread(target=cancel_after_request, daemon=True)
+    cancel_thread.start()
+    try:
+        with pytest.raises(LocalAISetupCancelled):
+            installer._pull_fixed_source(
+                TRANSLATION_OLLAMA_SOURCE_MODEL,
+                on_progress=None,
+                cancellation=cancellation,
+                transport=None,
+            )
+        assert received.is_set()
+        assert not expired.is_set(), "Cancellation waited for the server to close its connection"
+    finally:
+        release.set()
+        server.shutdown()
+        server.server_close()
+        server_thread.join(2)
+        cancel_thread.join(2)
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(307, headers={"Location": "https://example.com"}),
+        httpx.Response(503),
+        httpx.Response(200, content=b"not-json\n"),
+        httpx.Response(200, content=b"[]\n"),
+        httpx.Response(200, content=b'{"status":"downloading"}\n'),
+        httpx.Response(200, content=b'{"error":"private server detail"}\n'),
+        httpx.Response(200, content=b"x" * (installer.MAX_PULL_RESPONSE_LINE_BYTES + 1)),
+    ],
+)
+def test_component_pull_rejects_incomplete_or_unsafe_responses(response: httpx.Response) -> None:
+    with pytest.raises(LocalModelUnavailableError) as failure:
+        installer._pull_fixed_source(
+            TRANSLATION_OLLAMA_SOURCE_MODEL,
+            on_progress=None,
+            cancellation=Event(),
+            transport=httpx.MockTransport(lambda _request: response),
+        )
+    assert "private server detail" not in str(failure.value)
+
+
+def test_cancelled_component_does_not_start_a_request() -> None:
+    cancellation = Event()
+    cancellation.set()
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, text='{"status":"success"}')
+
+    with pytest.raises(LocalAISetupCancelled):
+        installer._pull_fixed_source(
+            TRANSLATION_OLLAMA_SOURCE_MODEL,
+            on_progress=None,
+            cancellation=cancellation,
+            transport=httpx.MockTransport(respond),
+        )
+    assert requests == []

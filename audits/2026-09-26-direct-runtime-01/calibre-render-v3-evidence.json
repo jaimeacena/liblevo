@@ -1,0 +1,10 @@
+{
+  "case": "READER-DIRECT-03",
+  "status": "PASS",
+  "calibre_exit_code": 0,
+  "rendered_pages": 1,
+  "epub_bytes": 2725,
+  "pdf_bytes": 50508,
+  "kindle_checked": false,
+  "human_format_checked": false
+}

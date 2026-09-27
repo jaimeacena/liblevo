@@ -47,9 +47,12 @@ def test_queue_persistence_throttles_unchanged_snapshots() -> None:
 
 def test_queue_persistence_retries_a_failed_snapshot_without_waiting_for_a_change() -> None:
     repository = QueueRepositoryStub(failures_remaining=1)
-    coordinator = QueuePersistenceCoordinator(repository, clock=lambda: 10.0)
+    now = [10.0]
+    coordinator = QueuePersistenceCoordinator(repository, clock=lambda: now[0])
 
     failed = coordinator.persist((), force=True)
+    assert coordinator.persist(()).status is QueuePersistenceStatus.FAILED
+    now[0] += 1
     recovered = coordinator.persist(())
 
     assert failed.status is QueuePersistenceStatus.FAILED

@@ -405,7 +405,7 @@ def test_populated_queue_exposes_add_action_in_the_single_header(qtbot) -> None:
     assert queue_layout.indexOf(workspace.queue_summary) == 0
     assert queue_layout.indexOf(workspace.table_panel) == 1
     assert queue_layout.indexOf(workspace.drop_area) == 2
-    assert workspace.drop_area.secondary_label.text() == "TXT · MD · DOCX · PDF · EPUB"
+    assert workspace.drop_area.secondary_label.text().endswith("TXT · MD · DOCX · PDF · EPUB")
     assert workspace.drop_area.isHidden()
     assert workspace.queue_summary.isVisible() or not workspace.isVisible()
     assert workspace.add_button.text() == "Añadir"
@@ -471,7 +471,7 @@ def test_internal_titles_share_the_centered_outer_rail(qtbot) -> None:
     workspace.show_internal_view(internal, "Configurar documento")
     QApplication.processEvents()
 
-    header = workspace.findChild(QLabel, "internalPageTitle").parentWidget()
+    header = workspace.findChild(QLabel, "internalPageTitle").parentWidget().parentWidget()
     assert header.width() == workspace.app_header.width() == 1280
     header_center = header.mapTo(workspace, header.rect().center())
     assert abs(header_center.x() - workspace.rect().center().x()) <= 1
@@ -524,6 +524,16 @@ def test_empty_workspace_anchors_its_only_task_near_the_header(qtbot) -> None:
     assert workspace.drop_area.browse_button.focusPolicy() is Qt.FocusPolicy.TabFocus
     assert (
         abs(workspace.drop_area.geometry().center().x() - workspace.queue_pane.rect().center().x())
+        <= 1
+    )
+    workspace.set_source_addition_feedback(1)
+    qtbot.wait(10)
+    assert workspace.source_message.width() == workspace.drop_area.width()
+    assert (
+        abs(
+            workspace.source_message.geometry().center().x()
+            - workspace.drop_area.geometry().center().x()
+        )
         <= 1
     )
 

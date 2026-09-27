@@ -8,9 +8,10 @@ metadata verifier accepts the final alias.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from importlib.resources import files
 from threading import Event
 from typing import Final
@@ -54,7 +55,7 @@ def install_product_component(
     *,
     on_progress: ProgressCallback | None = None,
     cancellation: Event | None = None,
-    transport: httpx.BaseTransport | None = None,
+    transport: httpx.MockTransport | None = None,
     hardware: LocalHardware | None = None,
     local_only_configured: bool | None = None,
 ) -> ComponentVerification:
@@ -112,35 +113,57 @@ def _pull_fixed_source(
     *,
     on_progress: ProgressCallback | None,
     cancellation: Event,
-    transport: httpx.BaseTransport | None,
+    transport: httpx.MockTransport | None,
 ) -> None:
     if source_model not in _SOURCE_MODELS.values():
         raise LocalModelUnavailableError("La fuente del componente no está aprobada.")
-    timeout = httpx.Timeout(connect=10.0, read=None, write=30.0, pool=10.0)
-    success = False
+    _raise_if_cancelled(cancellation)
+    asyncio.run(_pull_with_cancellation(source_model, on_progress, cancellation, transport))
+
+
+async def _pull_with_cancellation(
+    source_model: str,
+    on_progress: ProgressCallback | None,
+    cancellation: Event,
+    transport: httpx.MockTransport | None,
+) -> None:
+    download = asyncio.create_task(_download_fixed_source(source_model, on_progress, transport))
     try:
-        with httpx.Client(
-            timeout=timeout,
+        while not download.done():
+            _raise_if_cancelled(cancellation)
+            await asyncio.wait({download}, timeout=0.1)
+        _raise_if_cancelled(cancellation)
+        await download
+    finally:
+        # Cancelling the request also closes a socket waiting for headers or a partial line.
+        # Join it before returning so no download or callback outlives its worker.
+        download.cancel()
+        await asyncio.gather(download, return_exceptions=True)
+
+
+async def _download_fixed_source(
+    source_model: str,
+    on_progress: ProgressCallback | None,
+    transport: httpx.MockTransport | None,
+) -> None:
+    try:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=10.0, read=None, write=30.0, pool=10.0),
             follow_redirects=False,
             trust_env=False,
             transport=transport,
         ) as client:
-            with client.stream(
+            async with client.stream(
                 "POST",
                 f"{OLLAMA_BASE_URL}/api/pull",
                 json={"model": source_model, "stream": True},
             ) as response:
                 _raise_for_safe_status(response, "descargar")
-                for line in response.iter_lines():
-                    _raise_if_cancelled(cancellation)
+                async for line in _bounded_pull_lines(response):
                     if not line:
                         continue
-                    if len(line.encode("utf-8")) > MAX_PULL_RESPONSE_LINE_BYTES:
-                        raise LocalModelUnavailableError(
-                            "Ollama devolvió un progreso de descarga incompatible."
-                        )
                     try:
-                        update = json.loads(line)
+                        update = json.loads(line.decode("utf-8"))
                     except (ValueError, UnicodeError) as exc:
                         raise LocalModelUnavailableError(
                             "Ollama devolvió un progreso de descarga incompatible."
@@ -155,7 +178,7 @@ def _pull_fixed_source(
                         )
                     status = update.get("status")
                     if status == "success":
-                        success = True
+                        return
                     total = update.get("total")
                     completed = update.get("completed")
                     percent = (
@@ -172,8 +195,25 @@ def _pull_fixed_source(
         raise LocalModelUnavailableError(
             "Se interrumpió la conexión local con Ollama durante la descarga."
         ) from exc
-    if not success:
-        raise LocalModelUnavailableError("Ollama no confirmó la descarga del componente.")
+    raise LocalModelUnavailableError("Ollama no confirmó la descarga del componente.")
+
+
+async def _bounded_pull_lines(response: httpx.Response) -> AsyncIterator[bytes]:
+    """Bound an unfinished NDJSON line before HTTPX can accumulate an unbounded string."""
+    pending = bytearray()
+    async for chunk in response.aiter_bytes():
+        fragments = chunk.split(b"\n")
+        for index, fragment in enumerate(fragments):
+            if len(pending) + len(fragment) > MAX_PULL_RESPONSE_LINE_BYTES:
+                raise LocalModelUnavailableError(
+                    "Ollama devolvió un progreso de descarga incompatible."
+                )
+            pending.extend(fragment)
+            if index < len(fragments) - 1:
+                yield bytes(pending)
+                pending.clear()
+    if pending:
+        yield bytes(pending)
 
 
 def _create_translation_alias(*, transport: httpx.BaseTransport | None) -> None:

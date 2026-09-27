@@ -1829,11 +1829,33 @@ def test_manual_epub_structure_review_is_kept_when_ai_changes_nothing(
     assert result.revision_epub_metadata is not None
 
 
+def test_generated_epub_keeps_incomplete_review_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "notes.md"
+    source.write_text("# Notes\n\nAlready well structured.", encoding="utf-8")
+
+    def preserve(markdown, *_args, **kwargs):
+        kwargs["on_review_preserved"]()
+        return markdown
+
+    _patch_transform_dependency(monkeypatch, "_improve_with_checkpoints", preserve)
+    result = process_document(
+        ProcessRequest(source, True, output_format=OutputFormat.EPUB, review_structure=True),
+        settings=LOCAL_SETTINGS,
+    )
+    assert result.preserved_review_chunks == 1
+    assert result.review_required
+    assert result.final_path.is_file()
+
+
 def test_generated_epub_accepts_local_title_author_and_cover(tmp_path: Path) -> None:
     source = tmp_path / "notes.md"
     source.write_text("# Notes", encoding="utf-8")
     cover = tmp_path / "front.jpg"
-    cover.write_bytes(b"local-cover")
+    from PIL import Image
+
+    Image.new("RGB", (2, 2), "white").save(cover)
 
     result = process_document(
         ProcessRequest(
@@ -1851,7 +1873,7 @@ def test_generated_epub_accepts_local_title_author_and_cover(tmp_path: Path) -> 
         assert "<dc:title>Mi libro</dc:title>" in package
         assert "<dc:creator>Autora local</dc:creator>" in package
         assert 'properties="cover-image"' in package
-        assert archive.read("EPUB/images/cover/cover.jpg") == b"local-cover"
+        assert archive.read("EPUB/images/cover/cover.jpg") == cover.read_bytes()
 
 
 def test_epub_metadata_is_rejected_for_a_markdown_result(tmp_path: Path) -> None:
@@ -2651,6 +2673,9 @@ def test_improves_markdown_without_creating_a_redundant_raw_copy(
         target_language: str | None,
         *,
         on_progress=None,
+        load_checkpoint=None,
+        save_checkpoint=None,
+        on_translation_preserved=None,
     ) -> str:
         assert on_progress is None
         calls.append((mode, target_language))
@@ -2699,6 +2724,9 @@ def test_combined_converted_document_improvement_keeps_paired_raw_and_reports_st
         target_language: str | None,
         *,
         on_progress=None,
+        load_checkpoint=None,
+        save_checkpoint=None,
+        on_translation_preserved=None,
     ) -> str:
         assert on_progress is None
         calls.append((markdown, mode, target_language))
@@ -2744,6 +2772,8 @@ def test_translates_markdown_offline_without_requiring_a_local_model(
         *,
         on_progress=None,
         on_engine_ready=None,
+        load_checkpoint=None,
+        save_checkpoint=None,
     ) -> str:
         assert on_progress is None
         assert on_engine_ready is not None
@@ -3469,6 +3499,9 @@ def test_reports_improvement_chunk_progress_to_the_caller(
         _target_language: str | None,
         *,
         on_progress,
+        load_checkpoint=None,
+        save_checkpoint=None,
+        on_translation_preserved=None,
     ) -> str:
         on_progress(1, 2)
         on_progress(2, 2)
@@ -3566,6 +3599,19 @@ def test_pdf_ocr_checkpoint_rejects_a_stale_tagged_version() -> None:
     stale = "\x1eParsezen PDF OCR v2\x1fRecognized"
 
     assert prepare_module.decode_pdf_ocr_checkpoint(stale) is None
+
+
+def test_pdf_ocr_retries_old_empty_results_but_retains_valid_text() -> None:
+    old_header = "\x1eParsezen PDF OCR v4\x1f"
+    assert prepare_module.decode_pdf_ocr_checkpoint(old_header) is None
+    assert prepare_module.decode_pdf_ocr_checkpoint("") is None
+    assert (
+        prepare_module.decode_pdf_ocr_checkpoint(old_header + "Useful text 125")
+        == "Useful text 125"
+    )
+    assert (
+        prepare_module.decode_pdf_ocr_checkpoint(prepare_module.encode_pdf_ocr_checkpoint("")) == ""
+    )
 
 
 def test_pdf_result_reports_pages_marked_for_review(
@@ -3792,3 +3838,17 @@ def test_atomic_publish_never_exposes_an_empty_reservation(tmp_path: Path) -> No
     assert destination.read_text(encoding="utf-8") == "Complete content"
     assert destination.stat().st_size > 0
     assert not temporary.exists()
+
+
+def test_pdf_extraction_does_not_reuse_pre_initial_repair_cache(tmp_path: Path) -> None:
+    source = tmp_path / "book.pdf"
+    source.write_bytes(b"same document")
+    root = tmp_path / "checkpoints"
+    old = processing_module.open_work_checkpoints(
+        source, repr(("pdf-conversion-v11", False)), root=root
+    )
+    current = processing_module._open_pdf_conversion_checkpoints(
+        ProcessRequest(source, convert_to_markdown=True), root=root
+    )
+    assert current is not None
+    assert old.directory != current.directory

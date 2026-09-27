@@ -24,12 +24,15 @@ python -m ruff format --check .
 python -m mypy src/parsezen
 python -m pytest --cov=parsezen --cov-report=term-missing --cov-fail-under=88
 python -m pip check
-python -m pip_audit -r requirements.lock --no-deps --disable-pip --ignore-vuln CVE-2026-54499
+python scripts/audit_dependencies.py requirements.lock --ignore-vuln CVE-2026-54499 --allow-blocked-accelerate
 ```
 
 La excepción `CVE-2026-54499` corresponde a la versión de Stanza fijada por Argos 1.11.0. Parsezen
 fuerza MiniSBD antes de cargar cualquier paquete y no usa ese segmentador, pero la excepción debe
 revisarse en cada release y retirarse en cuanto Argos permita una versión corregida compatible.
+La opción de Accelerate verifica su versión y ejecuta el rechazo de los cargadores desactivados;
+no declara corregido el paquete upstream. Ambas excepciones se justifican en
+[seguridad de dependencias](dependency-security.md).
 
 La validación editorial con EPUBCheck y el candidato CPU de Windows deben terminar correctamente en
 GitHub Actions. Antes de publicar se prueba el instalador exacto en un perfil limpio, sin Python,

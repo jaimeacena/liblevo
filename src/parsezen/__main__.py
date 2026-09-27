@@ -7,9 +7,10 @@ import sys
 from collections.abc import Callable, Sequence
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Any
 
-from platformdirs import user_log_path
+from platformdirs import user_data_path, user_log_path
 
 from parsezen import APP_DISPLAY_NAME, APP_STORAGE_NAME, __version__
 from parsezen.branding import APP_ICON_PATH
@@ -31,6 +32,9 @@ PACKAGE_SMOKE_SWITCH = "--package-smoke"
 def _verify_packaged_runtime_imports() -> None:
     """Import lazy OCR/translation edges that a graphical startup alone cannot exercise."""
 
+    from parsezen.ocr_dependency_guard import protect_accelerate_loaders
+
+    protect_accelerate_loaders()
     import easyocr
     from argostranslate import package as argos_package
     from argostranslate import sbd as argos_sbd
@@ -40,6 +44,7 @@ def _verify_packaged_runtime_imports() -> None:
         ocr_engines,
         table_structure_engines,
     )
+    from llama_cpp import Llama
 
     if (
         easyocr.Reader is None
@@ -49,6 +54,7 @@ def _verify_packaged_runtime_imports() -> None:
         or not ocr_engines()["ocr_engines"]
         or not layout_engines()["layout_engines"]
         or not table_structure_engines()["table_structure_engines"]
+        or Llama is None
     ):
         raise RuntimeError("Packaged runtime imports are incomplete.")
 
@@ -133,10 +139,36 @@ def _run_desktop_application(
     application.setApplicationName(APP_DISPLAY_NAME)
     application.setApplicationDisplayName(APP_DISPLAY_NAME)
     application.setWindowIcon(icon_type(str(APP_ICON_PATH)))
-    _apply_startup_theme(application)
-    window = window_factory()
-    window.show()
-    exit_code = int(application.exec())
+    from PySide6.QtWidgets import QApplication, QMessageBox
+
+    from parsezen.presentation.desktop_instance import DesktopInstance
+
+    instance = None
+    if isinstance(application, QApplication):
+        try:
+            instance = DesktopInstance(user_data_path(APP_STORAGE_NAME, appauthor=False))
+            if not instance.acquire():
+                return 0
+        except OSError as exc:
+            QMessageBox.critical(None, "No se pudo iniciar Parsezen", str(exc))
+            return 1
+    try:
+        _apply_startup_theme(application)
+        window = window_factory()
+        window.show()
+        if instance is not None:
+
+            def activate() -> None:
+                if window.isMinimized():
+                    window.showNormal()
+                window.raise_()
+                window.activateWindow()
+
+            instance.on_activation(activate)
+        exit_code = int(application.exec())
+    finally:
+        if instance is not None:
+            instance.close()
     LOGGER.info("application_stopped exit_code=%d", exit_code)
     return exit_code
 
@@ -188,11 +220,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         _apply_startup_theme(application)
         from parsezen.presentation.main_window import ParsezenMainWindow
 
-        window = ParsezenMainWindow(settings=AppSettings())
-        window.show()
-        application.processEvents()
-        window.close()
-        application.processEvents()
+        with TemporaryDirectory(prefix="parsezen-smoke-") as directory:
+            window = ParsezenMainWindow(
+                settings=AppSettings(),
+                state_path=Path(directory) / "workspace.sqlite3",
+                history_path=Path(directory) / "history.json",
+                auto_discover_ai=False,
+            )
+            window.show()
+            application.processEvents()
+            window.close()
+            application.processEvents()
         return 0
 
     _configure_logging_without_startup_failure()

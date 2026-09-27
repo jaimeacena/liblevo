@@ -44,6 +44,35 @@ def _job(
     )
 
 
+def test_page_range_is_bounded_by_real_pdf_pages(qtbot):
+    dialog = _PageRangeDialog(PageRangeConfiguration(4, 100), total_pages=9)
+    qtbot.addWidget(dialog)
+    assert dialog.page_count_label.text() == "Este PDF tiene 9 páginas."
+    assert dialog.last_page.value() == 9
+    dialog.first_page.setValue(100)
+    assert dialog.first_page.value() == dialog.last_page.value() == 9
+    assert dialog.page_range() == PageRangeConfiguration(9, 9)
+
+
+def test_page_count_failure_cannot_confirm_an_unchecked_range(qtbot, tmp_path):
+    dialog = _PageRangeDialog(None, source_path=tmp_path / "missing.pdf")
+    qtbot.addWidget(dialog)
+    qtbot.waitUntil(lambda: "No se pudo" in dialog.page_count_label.text())
+    assert not dialog.apply_button.isEnabled()
+
+
+def test_configuration_only_announces_saved_after_persistence(qtbot, tmp_path):
+    job = _job(tmp_path)
+    dialog = JobConfigurationDialog(job, embedded=True)
+    qtbot.addWidget(dialog)
+    dialog.persist_if_valid()
+    assert "pendientes" in dialog.save_status.text()
+    dialog.mark_save_failed()
+    assert "No se han guardado" in dialog.save_status.text()
+    dialog.mark_persisted(job)
+    assert "Cambios guardados" in dialog.save_status.text()
+
+
 def test_standard_configuration_uses_visual_format_and_compact_settings(
     qtbot,
     tmp_path: Path,

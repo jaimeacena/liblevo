@@ -45,7 +45,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           python -c "import torch, torchvision; assert torch.version.cuda is None; print(torch.__version__, torchvision.__version__)"
           python -m pip check
-          python scripts/audit_dependencies.py requirements-windows-cpu.lock --canonical-lock requirements.lock --allow-variant-skip torch --allow-variant-skip torchvision --ignore-vuln CVE-2026-54499
+          python scripts/audit_dependencies.py requirements-windows-cpu.lock --canonical-lock requirements.lock --allow-variant-skip torch --allow-variant-skip torchvision --ignore-vuln CVE-2026-54499 --allow-blocked-accelerate
       - name: Validar el código antes de empaquetar
         run: |
           $PSNativeCommandUseErrorActionPreference = $true

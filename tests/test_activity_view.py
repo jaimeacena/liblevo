@@ -117,7 +117,7 @@ def test_activity_view_exposes_result_actions_and_reflows(qtbot, tmp_path: Path)
 
     view.set_compact_mode(True)
     assert view.panels.orientation() is Qt.Orientation.Vertical
-    assert view.actions_layout.itemAtPosition(0, 1).widget() is view.folder_button
+    assert view.actions_layout.itemAtPosition(1, 0).widget() is view.folder_button
     view.set_compact_mode(False)
     assert view.panels.orientation() is Qt.Orientation.Horizontal
 
@@ -269,4 +269,4 @@ def test_activity_rows_keep_cancelled_truthful_and_reflow_without_overflow(
     assert view._compact is True  # noqa: SLF001
     assert view.panels.orientation() is Qt.Orientation.Vertical
     assert view.jobs_list.horizontalScrollBar().maximum() == 0
-    assert view.actions_layout.itemAtPosition(0, 1).widget() is view.folder_button
+    assert view.actions_layout.itemAtPosition(1, 0).widget() is view.folder_button

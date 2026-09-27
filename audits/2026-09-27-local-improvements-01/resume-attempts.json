@@ -1,0 +1,19 @@
+[
+  {
+    "attempt": 1,
+    "status": "FAIL_PRECONDITION",
+    "cause": "The isolated output directory did not exist before process_document; RequestValidationError at validation. No app conversion began and no source data changed.",
+    "result": "The diagnostic script now creates that directory and uses a new trial path."
+  },
+  {
+    "attempt": 2,
+    "status": "PASS_FUNCTIONAL",
+    "evidence": "resume-trial-2.json",
+    "cancel_at": [
+      5,
+      40
+    ],
+    "saved_fragments_reused": 4,
+    "note": "Elapsed time includes Windows suspension; unsuitable for performance comparison."
+  }
+]

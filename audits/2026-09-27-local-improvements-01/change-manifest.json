@@ -1,0 +1,50 @@
+[
+  {
+    "file": "distribution/windows/build.ps1",
+    "before_sha256": "3b9d7bdcfd249ece3ad5993b103d31c64eb6bcad124455eec97390c5e662bfbf",
+    "after_sha256": "b2cc3b57715eaef0c28514cb591d8467af4e965e66a08a84ccf9531dbcc730a7",
+    "changed_hunks": 16,
+    "removed_lines": 62,
+    "added_lines": 153
+  },
+  {
+    "file": "docs/development.md",
+    "before_sha256": "01cdbef3b42784d32374ab125f266529e2555f91848df43270b716ceca53cbf6",
+    "after_sha256": "ea9b8ed90ab110bb38f6b009ce813da9e70c1024cb66bfc3eccb848c1efb17ac",
+    "changed_hunks": 1,
+    "removed_lines": 0,
+    "added_lines": 17
+  },
+  {
+    "file": "docs/work-plan.md",
+    "before_sha256": "1f68c08ede4b4b58b208ae46c4246cba15c5563e2316f5433f541503e4f14b15",
+    "after_sha256": "8d925868452c1a86c72b68e6752ab4e7134ba4993e3a0438eb8374b5e98a7921",
+    "changed_hunks": 3,
+    "removed_lines": 2,
+    "added_lines": 29
+  },
+  {
+    "file": "docs/acceptance-checklist.md",
+    "before_sha256": "91da22daeaeb5b70390166731197f560a27285e6c1d684563c0cb27656f20d6d",
+    "after_sha256": "e7a8cd71bf0bbbc49f9cec5c478d6c708036f4ffca388b23f63dba99d6386f92",
+    "changed_hunks": 1,
+    "removed_lines": 0,
+    "added_lines": 3
+  },
+  {
+    "file": "tests/test_package.py",
+    "before_sha256": "74cf18a013854807272d602283efb0aad35857afb13bfad6b38cbd3e11862c48",
+    "after_sha256": "74cf18a013854807272d602283efb0aad35857afb13bfad6b38cbd3e11862c48",
+    "changed_hunks": 0,
+    "removed_lines": 0,
+    "added_lines": 0
+  },
+  {
+    "file": "docs/user-guide.md",
+    "before_sha256": "49bded29cb5fe373af773049b71938e07dc2505512639900730b228ca15c65d5",
+    "after_sha256": "455fbf86a46854ee6f27e5fd1f9fffc7dd14daf24d39c026233fe71240aa2baf",
+    "changed_hunks": 1,
+    "removed_lines": 2,
+    "added_lines": 16
+  }
+]

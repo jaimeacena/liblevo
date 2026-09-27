@@ -28,7 +28,11 @@ from parsezen.domain.stages import StageKind
 class ReviewRepository:
     def __init__(self) -> None:
         self.saved: list[ReviewSession] = []
+        self.completed_jobs = []
         self.deleted: list[str] = []
+
+    def upsert_job(self, job) -> None:
+        self.completed_jobs.append(job)
 
     def save_review(self, review: ReviewSession) -> None:
         self.saved.append(review)

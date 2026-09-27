@@ -1,0 +1,37 @@
+{
+  "window": {
+    "method": "three fresh Python processes, Qt offscreen, synthetic profile, AI discovery off",
+    "runs": [
+      {
+        "import_seconds": 1.046,
+        "window_construction_seconds": 0.051,
+        "first_event_seconds": 0.005,
+        "total_seconds": 1.102
+      },
+      {
+        "import_seconds": 0.858,
+        "window_construction_seconds": 0.051,
+        "first_event_seconds": 0.005,
+        "total_seconds": 0.914
+      },
+      {
+        "import_seconds": 0.838,
+        "window_construction_seconds": 0.052,
+        "first_event_seconds": 0.005,
+        "total_seconds": 0.894
+      }
+    ],
+    "median_total_seconds": 0.914
+  },
+  "model": {
+    "status": "verified",
+    "model_size_bytes": 4624648896,
+    "method": "three consecutive SHA-256 checks, warm Windows file cache likely",
+    "runs_seconds": [
+      3.045,
+      3.035,
+      3.055
+    ],
+    "median_seconds": 3.045
+  }
+}

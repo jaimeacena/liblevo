@@ -73,6 +73,17 @@ class JobQueue:
         job = self._require(job_id)
         return self.replace(job.with_configuration(configuration))
 
+    def create_version(self, job_id: str, source: DocumentSource) -> DocumentJob:
+        """Replace a completed queue slot with a new identity and copied choices."""
+        previous = self._require(job_id)
+        if previous.status is not JobStatus.COMPLETED:
+            raise ValueError("Solo se puede crear otra versión de un trabajo terminado.")
+        if _source_key(source.path) != _source_key(previous.source.path):
+            raise ValueError("La nueva versión debe usar el mismo documento original.")
+        created = DocumentJob.create(source, previous.configuration, order=previous.order)
+        self.restore(tuple(created if job.id == job_id else job for job in self.jobs))
+        return created
+
     def refresh_source(self, job_id: str, source: DocumentSource) -> DocumentJob:
         job = self._require(job_id)
         if _source_key(job.source.path) != _source_key(source.path):

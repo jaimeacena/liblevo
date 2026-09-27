@@ -41,6 +41,15 @@ def test_document_source_inspection_captures_content_identity(tmp_path: Path) ->
     assert inspected.content_sha256 == hashlib.sha256(content).hexdigest()
 
 
+def test_long_markdown_extension_has_the_same_source_format_as_md(tmp_path: Path) -> None:
+    path = tmp_path / "notes.MARKDOWN"
+    path.write_text("# Notes", encoding="utf-8")
+
+    assert (
+        DocumentSource.inspect(path, include_content_hash=False).format is DocumentFormat.MARKDOWN
+    )
+
+
 def test_source_identity_rejects_invalid_values_and_hash_can_be_deferred(
     tmp_path: Path,
 ) -> None:

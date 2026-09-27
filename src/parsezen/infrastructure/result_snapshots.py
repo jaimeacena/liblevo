@@ -210,12 +210,16 @@ class ResultSnapshotStore:
         )
 
     def _result_from_snapshot(self, job_id: str, snapshot: ReviewSnapshot) -> ProcessResult:
+        texts: dict[str, str] = {}
+
         def read_text(artifact_id: str) -> str:
-            return self._artifacts.read_text(
-                job_id,
-                artifact_id,
-                generation=snapshot.generation,
-            )
+            if artifact_id not in texts:
+                texts[artifact_id] = self._artifacts.read_text(
+                    job_id,
+                    artifact_id,
+                    generation=snapshot.generation,
+                )
+            return texts[artifact_id]
 
         base_text = read_text(snapshot.base_text_artifact_id)
         proposed_text = (
@@ -405,6 +409,7 @@ def _result_recovery_state(result: ProcessResult) -> dict[str, Any]:
         "review_translation_quality_report",
         "linguistic_review_coverage",
         "preserved_translation_chunks",
+        "preserved_review_chunks",
         "preserved_images",
         "epub_chapters",
         "revision_epub_metadata",
@@ -446,6 +451,7 @@ def _result_from_recovery_state(
             int(value) for value in state.get("preserved_translation_chunks", ())
         ),
         preserved_images=max(0, int(state.get("preserved_images", 0))),
+        preserved_review_chunks=max(0, int(state.get("preserved_review_chunks", 0))),
         epub_chapters=max(0, int(state.get("epub_chapters", 0))),
         revision_draft=draft,
         revision_resources=resources,
@@ -490,6 +496,7 @@ def _result_to_json(result: ProcessResult) -> dict[str, Any]:
             result.linguistic_review_coverage
         ),
         "preserved_translation_chunks": list(result.preserved_translation_chunks),
+        "preserved_review_chunks": result.preserved_review_chunks,
         "preserved_images": result.preserved_images,
         "epub_chapters": result.epub_chapters,
         "revision_draft": (
@@ -614,6 +621,7 @@ def _result_from_json(
             int(value) for value in raw.get("preserved_translation_chunks", ())
         ),
         preserved_images=int(raw.get("preserved_images", 0)),
+        preserved_review_chunks=max(0, int(raw.get("preserved_review_chunks", 0))),
         epub_chapters=int(raw.get("epub_chapters", 0)),
         revision_draft=draft,
         revision_resources=resources,

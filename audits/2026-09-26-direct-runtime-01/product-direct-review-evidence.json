@@ -1,0 +1,13 @@
+{
+  "case": "PRODUCT-DIRECT-REVIEW-01",
+  "result": "PASS",
+  "elapsed_seconds": 8.044,
+  "checks": {
+    "json_object": true,
+    "correcta_boolean": true,
+    "motivo_text": true
+  },
+  "http_forbidden": true,
+  "content_logged": false,
+  "human_review_equivalence_checked": false
+}

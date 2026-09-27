@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox, QWidget
 
 from parsezen.component_catalog import PRODUCT_COMPONENT_CATALOG, REVIEW_REQUIRED_NOTICES
 from parsezen.component_readiness import ComponentReadiness, ReadinessStatus
+from parsezen.direct_models import active_direct_profile
 from parsezen.domain.jobs import LocalAIComponentSnapshot, LocalAIPolicySnapshot
 from parsezen.local_ai_policy import ComponentCapability
 from parsezen.local_models import (
@@ -122,14 +123,17 @@ class LocalAIWorkflow(QObject):
         if setup is None:
             setup = ComponentSetupDialog(
                 readiness=self._component_readiness,
+                direct_mode=self._controller.direct,
                 parent=self._parent_widget,
             )
             setup.download_requested.connect(self._download_component_requested)
             setup.cancel_requested.connect(self.cancel_component_download)
             setup.refresh_requested.connect(lambda: self.start_model_discovery(automatic=False))
+            setup.runtime_setup_requested.connect(self.handle_primary_action)
             setup.finished.connect(self.component_setup_finished)
             self._component_setup = setup
             self._present_component_setup(setup)
+            setup.set_runtime_status(self._status, busy=self.busy)
         elif self._workspace.current_internal_widget is not setup:
             self._present_component_setup(setup)
         if not self.busy:
@@ -169,6 +173,8 @@ class LocalAIWorkflow(QObject):
         if not isinstance(value, OllamaConnection):
             return
         self._status = value.status
+        if self._component_setup is not None:
+            self._component_setup.set_runtime_status(self._status)
         self._models = tuple(value.models)
         settings = self._settings()
         self._workspace.set_local_ai_status(value.status, settings.model)
@@ -281,12 +287,17 @@ class LocalAIWorkflow(QObject):
             if readiness is None or readiness.status is not ReadinessStatus.PREPARED:
                 continue
             manifest = PRODUCT_COMPONENT_CATALOG[capability].manifest
+            profile = active_direct_profile(capability) if self._controller.direct else None
+            if self._controller.direct and profile is None:
+                continue
             try:
                 snapshots[capability] = LocalAIComponentSnapshot(
                     policy_version=manifest.policy_version,
-                    model=manifest.model_name,
-                    digest=manifest.ollama_digest,
-                    context_window=manifest.context_window,
+                    model=profile.model_id if profile is not None else manifest.model_name,
+                    digest=profile.sha256 if profile is not None else manifest.ollama_digest,
+                    context_window=(
+                        profile.context_window if profile is not None else manifest.context_window
+                    ),
                 )
             except (TypeError, ValueError):
                 snapshots[capability] = None
@@ -303,6 +314,8 @@ class LocalAIWorkflow(QObject):
             return
         if not self._controller.discover(self._settings().model):
             return
+        if self._component_setup is not None:
+            self._component_setup.set_runtime_status(self._status, busy=True)
         self.state_changed.emit(False)
 
     @Slot(str)
@@ -312,9 +325,13 @@ class LocalAIWorkflow(QObject):
         self._models = ()
         self.set_component_readiness({})
         self._workspace.set_local_ai_status(self._status, self._settings().model)
+        if self._component_setup is not None:
+            self._component_setup.set_runtime_status(self._status)
 
     @Slot()
     def model_discovery_finished(self) -> None:
+        if self._component_setup is not None:
+            self._component_setup.set_runtime_status(self._status)
         self.state_changed.emit(False)
 
     @Slot()
@@ -342,10 +359,16 @@ class LocalAIWorkflow(QObject):
             return
         self._setup_action = action
         self._setup_succeeded = False
+        if self._component_setup is not None:
+            self._component_setup.set_runtime_status(
+                self._status, busy=True, message="Preparando la IA local…"
+            )
 
     @Slot(object, str)
     def ai_setup_progress_changed(self, percent: object, message: str) -> None:
-        del percent, message
+        del percent
+        if self._component_setup is not None:
+            self._component_setup.set_runtime_status(self._status, busy=True, message=message)
 
     @Slot(str)
     def ai_setup_succeeded(self, model_id: str) -> None:
@@ -360,7 +383,11 @@ class LocalAIWorkflow(QObject):
     @Slot(str)
     def ai_setup_failed(self, message: str) -> None:
         self._setup_succeeded = False
-        del message
+        QMessageBox.warning(
+            self._parent_widget,
+            "No se pudo preparar la IA local",
+            f"{message}\n\nPuedes volver a intentarlo desde IA local.",
+        )
 
     @Slot()
     def cancel_setup(self) -> None:
@@ -371,6 +398,9 @@ class LocalAIWorkflow(QObject):
         succeeded = self._setup_succeeded
         self._setup_action = None
         self._setup_succeeded = False
+        if self._component_setup is not None:
+            self._component_setup.set_runtime_status(self._status)
+        self.state_changed.emit(False)
         if succeeded:
             self.start_model_discovery(automatic=False)
 
