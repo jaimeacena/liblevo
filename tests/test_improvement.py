@@ -658,7 +658,8 @@ def test_bilingual_review_uses_only_closed_semantic_focus_instructions() -> None
     assert result == translated
 
 
-def test_bilingual_review_rejects_free_text_as_semantic_focus() -> None:
+def test_bilingual_review_rejects_free_text_as_semantic_focus(monkeypatch) -> None:
+    monkeypatch.setattr(improvement_module, "direct_model_present", lambda _model: True)
     with pytest.raises(ImprovementError, match="foco de revisión semántica"):
         review_translation_markdown(
             "Source statement.\n",

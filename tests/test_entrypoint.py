@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+from types import ModuleType
 from typing import cast
 
 import pytest
@@ -11,6 +13,14 @@ import parsezen.ocr_worker as ocr_worker
 import parsezen.offline_translation_worker as translation_worker
 from parsezen.errors import SettingsError
 from parsezen.presentation.main_window import ParsezenMainWindow
+
+
+def _install_llama_cpp_stub(monkeypatch) -> None:
+    """Keep canonical tests independent from the optional Windows Vulkan lock."""
+
+    module = ModuleType("llama_cpp")
+    module.Llama = object()
+    monkeypatch.setitem(sys.modules, "llama_cpp", module)
 
 
 def test_worker_switches_dispatch_without_starting_qt(monkeypatch) -> None:
@@ -187,6 +197,10 @@ def test_regular_main_delegates_to_the_testable_desktop_lifecycle(monkeypatch) -
 def test_packaged_runtime_verifies_every_lazy_processing_edge(monkeypatch) -> None:
     from argostranslate import sbd as argos_sbd
 
+    # The real package smoke checks the Vulkan binding in its dedicated environment;
+    # the canonical test lock intentionally does not install that optional dependency.
+    _install_llama_cpp_stub(monkeypatch)
+
     # The Windows package deliberately excludes spaCy; Argos then uses its supported
     # fallback, while OCR and the translation package remain importable.
     monkeypatch.setattr(argos_sbd, "spacy", None)
@@ -198,6 +212,7 @@ def test_packaged_runtime_rejects_an_incomplete_lazy_dependency(monkeypatch) -> 
     import easyocr
     from argostranslate import sbd as argos_sbd
 
+    _install_llama_cpp_stub(monkeypatch)
     monkeypatch.setattr(argos_sbd, "spacy", None)
     monkeypatch.setattr(easyocr, "Reader", None)
 
