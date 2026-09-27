@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 
 from PySide6.QtCore import QEvent, QObject, QRectF, Qt, QTimer
 from PySide6.QtGui import (
@@ -15,6 +16,7 @@ from PySide6.QtGui import (
     QPixmap,
     QResizeEvent,
     QShortcut,
+    QTextCharFormat,
     QTextCursor,
 )
 from PySide6.QtWidgets import (
@@ -31,6 +33,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QSplitter,
+    QTextEdit,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -168,13 +171,26 @@ class PhaseReviewDialog(QDialog):
         self._focus_timer = QTimer(self)
         self._focus_timer.setSingleShot(True)
         self._focus_timer.timeout.connect(self._focus_pending_decision_now)
+        self._diff_timer = QTimer(self)
+        self._diff_timer.setSingleShot(True)
+        self._diff_timer.setInterval(250)
+        self._diff_timer.timeout.connect(self._highlight_changes)
         self.setWindowTitle("Revisión del documento · Parsezen")
         self.resize(1240, 780)
 
-        layout = QVBoxLayout(self)
-        self.root_layout = layout
-        layout.setSizeConstraint(QLayout.SizeConstraint.SetNoConstraint)
-        layout.setContentsMargins(18, 16, 18, 16)
+        self.root_layout = QVBoxLayout(self)
+        self.root_layout.setSizeConstraint(QLayout.SizeConstraint.SetNoConstraint)
+        self.root_layout.setContentsMargins(18, 16, 18, 16)
+        self.review_scroll = QScrollArea(self)
+        self.review_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.review_scroll.setWidgetResizable(True)
+        self.review_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        review_body = QWidget(self.review_scroll)
+        self.review_scroll.setWidget(review_body)
+        self.root_layout.addWidget(self.review_scroll, 1)
+        layout = QVBoxLayout(review_body)
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
 
         self.progress_indicator = _ReviewProgressIndicator(
@@ -184,6 +200,10 @@ class PhaseReviewDialog(QDialog):
             total_units=len(review.units),
         )
         layout.addWidget(self.progress_indicator)
+        self.decision_status = QLabel(self)
+        self.decision_status.setObjectName("reviewCaseSummary")
+        self.decision_status.setWordWrap(True)
+        layout.addWidget(self.decision_status)
         self.case_summary = QLabel("", self)
         self.case_summary.setObjectName("reviewCaseSummary")
         self.case_summary.setWordWrap(True)
@@ -327,7 +347,7 @@ class PhaseReviewDialog(QDialog):
         self.next_button.setObjectName("primaryAction")
         self.next_button.clicked.connect(self._next)
         footer.addWidget(self.next_button, 0, 4)
-        layout.addLayout(footer)
+        self.root_layout.addLayout(footer)
 
         self._shortcuts = (
             self._shortcut("Alt+O", self._choose_original),
@@ -356,6 +376,7 @@ class PhaseReviewDialog(QDialog):
         if compact == self._compact:
             return
         self._compact = compact
+        self.splitter.setMinimumHeight(420 if compact else 210)
         for widget in (
             self.previous_button,
             self.approve_all_button,
@@ -426,7 +447,7 @@ class PhaseReviewDialog(QDialog):
         self.approve_all_button.setText("Aplicar seguras")
         self.save_later_button.setText("Guardar y salir")
         self.next_button.setText(
-            "Siguiente"
+            "Confirmar y seguir"
             if self._next_case_index() is not None
             else _PHASE_FINAL_LABELS[self._review.kind]
         )
@@ -470,6 +491,11 @@ class PhaseReviewDialog(QDialog):
         elif not unit.resolved and unit.recommended_choice is ReviewChoice.PROPOSED:
             summary_parts.append("Sugerencia: usar la propuesta")
         pending = self._review.remaining_count
+        confirmed = self._review.resolved_count
+        self.decision_status.setText(
+            f"Caso {self._index + 1} de {len(self._review.units)} · "
+            f"{confirmed} {'decisión confirmada' if confirmed == 1 else 'decisiones confirmadas'}"
+        )
         priority = self._review.priority_remaining_count
         self.case_summary.setText(" · ".join(summary_parts))
         self.case_summary.setVisible(bool(summary_parts))
@@ -563,7 +589,50 @@ class PhaseReviewDialog(QDialog):
             self.original_pane.selector.setChecked(True)
         self._refresh_pane_selection()
         self._loading_unit = False
+        self._highlight_changes()
         self._focus_pending_decision()
+
+    def apply_theme(self) -> None:
+        self.previous_button.setIcon(back_icon())
+        for pane in (self.original_pane, self.proposed_pane):
+            pane.more_button.setIcon(editor_icon("more"))
+        self._highlight_changes()
+
+    def _highlight_changes(self) -> None:
+        panes = (self.original_pane, self.proposed_pane)
+        for pane in panes:
+            pane.editor.setExtraSelections([])
+        if self._review.kind not in {ReviewKind.REFINEMENT, ReviewKind.STRUCTURE}:
+            return
+        texts = tuple(pane.editor.toPlainText() for pane in panes)
+        # Keep comparison bounded; long passages retain the full unmodified text.
+        if max(map(len, texts)) > 4000:
+            return
+        ranges: tuple[list[QTextEdit.ExtraSelection], list[QTextEdit.ExtraSelection]] = ([], [])
+        for operation, a, b, c, d in SequenceMatcher(
+            None, texts[0], texts[1], autojunk=True
+        ).get_opcodes():
+            if operation == "equal":
+                continue
+            for index, (start, end) in enumerate(((a, b), (c, d))):
+                if start == end:
+                    continue
+                selection = QTextEdit.ExtraSelection()
+                selection.cursor = panes[index].editor.textCursor()
+                selection.cursor.setPosition(len(texts[index][:start].encode("utf-16-le")) // 2)
+                selection.cursor.setPosition(
+                    len(texts[index][:end].encode("utf-16-le")) // 2,
+                    QTextCursor.MoveMode.KeepAnchor,
+                )
+                selection.format.setBackground(QColor(COLORS.warning_soft))
+                selection.format.setForeground(QColor(COLORS.text_primary))
+                selection.format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SingleUnderline)
+                ranges[index].append(selection)
+        for pane, selections in zip(panes, ranges, strict=True):
+            pane.editor.setExtraSelections(selections)
+            pane.editor.setToolTip(
+                "Los cambios aparecen resaltados y subrayados. El texto se conserva íntegro."
+            )
 
     def _save_unit(self) -> bool:
         unit = self._unit()
@@ -689,6 +758,7 @@ class PhaseReviewDialog(QDialog):
         )
 
     def _proposal_edited(self) -> None:
+        self._diff_timer.start()
         if not self._loading_unit:
             self._active_case_dirty = True
             self.proposed_pane.selector.setChecked(True)
@@ -806,6 +876,7 @@ class _ReviewPane(QFrame):
         super().__init__(parent)
         self.setObjectName("reviewPane")
         layout = QVBoxLayout(self)
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         layout.setContentsMargins(14, 14, 14, 14)
         layout.setSpacing(9)
         top = QGridLayout()
@@ -813,9 +884,13 @@ class _ReviewPane(QFrame):
         self.heading = QLabel(title, self)
         self.heading.setObjectName("reviewPaneTitle")
         self.heading.setAccessibleName(title)
+        self.heading.setWordWrap(True)
+        self.heading.setMinimumWidth(0)
+        self.heading.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         top.addWidget(self.heading, 0, 0)
         top.setColumnStretch(1, 1)
         self.selector = QPushButton(selection_text, self)
+        self._selection_text = selection_text
         self.selector.setObjectName("reviewChoiceButton")
         self.selector.setCheckable(True)
         self.selector.setAutoDefault(False)
@@ -865,6 +940,10 @@ class _ReviewPane(QFrame):
         self.image_size_action.setCheckable(True)
         self.image_size_action.setVisible(False)
         self.image_size_action.toggled.connect(self._set_image_actual_size)
+        self.image_size_button = QToolButton(self)
+        self.image_size_button.setDefaultAction(self.image_size_action)
+        self.image_size_button.hide()
+        layout.addWidget(self.image_size_button)
         self.restore_button: QPushButton | None
         self.restore_action: QAction | None
         if editable:
@@ -937,6 +1016,7 @@ class _ReviewPane(QFrame):
                 self.image_size_action.setText("Ver tamaño real")
                 self.image_size_action.blockSignals(False)
                 self.image_size_action.setVisible(True)
+                self.image_size_button.show()
                 self._set_image_actual_size(False)
                 self._initial_text = ""
                 return
@@ -944,6 +1024,7 @@ class _ReviewPane(QFrame):
         self._image_pixmap = QPixmap()
         self.image.clear()
         self.image_size_action.setVisible(False)
+        self.image_size_button.hide()
         if project_private:
             self._projection = project_review_text(text)
             text = self._projection.visible_text
@@ -963,6 +1044,12 @@ class _ReviewPane(QFrame):
         return self._projection.restore(text) if self._projection is not None else text
 
     def set_selected(self, selected: bool) -> None:
+        self.selector.setText("✓ Seleccionada" if selected else self._selection_text)
+        self.selector.setAccessibleDescription(
+            "Versión seleccionada. Confirma abajo para guardar la decisión."
+            if selected
+            else "Seleccionar esta versión para la decisión actual."
+        )
         self.setProperty("selected", selected)
         self.style().unpolish(self)
         self.style().polish(self)

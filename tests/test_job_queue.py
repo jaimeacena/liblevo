@@ -10,6 +10,7 @@ from parsezen.domain.jobs import (
     DocumentJob,
     DocumentSource,
     JobConfiguration,
+    JobStatus,
     ProcessingPlan,
 )
 from parsezen.domain.stages import StageKind, StageStatus
@@ -17,6 +18,31 @@ from parsezen.domain.stages import StageKind, StageStatus
 
 def source(name: str, *, size: int = 100, modified: int = 1) -> DocumentSource:
     return DocumentSource(Path(name), DocumentFormat.PDF, size, modified)
+
+
+def test_new_version_keeps_choices_and_order_with_fresh_identity():
+    queue = JobQueue()
+    first = queue.add(source("first.pdf"), JobConfiguration())
+    other = queue.add(source("other.pdf"), JobConfiguration())
+    completed = replace(
+        first,
+        stages=tuple(
+            replace(stage, status=StageStatus.COMPLETED) if stage.participates else stage
+            for stage in first.stages
+        ),
+        result_path=Path("old.epub"),
+    )
+    queue.replace(completed)
+    new = queue.create_version(first.id, source("first.pdf", modified=2))
+    assert new.id != first.id
+    assert new.configuration == completed.configuration
+    assert new.order == first.order
+    assert new.status is JobStatus.QUEUED
+    assert new.result_path is None
+    assert queue.jobs == (new, other)
+    assert completed.result_path == Path("old.epub")
+    with pytest.raises(ValueError):
+        queue.create_version(new.id, new.source)
 
 
 def test_job_queue_owns_unique_identity_configuration_and_order() -> None:

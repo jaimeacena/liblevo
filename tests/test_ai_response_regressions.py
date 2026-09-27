@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from parsezen.errors import ImprovementError
 from parsezen.improvement import ImprovementMode, improve_markdown
 from parsezen.settings import AppSettings
 
@@ -43,7 +44,7 @@ def test_anonymized_model_response_regressions(case: dict[str, object]) -> None:
             content = next(responses)
         except StopIteration:
             pytest.fail("The regression made more model requests than its fixture allows.")
-        return httpx.Response(200, json={"message": {"content": content}})
+        return httpx.Response(200, json={"done": True, "message": {"content": content}})
 
     result = improve_markdown(
         source,
@@ -54,3 +55,23 @@ def test_anonymized_model_response_regressions(case: dict[str, object]) -> None:
 
     assert result == expected
     assert request_count == len(raw_responses)
+
+
+@pytest.mark.parametrize("done", [False, True])
+def test_truncated_generation_is_not_accepted_or_saved_as_a_checkpoint(done: bool) -> None:
+    saved: list[str] = []
+    source = "Este párrafo contiene un eror que debe corregirse."
+    response = {
+        "message": {"content": source.replace("eror", "error")},
+        "done": done,
+        "done_reason": "length" if done else None,
+    }
+    with pytest.raises(ImprovementError):
+        improve_markdown(
+            source,
+            ImprovementMode.CLEAN,
+            _SETTINGS,
+            transport=httpx.MockTransport(lambda _: httpx.Response(200, json=response)),
+            save_checkpoint=lambda _key, content: saved.append(content),
+        )
+    assert not saved

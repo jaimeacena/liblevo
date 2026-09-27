@@ -166,7 +166,7 @@ def test_activity_render_matrix_keeps_failed_and_completed_states_inside_viewpor
         view.jobs_list.setCurrentRow(row)
         QApplication.processEvents()
         snapshot = view.grab()
-        assert snapshot.size() == QSize(width, 720)
+        assert snapshot.deviceIndependentSize().toSize() == QSize(width, 720)
         assert snapshot.save(str(tmp_path / f"activity-{theme.value}-{width}-{row}.png"))
         assert view.jobs_list.horizontalScrollBar().maximum() == 0
         for widget in (view.jobs_list, view.details):
@@ -197,7 +197,7 @@ def test_workspace_render_matrix_keeps_core_actions_inside_the_viewport(
     snapshot = workspace.grab()
     snapshot_path = tmp_path / f"workspace-{theme.value}-{width}.png"
     assert snapshot.save(str(snapshot_path))
-    assert snapshot.size() == QSize(width, 760)
+    assert snapshot.deviceIndependentSize().toSize() == QSize(width, 760)
     assert snapshot.toImage().pixelColor(width // 2, 10).alpha() == 255
 
     for control in (
@@ -238,11 +238,11 @@ def test_empty_workspace_render_matrix_keeps_one_clear_import_action(
     QApplication.processEvents()
 
     snapshot = workspace.grab()
-    assert snapshot.size() == QSize(width, 760)
+    assert snapshot.deviceIndependentSize().toSize() == QSize(width, 760)
     assert snapshot.save(str(tmp_path / f"workspace-empty-{theme.value}-{width}.png"))
     assert workspace.drop_area.isVisible()
     assert workspace.drop_area.width() <= 620
-    assert workspace.drop_area.height() == (140 if width <= 640 else 92)
+    assert workspace.drop_area.height() == (180 if width <= 640 else 112)
     assert workspace.drop_area.primary_label.text() == "Arrastra documentos aquí"
     assert workspace.drop_area.browse_button.text() == "Seleccionar archivos"
     assert not workspace.queue_summary.isVisible()
@@ -285,7 +285,7 @@ def test_workspace_wide_tall_matrix_preserves_intentional_queue_geometry(
     QApplication.processEvents()
 
     snapshot = workspace.grab()
-    assert snapshot.size() == QSize(2160, 1280)
+    assert snapshot.deviceIndependentSize().toSize() == QSize(2160, 1280)
     assert snapshot.save(str(tmp_path / f"workspace-wide-{theme.value}-{job_count}.png"))
     if not jobs:
         assert workspace.drop_area.geometry().center().y() < workspace.queue_pane.height() // 3
@@ -333,7 +333,7 @@ def test_running_row_render_matrix_keeps_progress_inside_the_row(
     QApplication.processEvents()
 
     snapshot = workspace.grab()
-    assert snapshot.size() == QSize(width, 760)
+    assert snapshot.deviceIndependentSize().toSize() == QSize(width, 760)
     assert snapshot.save(str(tmp_path / f"running-{theme.value}-{width}.png"))
     assert workspace.job_table.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
 
@@ -372,7 +372,7 @@ def test_phase_review_render_matrix_keeps_current_session_progress_and_actions_v
     QApplication.processEvents()
 
     snapshot = dialog.grab()
-    assert snapshot.size() == QSize(width, 760)
+    assert snapshot.deviceIndependentSize().toSize() == QSize(width, 760)
     assert snapshot.save(str(tmp_path / f"phase-{theme.value}-{width}.png"))
     assert "0 de 1 decisiones" in dialog.progress_indicator.accessibleDescription()
     assert dialog.next_button.isVisible()
@@ -411,14 +411,20 @@ def test_epub_editor_render_matrix_keeps_safe_exit_and_helper_visible(
     QApplication.processEvents()
 
     snapshot = dialog.grab()
-    assert snapshot.size() == QSize(width, 760)
+    assert snapshot.deviceIndependentSize().toSize() == QSize(width, 760)
     assert snapshot.save(str(tmp_path / f"epub-{theme.value}-{width}.png"))
     assert dialog.dialog_title.text() == "Revisión final del EPUB"
     assert dialog.review_helper.isVisible()
     assert dialog.save_later_button.text() == "Guardar y salir"
-    assert dialog.cancel_button.text() == "Descartar cambios"
+    assert dialog.cancel_button.text() == ("Descartar" if width <= 640 else "Descartar cambios")
     assert dialog.content_tool_strip.horizontalScrollBarPolicy() == Qt.ScrollBarAlwaysOff
     assert dialog.editor_more_button.isVisible() is (width <= 960)
+    if width > 640:
+        assert dialog.split_button.width() >= (
+            dialog.split_button.fontMetrics().horizontalAdvance("Separar")
+            + dialog.split_button.iconSize().width()
+            + 6
+        )
 
 
 @pytest.mark.parametrize("theme", [ThemeMode.LIGHT, ThemeMode.DARK])
@@ -564,6 +570,8 @@ def test_configuration_is_a_fully_visible_internal_page(
     window._configure_job(job.id, None)  # noqa: SLF001
     editor = window._active_configuration_dialog  # noqa: SLF001
     assert isinstance(editor, JobConfigurationDialog)
+    # This render contract stays on the configuration page; setup navigation has its own tests.
+    editor.component_setup_requested.disconnect()
     editor._set_review_enabled(False)  # noqa: SLF001
     editor._set_translation_language("es")  # noqa: SLF001
     editor._set_page_range(PageRangeConfiguration(25, 140))  # noqa: SLF001
@@ -573,8 +581,8 @@ def test_configuration_is_a_fully_visible_internal_page(
     assert window.parsezen_workspace.current_internal_widget is editor
     assert not hasattr(editor, "scroll_area")
     assert editor.content.width() >= 700
-    left_margin = editor.content.geometry().left()
-    right_margin = editor.width() - editor.content.geometry().right() - 1
+    left_margin = editor.content.mapTo(editor, QPoint()).x()
+    right_margin = editor.width() - left_margin - editor.content.width()
     assert abs(left_margin - right_margin) <= 1
     _assert_fully_visible(editor.content, editor)
     _assert_fully_visible(editor.markdown_card, editor)
@@ -622,4 +630,4 @@ def test_flat_option_row_remains_keyboard_operable_without_clipping(qtbot, tmp_p
         qtbot.keyClick(row, Qt.Key.Key_Space)
 
     image = row.grab().toImage()
-    assert image.size() == row.size()
+    assert image.deviceIndependentSize().toSize() == row.size()

@@ -9,6 +9,7 @@ from pathlib import Path, PurePosixPath
 
 from parsezen.cancellation import CancellationToken, check_cancelled
 from parsezen.conversion import CONVERSION_REQUIRED_EXTENSIONS, materialize_converted_markdown
+from parsezen.cover_images import COVER_MEDIA_TYPES, read_cover_image
 from parsezen.document_model import ConvertedResource
 from parsezen.domain.execution_plan import ExecutionStep
 from parsezen.domain.process_lifecycle import ProcessStage
@@ -45,14 +46,7 @@ from parsezen.translation_quality import (
 from parsezen.work_checkpoints import WorkCheckpoints, prune_work_checkpoint_cache
 from parsezen.workflow import OutputFormat
 
-EPUB_COVER_MEDIA_TYPES = {
-    ".gif": "image/gif",
-    ".jpeg": "image/jpeg",
-    ".jpg": "image/jpeg",
-    ".png": "image/png",
-    ".svg": "image/svg+xml",
-    ".webp": "image/webp",
-}
+EPUB_COVER_MEDIA_TYPES = COVER_MEDIA_TYPES
 
 CoverRenderer = Callable[[Path, int], bytes]
 
@@ -129,7 +123,7 @@ def publish_transformed_document(
         epub_resources = converted_resources
         cover_resource_path = None if request.epub_remove_cover else source_cover_path
         if request.epub_cover_path is not None:
-            cover_resource = _read_epub_cover(request.epub_cover_path)
+            cover_resource = read_epub_cover(request.epub_cover_path)
             epub_resources = (
                 *(
                     resource
@@ -219,6 +213,7 @@ def publish_transformed_document(
             review_translation_quality_report=review_translation_quality_report,
             linguistic_review_coverage=linguistic_review_coverage,
             preserved_translation_chunks=tuple(preserved_translation_chunks),
+            preserved_review_chunks=transformed.preserved_review_chunks,
             preserved_images=built_epub.resource_count,
             epub_chapters=built_epub.chapter_count,
             revision_draft=revision_draft,
@@ -288,6 +283,7 @@ def publish_transformed_document(
             review_translation_quality_report=review_translation_quality_report,
             linguistic_review_coverage=linguistic_review_coverage,
             preserved_translation_chunks=tuple(preserved_translation_chunks),
+            preserved_review_chunks=transformed.preserved_review_chunks,
             preserved_images=len(converted_resources),
             revision_draft=materialized_revision,
             review_markdown=(
@@ -295,7 +291,7 @@ def publish_transformed_document(
                 if materialized_revision is not None
                 else public_markdown
             ),
-            review_required=effective_review_required,
+            review_required=effective_review_required or bool(transformed.preserved_review_chunks),
             final_integrity_report=integrity.report,
             front_matter_blocks=semantic_document.front_matter_blocks,
             toc_blocks=semantic_document.toc_blocks,
@@ -436,13 +432,15 @@ def _without_revision_resources(
     return replace(rebuilt, changes=tuple(aligned_changes))
 
 
-def _read_epub_cover(path: Path) -> ConvertedResource:
+def read_epub_cover(path: Path) -> ConvertedResource:
     suffix = path.suffix.lower()
     media_type = EPUB_COVER_MEDIA_TYPES[suffix]
     try:
-        content = path.read_bytes()
-    except OSError as exc:
-        raise RequestValidationError("No se pudo leer la portada seleccionada.") from exc
+        content = read_cover_image(path)
+    except (OSError, ValueError) as exc:
+        raise RequestValidationError(
+            "No se pudo leer la portada: debe ser una imagen válida, estática y de hasta 20 MB."
+        ) from exc
     return ConvertedResource(
         PurePosixPath(f"cover/cover{suffix}"),
         content,

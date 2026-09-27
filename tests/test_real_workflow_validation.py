@@ -21,6 +21,7 @@ from scripts.validate_real_workflows import (
     write_synthetic_pdf,
 )
 
+from parsezen.direct_models import DIRECT_TRANSLATION_MODEL_ID
 from parsezen.glossary import GlossaryEntry
 from parsezen.improvement import ImprovementMode
 from parsezen.local_models import OllamaConnection, OllamaModel, OllamaStatus
@@ -74,6 +75,27 @@ def test_live_settings_reject_reasoning_model_even_when_it_is_installed(
         select_live_settings("qwen3:4b")
 
     assert select_live_settings("qwen3:4b-instruct").model == "qwen3:4b-instruct"
+
+
+def test_live_settings_default_to_integrated_model_without_ollama(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(workflow_module, "load_settings", lambda: AppSettings())
+    monkeypatch.setattr(
+        workflow_module,
+        "verified_direct_model_path",
+        lambda _model: tmp_path / "verified.gguf",
+    )
+    monkeypatch.setattr(
+        workflow_module,
+        "discover_ollama",
+        lambda _preferred: pytest.fail("Ollama was contacted for a new validation"),
+    )
+
+    settings = select_live_settings()
+
+    assert settings.model == DIRECT_TRANSLATION_MODEL_ID
+    assert settings.context_window == 8192
 
 
 def test_full_live_matrix_contains_each_combination_for_both_outputs() -> None:

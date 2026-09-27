@@ -1,4 +1,4 @@
-"""Qt controller for local Ollama discovery and setup.
+"""Qt controller for fixed local models and optional legacy Ollama setup.
 
 The controller owns asynchronous local-AI operations without depending on any
 window or presentation widget.  Presentation code consumes its signals and
@@ -17,10 +17,19 @@ from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal, Slot
 from parsezen.component_catalog import PRODUCT_COMPONENT_CATALOG
 from parsezen.component_installer import install_product_component
 from parsezen.component_readiness import ComponentCatalogEntry, inspect_component_catalog
+from parsezen.direct_models import (
+    ACTIVE_DIRECT_MODEL_IDS,
+    active_direct_profile,
+    inspect_direct_components,
+    prepare_direct_model,
+)
 from parsezen.errors import LocalModelUnavailableError, ParsezenError
 from parsezen.local_ai_policy import ComponentCapability
 from parsezen.local_models import (
     LocalAISetupCancelled,
+    OllamaConnection,
+    OllamaModel,
+    OllamaStatus,
     configure_ollama_local_only,
     detect_local_hardware,
     discover_ollama,
@@ -46,12 +55,53 @@ class _DiscoverySignals(QObject):
 
 
 class _DiscoveryWorker(QRunnable):
-    def __init__(self, model: str | None) -> None:
+    def __init__(self, model: str | None, *, direct: bool) -> None:
         super().__init__()
         self.signals = _DiscoverySignals()
         self._model = model
+        self._direct = direct
 
     def run(self) -> None:
+        if self._direct:
+            try:
+                readiness = inspect_direct_components()
+                models = tuple(
+                    OllamaModel(
+                        model_id=profile.model_id,
+                        display_name=(
+                            "Traducción IA"
+                            if profile.capability is ComponentCapability.TRANSLATION
+                            else "Revisión IA"
+                        ),
+                        size_bytes=profile.size_bytes,
+                        max_context=profile.context_window,
+                        recommended_context=profile.context_window,
+                        digest=profile.sha256,
+                    )
+                    for capability in ACTIVE_DIRECT_MODEL_IDS
+                    if (profile := active_direct_profile(capability)) is not None
+                    and readiness[capability].prepared
+                )
+                status = OllamaStatus.READY if models else OllamaStatus.MISSING_MODEL
+                connection = OllamaConnection(status, models, self._model)
+            except Exception:
+                try:
+                    self.signals.failed.emit("No se pudo comprobar el motor local de modelos.")
+                except RuntimeError:
+                    pass
+            else:
+                try:
+                    self.signals.component_readiness.emit(readiness)
+                    self.signals.succeeded.emit(connection)
+                except RuntimeError:
+                    # The window may close while this read-only worker finishes.
+                    pass
+            finally:
+                try:
+                    self.signals.finished.emit()
+                except RuntimeError:
+                    pass
+            return
         try:
             connection = discover_ollama(self._model)
         except ParsezenError as exc:
@@ -60,12 +110,16 @@ class _DiscoveryWorker(QRunnable):
             self.signals.failed.emit("Se produjo un error inesperado al comprobar la IA local.")
         else:
             try:
-                readiness = inspect_component_catalog(
-                    cast(
-                        Mapping[ComponentCapability | str, ComponentCatalogEntry],
-                        PRODUCT_COMPONENT_CATALOG,
-                    ),
-                    detect_local_hardware(),
+                readiness = (
+                    inspect_component_catalog(
+                        cast(
+                            Mapping[ComponentCapability | str, ComponentCatalogEntry],
+                            PRODUCT_COMPONENT_CATALOG,
+                        ),
+                        detect_local_hardware(),
+                    )
+                    if connection.status in {OllamaStatus.READY, OllamaStatus.MISSING_MODEL}
+                    else {}
                 )
             except Exception:
                 # Keep ordinary Ollama discovery useful when a platform probe
@@ -141,10 +195,11 @@ class _ComponentSignals(QObject):
 
 
 class _ComponentWorker(QRunnable):
-    def __init__(self, capability: ComponentCapability) -> None:
+    def __init__(self, capability: ComponentCapability, *, direct: bool) -> None:
         super().__init__()
         self.signals = _ComponentSignals()
         self._capability = capability
+        self._direct = direct
         self.cancellation = Event()
 
     def run(self) -> None:
@@ -152,11 +207,18 @@ class _ComponentWorker(QRunnable):
             self.signals.progress.emit(self._capability, percent, message)
 
         try:
-            install_product_component(
-                self._capability,
-                on_progress=report,
-                cancellation=self.cancellation,
-            )
+            if self._direct:
+                prepare_direct_model(
+                    self._capability,
+                    on_progress=report,
+                    cancellation=self.cancellation,
+                )
+            else:
+                install_product_component(
+                    self._capability,
+                    on_progress=report,
+                    cancellation=self.cancellation,
+                )
         except LocalAISetupCancelled as exc:
             self.signals.cancelled.emit(self._capability, str(exc))
         except ParsezenError as exc:
@@ -195,9 +257,11 @@ class LocalAIController(QObject):
         parent: QObject | None = None,
         *,
         thread_pool: QThreadPool | None = None,
+        direct: bool = False,
     ) -> None:
         super().__init__(parent)
         self._thread_pool = thread_pool
+        self.direct = direct
         self._discovery_worker: _DiscoveryWorker | None = None
         self._setup_worker: _SetupWorker | None = None
         self._setup_action: LocalAIAction | None = None
@@ -222,7 +286,7 @@ class LocalAIController(QObject):
     def discover(self, model: str | None) -> bool:
         if self.discovering or self.setting_up or self.installing_component:
             return False
-        worker = _DiscoveryWorker(model)
+        worker = _DiscoveryWorker(model, direct=self.direct)
         worker.signals.succeeded.connect(self.discovery_succeeded)
         worker.signals.component_readiness.connect(self.component_readiness)
         worker.signals.failed.connect(self.discovery_failed)
@@ -261,7 +325,7 @@ class LocalAIController(QObject):
             or self.installing_component
         ):
             return False
-        worker = _ComponentWorker(capability)
+        worker = _ComponentWorker(capability, direct=self.direct)
         worker.signals.progress.connect(self.component_progress)
         worker.signals.succeeded.connect(self.component_succeeded)
         worker.signals.cancelled.connect(self.component_cancelled)

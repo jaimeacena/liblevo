@@ -523,3 +523,78 @@ def test_prefers_a_rotated_crop_for_an_orientation_mismatched_image(
 
     assert result[1].startswith("Recovered text")
     assert converted_sizes == [(220, 100)]
+
+
+@pytest.mark.parametrize("image_result", [{1: "Recognized image text."}, {1: ""}, {}])
+def test_forced_ocr_uses_pdf_only_as_fallback(tmp_path, monkeypatch, image_result):
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-synthetic")
+    pdf_pages = []
+    image_calls = []
+
+    class Document:
+        def export_to_markdown(self, *, page_no, **kwargs):
+            return f"Native page {page_no}."
+
+    class Converter:
+        def convert(self, source, *, page_range):
+            pdf_pages.extend(range(page_range[0], page_range[1] + 1))
+            return SimpleNamespace(document=Document())
+
+    def images(converter, source, pages, cancellation, **kwargs):
+        image_calls.append(pages)
+        return image_result
+
+    monkeypatch.setattr(ocr_module, "_document_converter", Converter)
+    monkeypatch.setattr(ocr_module, "_recover_pages_from_images", images)
+    page_results = []
+    result = _convert_pdf_pages_in_process(
+        source,
+        {1, 2},
+        force_full_page_numbers={1},
+        on_page_result=lambda page, text: page_results.append((page, text)),
+    )
+    assert image_calls == [{1}]
+    expected = {1: image_result.get(1) or "Native page 1.", 2: "Native page 2."}
+    assert result == expected
+    assert sorted(page_results) == sorted(expected.items())
+    assert pdf_pages == ([2] if image_result.get(1) else [1, 2])
+
+
+def test_forced_image_error_retains_native_fallback(tmp_path, monkeypatch):
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-synthetic")
+
+    class Document:
+        def export_to_markdown(self, **kwargs):
+            return "Native fallback with 125."
+
+    class Converter:
+        def convert(self, source, **kwargs):
+            return SimpleNamespace(document=Document())
+
+    def images(*args, **kwargs):
+        raise RuntimeError("Image unavailable")
+
+    monkeypatch.setattr(ocr_module, "_document_converter", Converter)
+    monkeypatch.setattr(ocr_module, "_recover_pages_from_images", images)
+    assert _convert_pdf_pages_in_process(source, {1}, force_full_page_numbers={1}) == {
+        1: "Native fallback with 125."
+    }
+
+
+def test_forced_image_cancellation_never_starts_native_fallback(tmp_path, monkeypatch):
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-synthetic")
+
+    class Converter:
+        def convert(self, *args, **kwargs):
+            pytest.fail("Cancellation must not start another OCR route")
+
+    def images(*args, **kwargs):
+        raise ProcessingCancelledError()
+
+    monkeypatch.setattr(ocr_module, "_document_converter", Converter)
+    monkeypatch.setattr(ocr_module, "_recover_pages_from_images", images)
+    with pytest.raises(ProcessingCancelledError):
+        _convert_pdf_pages_in_process(source, {1}, force_full_page_numbers={1})

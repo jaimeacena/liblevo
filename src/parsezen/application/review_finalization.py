@@ -16,6 +16,8 @@ from parsezen.domain.reviews import ReviewSession, ReviewStatus
 class ReviewRepository(Protocol):
     def save_review(self, review: ReviewSession) -> None: ...
 
+    def upsert_job(self, job: DocumentJob) -> None: ...
+
     def delete_review_material(self, job_id: str) -> None: ...
 
 
@@ -68,6 +70,13 @@ class ReviewFinalizationCoordinator:
         for review in applied:
             self._reviews.save_review(review)
         completed = self._execution.complete(job_id, result_path)
+        try:
+            # Keep recovery material until the completed state and final path are durable.
+            # If persistence fails, the published file exists but the old review remains usable.
+            self._reviews.upsert_job(completed)
+        except (OSError, RuntimeError, ValueError):
+            self._queue.replace(job)
+            raise
         warning = None
         try:
             self._reviews.delete_review_material(job_id)

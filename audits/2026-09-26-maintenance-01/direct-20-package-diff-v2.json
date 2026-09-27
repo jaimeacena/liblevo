@@ -1,0 +1,8 @@
+{
+  "changed_members": [
+    "EPUB/package.opf"
+  ],
+  "identifier_changed": true,
+  "modified_timestamp_changed": true,
+  "other_opf_xml_equal_after_both_normalized": true
+}

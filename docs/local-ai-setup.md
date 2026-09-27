@@ -1,10 +1,10 @@
 # IA local en Parsezen
 
-Parsezen integra Ollama como único servidor de modelos conversacionales. No permite proveedores ni
-direcciones configurables: la API está fijada a `127.0.0.1:11434`.
+Los trabajos nuevos usan modelos integrados en Parsezen. No necesitas instalar, abrir ni mantener
+Ollama. La app no ofrece proveedores, cuentas ni direcciones configurables. Los documentos se
+procesan en el PC; al preparar un componente puede descargarse su archivo público del modelo.
 
-Ollama solo es necesario para traducción con IA, corrección o la pre-organización automática de
-capítulos. Conversión, EPUB, OCR, personalización manual y traducción con Argos pueden usarse sin él.
+Conversión, EPUB, OCR, traducción y revisión de trabajos nuevos pueden usarse sin Ollama.
 La traducción nueva usa IA local por defecto; Argos permanece como elección manual y nunca actúa como
 alternativa silenciosa. Parsezen fija Hy-MT2 Q4_K_M para traducir y LFM Q6_K para generar propuestas
 de revisión protegidas por guardas y confirmación humana; no pide a la persona elegir un modelo
@@ -20,10 +20,13 @@ alcanzan trabajos pendientes todavía editables.
 
 La interfaz muestra una única acción pertinente:
 
-1. **Instalar Ollama**: usa WinGet o el instalador oficial verificado.
-2. **Iniciar**: abre el proceso local y espera a que responda.
-3. **Proteger y reiniciar**: activa `disable_ollama_cloud` y reinicia el servidor.
-4. **Componentes de IA local**: abre las dos filas de capacidades fijadas.
+1. Abre **IA local** desde Ajustes.
+2. Si **Traducción IA** indica `Descargable`, pulsa **Preparar componente**. Si ya indica
+   `Preparado`, puedes traducir. El archivo ocupa unos 4,6 GB.
+3. Prepara **Revisión IA** solo si quieres esa revisión adicional; ocupa unos 2,2 GB y muestra
+   sus condiciones antes de descargarlo.
+4. Elige el PDF, el idioma español y salida EPUB. Revisa las páginas, el índice y los fragmentos
+   señalados antes de usar el libro.
 
 El usuario no necesita abrir una consola, una aplicación de chat ni un navegador.
 
@@ -31,12 +34,11 @@ El usuario no necesita abrir una consola, una aplicación de chat ni un navegado
 
 Cada tarjeta representa una capacidad concreta, no un modelo conversacional intercambiable. La
 preparación se decide con el catálogo versionado de Parsezen y comprobaciones locales de hardware,
-configuración solo-local y metadatos de Ollama. La verificación solo consulta `GET /api/version`,
-`GET /api/tags` y `POST /api/show`; no envía documentos, prompts ni respuestas.
+modelo integrado y el SHA-256 del archivo GGUF local. No consulta Ollama ni envía documentos,
+prompts ni respuestas.
 
-Un componente solo aparece como `Preparado` cuando su manifest, digest, formato, familia,
-cuantización, contexto, capacidades y versión de Ollama coinciden. Si el modelo fijado no está en
-`/api/tags`, la tarjeta puede mostrar `Descargable` cuando los demás requisitos se cumplen; la vista
+Un componente directo solo aparece como `Preparado` cuando el motor existe y tamaño y SHA-256 del
+archivo coinciden con el perfil fijado. Si falta, la tarjeta puede mostrar `Descargable`; la vista
 emite únicamente la capacidad (`translation` o `review`) para que una capa posterior autorizada
 gestione la preparación. Nunca acepta un nombre de modelo, URL o endpoint introducido por el usuario.
 
@@ -50,67 +52,53 @@ reemplazo silencioso de un componente de IA.
 
 ## Solo local
 
-Los modelos con `:cloud` o `-cloud` se excluyen. Parsezen requiere además que las funciones cloud de
-Ollama estén desactivadas.
-
-Configuración de Windows:
-
-```json
-{
-  "disable_ollama_cloud": true
-}
-```
-
-Se guarda en `%USERPROFILE%\.ollama\server.json`. Parsezen conserva otras claves y reemplaza el
-archivo de forma atómica. La variable `OLLAMA_NO_CLOUD=1` se aplica además cuando Parsezen inicia
-Ollama, pero no se acepta el entorno del cliente como prueba del estado de un servidor que ya estaba
-activo. Si falta la configuración persistente, Parsezen exige proteger y reiniciar Ollama.
+El motor directo abre únicamente el modelo GGUF que Parsezen ha verificado en el equipo. No contacta
+un servidor de modelos. La preparación puede reutilizar una copia local antigua del mismo archivo o
+descargar el modelo público fijado; los documentos nunca forman parte de esa solicitud.
+Los trabajos antiguos que guardaron expresamente una identidad de Ollama conservan esa dependencia.
+Si no quieres usarla, vuelve a configurar esos trabajos antes de reanudarlos.
 
 ## Ventana de contexto
 
 Cada manifest fija 8.192 tokens para su fase, dentro del máximo anunciado por el artefacto. Parsezen
-fragmenta los documentos largos y envía la ventana como `options.num_ctx`; la interfaz no ofrece un
+fragmenta los documentos largos y usa la ventana fijada por el perfil; la interfaz no ofrece un
 control para elevarla ni permite que una preferencia antigua sustituya el contrato especializado.
 
 ## Preparación de componentes
 
 La interfaz no instala ni selecciona modelos arbitrarios. El instalador recibe únicamente la
-capacidad del catálogo, descarga su fuente fija mediante Ollama y vuelve a comprobar el alias final.
-Una descarga solo termina correctamente si digest, formato, familia, cuantización, contexto,
-plantilla, parámetros, licencia y capacidades coinciden con el manifest. LFM muestra sus condiciones
+capacidad del catálogo, importa o descarga el archivo público fijado y comprueba tamaño y SHA-256.
+Una descarga incompleta o incorrecta no se publica como modelo preparado. LFM muestra sus condiciones
 de licencia y exige confirmación explícita antes de descargar.
 
 ## Privacidad de las peticiones
 
-- `POST /api/generate` y `POST /api/chat` se dirigen únicamente a loopback.
-- Las respuestas llegan en streaming para poder cancelar entre fragmentos.
+- El motor directo no abre conexiones para procesar documentos.
+- Las respuestas llegan en fragmentos para poder cancelar entre ellos.
 - No se registra el prompt ni la respuesta.
 - El glosario se protege durante la petición y se cifra mientras una revisión sea recuperable.
 - Los checkpoints de fragmentos validados se cifran para la cuenta de Windows.
 
-## Diagnóstico manual opcional
+## Diagnóstico sencillo
 
-El recorrido normal no requiere estos comandos. Para diagnóstico:
+Si `Traducción IA` no aparece como `Preparado`, abre **IA local** y pulsa **Comprobar de nuevo**.
+Si indica que falta el motor integrado, usa el paquete local que lo incluye. Si el archivo no supera
+la verificación, consérvalo y consulta el informe técnico antes de intentar repararlo; no se usa
+para traducir.
 
-```powershell
-winget install --id Ollama.Ollama --exact
-Invoke-RestMethod http://127.0.0.1:11434/api/version
-ollama list
-ollama ps
-```
+## Prueba técnica opcional y evaluación histórica
 
-Después vuelve a Parsezen y pulsa `Comprobar de nuevo`. La pantalla vuelve a evaluar las dos filas
-sin conservar nombres de tags ni rutas del documento.
-
-## Validación real
+`Validar con IA real.cmd` sin argumentos usa el traductor integrado y un PDF sintético; no necesita
+Ollama. El recorrido inicial comprueba traducción y EPUB. Puede tardar varios minutos y un resultado
+`OK` no demuestra que la prosa de un libro sea agradable de leer. Elige los intervalos y documentos
+de prueba de manera explícita si deseas ampliar el ensayo.
 
 La política de modelos de IA local fija los manifests, adaptadores, alcances y gates de los
 componentes. La pantalla no muestra candidatos ni permite cambiar tags fuera de esa política.
 
-`Validar con IA real.cmd` recorre una muestra sintética de 20 páginas mediante los componentes
-instalados. Los
-casos que traducen usan IA local por defecto; Argos solo se prueba al añadir explícitamente
-`--translation-engine argos` y nunca se usa para recuperarse de un fallo de Ollama. El informe local
+La herramienta genera por defecto un PDF sintético de 20 páginas. Los casos que traducen usan IA
+local por defecto; Argos solo se prueba al añadir explícitamente `--translation-engine argos` y
+nunca se usa para recuperarse de un fallo del modelo. El informe local
 solo contiene fases, tiempos, tamaños, contadores de calidad y revisión, y tipos de error. La
 aprobación automática aplica únicamente los cambios que la app clasifica como conservadores. El
 informe no se incorpora al repositorio ni contiene texto documental. `OK` exige que no queden
@@ -122,7 +110,9 @@ termina y genera un archivo válido pero no supera ese control se presenta como 
 corpus especializado puedes repetir
 `--glossary "origen=destino"`; esos términos se usan en la transformación y se omiten del informe.
 
-La misma herramienta permite comparaciones reproducibles sin documentos privados:
+Los comandos y resultados siguientes pertenecen a la evaluación histórica con Ollama. Se conservan
+como referencia, no como validación del motor directo ni como pasos para el uso normal. La misma
+herramienta permite pedir expresamente el modelo antiguo para esa comparación:
 
 ```powershell
 Validar con IA real.cmd --model parsezen/hymt-translation:Q4_K_M --translation-engine local_ai --profile translation --pages 1 4

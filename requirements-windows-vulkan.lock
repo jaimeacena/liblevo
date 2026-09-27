@@ -1,0 +1,7 @@
+# Additive Windows 11 direct-model runtime, after requirements-windows-cpu.lock.
+# Install with: python -m pip install --no-deps --require-hashes -r requirements-windows-vulkan.lock
+# The wheel is the upstream maintainer's Vulkan build, verified on this PC.
+diskcache==5.6.3 \
+    --hash=sha256:5e31b2d5fbad117cc363ebaf6b689474db18a1f6438bc82358b024abd4c2ca19
+llama-cpp-python @ https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.35-vulkan/llama_cpp_python-0.3.35-py3-none-win_amd64.whl \
+    --hash=sha256:fa06c0c184801410be1ffdcc32cf5b57d92b23a6dff9e90e5870dea8710a233c

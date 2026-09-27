@@ -655,7 +655,7 @@ def _protect_translation_values(
     protect_emphasis: bool = False,
     foreign_emphasis_languages: tuple[str, str] | None = None,
 ) -> _ProtectedMarkdown:
-    spans = []
+    spans: list[tuple[int, int, bool]] = []
     emphasis_pairs = _markdown_emphasis_delimiter_pairs(markdown) if protect_emphasis else ()
     if protect_numbers:
         # Protect the complete English ordinal before its bare number.  Hiding only ``13`` from
@@ -998,6 +998,10 @@ def _restore_protected_values(
 ) -> str:
     restored = _repair_unambiguous_protected_token_typos(response, values)
     for protected_value in values:
+
+        def literal_value(_match: re.Match[str], value: str = protected_value.value) -> str:
+            return value
+
         if restored.count(protected_value.token) != protected_value.expected_count:
             raise ImprovementError("El modelo cambió u omitió un valor protegido del documento.")
         if protected_value.paragraph:
@@ -1005,7 +1009,7 @@ def _restore_protected_values(
                 rf"[ \t]*\r?\n[ \t]*{re.escape(protected_value.token)}[ \t]*\r?\n"
             )
             restored, replacements = paragraph_pattern.subn(
-                lambda _match, value=protected_value.value: value,
+                literal_value,
                 restored,
             )
             if replacements != protected_value.expected_count:
@@ -1015,7 +1019,7 @@ def _restore_protected_values(
         else:
             wrapped_pattern = re.compile(rf"<!--[ \t]*{re.escape(protected_value.token)}[ \t]*-->")
             restored, wrapped_replacements = wrapped_pattern.subn(
-                lambda _match, value=protected_value.value: value,
+                literal_value,
                 restored,
             )
             if wrapped_replacements == 0:

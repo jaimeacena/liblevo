@@ -6,6 +6,47 @@ El orden actual de trabajo vive en [`work-plan.md`](work-plan.md) y el protocolo
 ejecutada sobre el alcance correspondiente; ausencia de avisos, fallback seguro o archivo generado no
 equivalen por sí solos a fidelidad.
 
+## Regresiones de estabilidad obligatorias
+
+- Una respuesta cortada de revisión opcional conserva el texto anterior, no se cachea como éxito
+  y mantiene un aviso recuperable hasta la confirmación del EPUB. Cancelar sigue interrumpiendo.
+  La reserva de generación de LFM queda acotada; los demás modelos conservan sus límites.
+- Una fase todavía activa no muestra 100 % por haber anunciado su último fragmento.
+- Una imagen vertical se ve completa en un lector EPUB paginado sin una página vacía previa;
+  comprobar el reflujo además de la integridad binaria de los recursos.
+
+- Con Ollama cerrado, elegir traducción directa lleva a preparar únicamente el GGUF que falte;
+  los fallos de verificación no se presentan como falta de hardware. Preparar componentes
+  actualiza el editor ya abierto. El idioma y el plan pendientes sobreviven al cierre como
+  borrador no procesable y se validan al volver tras la preparación.
+
+- Un segundo arranque activa la ventana existente sin cargar ni sobrescribir otra cola del perfil;
+  el bloqueo se recupera tras un cierre inesperado.
+- Una base ocupada no congela la ventana durante segundos; conserva los cambios pendientes,
+  reintenta y avisa si se intenta cerrar sin guardarlos.
+- Cancelar IA interrumpe también la espera de cabeceras y de una línea incompleta, cierra la
+  conexión y no publica contenido parcial; el plazo total cubre esas mismas esperas.
+- Comparar un documento consigo mismo no ejecuta alineación cuadrática, incluidos párrafos repetidos.
+- Una portada corrupta, de formato falso, excesiva o activa se rechaza antes de almacenarse;
+  un EPUB físicamente excesivo se rechaza antes de cargar sus bytes.
+- Las excepciones de dependencias ejecutan sus guardas y respetan las versiones documentadas;
+  repetir OCR real y smoke del paquete con la protección habilitada.
+
+- Abrir, navegar, ampliar y salir del editor sin editar conserva el XHTML y el paquete EPUB;
+  fórmulas y semántica de tablas no se pierden. El contenido no representable queda protegido,
+  incluso ante edición programática; cambiar solo metadatos no serializa el cuerpo desde Qt.
+- Guardar o publicar con una base ocupada o una escritura fallida mantiene el editor abierto y
+  conserva la edición para reintentar. El cierre de la aplicación respeta el mismo contrato.
+- La finalización guarda estado completado y ruta antes de limpiar borradores/instantáneas.
+  Una interrupción en cada frontera deja revisión recuperable o resultado final reconocido.
+  El cierre comprueba escrituras pendientes también cuando ya no hay trabajos sin terminar.
+- Textos repetitivos casi iguales se comparan con trabajo acotado y cambios seleccionables.
+  Conservar orden, cifras y contenido ante cambios al inicio, centro, final e intervalos ambiguos;
+  incluir un párrafo muy largo para cubrir también la comparación de palabras.
+- OCR forzado evita la pasada PDF cuando obtiene resultado de imagen, pero conserva el respaldo
+  nativo ante fallo o vacío. Comprobar resultados únicos, cancelación y checkpoints negativos;
+  cualquier afirmación de ahorro identifica muestra, tiempos, memoria y equivalencia de salida.
+
 ## Cómo usar esta lista
 
 La aceptación avanza en cascada y se detiene en el primer fallo material:
@@ -25,7 +66,46 @@ Para un cambio focal se ejecuta primero su prueba y el bloque afectado. Antes de
 la lista completa. Un cambio exclusivamente documental valida diff, enlaces, coherencia y formato,
 pero no afirma que el pipeline fue reejecutado.
 
+La evaluación comparativa sigue [el procedimiento mínimo](evaluation.md). El banco anterior está
+pendiente de revalidación humana; sus resultados históricos no aprueban el candidato actual.
+Congelar la selección antes de procesar, contar intentos fallidos e incompletos, revisar también
+contenido sin avisos y vincular cada juicio al original y al resultado exactos. Ni una igualdad de
+hashes ni una referencia pendiente ni una valoración simulada acreditan calidad semántica.
+
+La revisión guiada no preselecciona respuestas ni permite entregar una aprobación sin confirmar la
+comparación. «Necesito ayuda» conserva la incertidumbre; un borrador sigue incompleto. La práctica
+sintética se identifica explícitamente. Copiar o guardar valoraciones nunca importa un juicio por sí
+solo ni incluye el contenido del documento. Recuperar respuestas exige el mismo paquete y todos sus
+paneles, sin convertir una inspección parcial en una confirmación completa.
+El formulario incluye comentarios privados, los conserva al entregar y recuperar un borrador y los
+excluye del informe agregado. Markdown y HTML aparecen con formato pasivo, nunca con scripts, CSS
+documental o solicitudes remotas. El PDF indica cualquier truncamiento del intervalo. Resultados
+idénticos se revisan una vez solo si coinciden archivo y recursos, manteniendo ambos intentos y la
+distinción entre intentos y revisiones humanas. Confirmar y copiar constituye la confirmación única;
+un borrador no equivale a una inspección confirmada.
+
 ## Automática
+
+- La separación por espacio vertical se calibra con continuaciones de la propia página y conserva
+  el texto corrido cuando no hay espacio adicional. Las listas de dos elementos exigen introducción
+  explícita y coherencia geométrica. Una continuación partida confundible con un título conserva
+  el énfasis parcial del original antes de recomponer la palabra.
+
+- Una pareja inicial de letras separada artificialmente solo se reúne con evidencia de tamaño,
+  línea base y distancias. Se conservan tamaños uniformes, separaciones normales, letras elevadas o
+  rotadas y casos sin palabra siguiente. La reanudación no reutiliza extracciones previas a la regla.
+
+- La recomposición nativa conserva sangrías de párrafo tras una frase cerrada a distintos tamaños
+  tipográficos, sin convertir pequeños desajustes o continuaciones abiertas en párrafos separados.
+  Los pies con cifras internas requieren las mismas guardas geométricas que los alfabéticos.
+
+- Una marca de procedencia entre páginas consecutivas no corta una continuación nativa confirmada.
+  Se conserva una única marca de la nueva página en la posición de cambio; frases nuevas, listas,
+  títulos, anclas y páginas no consecutivas permanecen separadas.
+
+- La extracción de intervalos cortos elimina etiquetas inferiores aisladas junto al folio cuando
+  su geometría es inequívoca. Conserva notas numeradas con puntuación de cierre, contenido cercano al
+  cuerpo, títulos de índice y texto con continuación. No depende de nombres de capítulos concretos.
 
 ```powershell
 python -m ruff check .
@@ -39,6 +119,25 @@ python scripts/sync_version.py --check
 ```
 
 `Validar Parsezen.cmd` ejecuta la aceptación corta sin documentos privados ni IA real.
+
+- Markdown dividido conserva todo el preámbulo, incluidos rótulos como `Advertencia: ...`, y no
+  corta dentro de bloques de código ni citas. La prueba incluye referencias de página y metadatos.
+- Conversión, mejora y revisión rechazan un índice alterado, un capítulo alterado o uno ausente
+  antes de publicar; validar únicamente el texto canónico no satisface esta condición.
+- Los enlaces relativos con y sin imágenes extraídas conservan sus destinos. Cuando no se puede
+  demostrar la reubicación, el resultado único conserva las referencias y el código originales.
+- Una interrupción real del proceso inmediatamente antes o después de reemplazar un índice
+  Markdown deja todos sus capítulos accesibles. La limpieza posterior respeta archivos ajenos.
+- Chat y generación raw de Ollama rechazan EOF sin `done: true`, `done_reason: length`, motivos
+  desconocidos y errores del servidor, sin registrar contenido ni métricas de éxito. El contenido
+  del evento terminal válido se conserva y no se espera otro evento después de él.
+- Cancelar la descarga de un componente cierra la solicitud aunque Ollama no envíe cabeceras o deje
+  una línea sin terminar. El trabajador espera ese cierre y no emite progreso después de terminar.
+- El auditor de dependencias rechaza paquetes ausentes, duplicados, ajenos o con versión distinta;
+  las únicas diferencias entre locks son las dos variantes CPU autorizadas y auditadas.
+- Una recuperación descifra una sola vez cada texto compartido y vuelve a comprobarlo en la siguiente
+  carga. Una actualización aislada de cola no reescribe los demás trabajos; reordenación, borrado y
+  eventos se deshacen juntos si falla la transacción.
 
 ## Interfaz y cola
 
@@ -58,6 +157,19 @@ python scripts/sync_version.py --check
   viewport en cola, configuración, IA local, revisiones o editor EPUB.
 - Todo el flujo principal se puede recorrer con teclado; el foco es visible, entra en errores
   recuperables y vuelve al control que abrió una página interna.
+- Cambiar claro/oscuro con la confirmación EPUB abierta conserva contraste e iconos legibles.
+  A 320 px y con poca altura se alcanza todo el formulario desplazándolo; Generar EPUB permanece
+  visible, con los botones separados y sus textos completos.
+- Actividad muestra el resultado y lo que conviene revisar; los detalles largos se desplazan sin
+  ocultar Abrir resultado, Abrir carpeta o las acciones de recuperación.
+- «Cambios guardados» solo aparece tras persistencia correcta. Crear otra versión conserva el
+  archivo anterior; un fallo de guardado mantiene el trabajo terminado en la cola.
+- Intervalo PDF muestra el total comprobado en segundo plano, limita los extremos y explica que
+  incluye portada; un error no permite confirmar un rango sin comprobar.
+- La versión marcada «Seleccionada» no suma una decisión hasta confirmarla. Caso actual y decisiones
+  confirmadas son información visible separada. El resaltado no modifica texto ni contenido privado.
+- El editor compacto permite elegir capítulos sin mantener abierto el árbol. Ver índice coincide
+  con la navegación de publicación y no escribe el archivo final. OCR ofrece tamaño real visible.
 - Los botones de icono tienen nombre accesible y tooltip; los formularios mantienen etiquetas
   visibles, error asociado y valores después de una validación fallida.
 - La zona de añadir permanece justo bajo la última fila, comunica selector y arrastre y crea una
@@ -336,7 +448,9 @@ python scripts/sync_version.py --check
 - Una página dudosa abre la imagen a la izquierda y el texto editable a la derecha.
 - Una página con imagen completa y texto útil puede entrar en la auditoría OCR acotada sin que el OCR
   sustituya automáticamente la capa nativa. El presupuesto no supera el 25 % del intervalo ni seis
-  páginas; PDFium solo se ejecuta en esas páginas inciertas.
+  páginas; PDFium solo se ejecuta en esas páginas inciertas. Una tabla nativa explícita, legible,
+  abundante y sin glifos sospechosos no activa por sí sola otro OCR de página completa; una tabla
+  inferida desde raster o con texto insuficiente sigue entrando en el contraste local.
 - Una fuente dañada en al menos ocho líneas puede repararse con lecturas PDFium limitadas a la caja de
   cada línea. La propuesta conserva cifras y separadores nativos, rechaza cambios léxicos amplios y
   solo une un límite de palabra cuando la forma completa se repite como evidencia independiente.
@@ -545,22 +659,26 @@ cifrado debe eliminarse.
 
 ## IA local
 
-- Sin Ollama, aparece la instalación guiada.
-- Con Ollama detenido, `Iniciar` lo pone disponible.
-- Sin modo solo local, se exige proteger y reiniciar.
-- `OLLAMA_NO_CLOUD` en el proceso de Parsezen no acredita por sí solo un servidor activo; falta de
-  `server.json` protegido mantiene bloqueado el envío de contenido.
+- La app nueva abre y traduce con Ollama cerrado o ausente cuando el motor integrado y el GGUF
+  verificado están presentes. La preparación importa un blob local anterior o descarga solo el
+  artefacto público fijado, comprueba tamaño y SHA-256, y nunca envía contenido del documento.
+- Una descarga cancelada, un digest incorrecto o un motor ausente no muestran `Preparado` ni
+  publican un archivo parcial como modelo válido. La generación incompleta, cancelada o demasiado
+  larga tampoco se presenta como resultado correcto.
+- Identidades directas y de Ollama son distintas; un checkpoint de una ruta no se reutiliza en la
+  otra. Los trabajos anteriores conservan su identidad y su diagnóstico de Ollama.
 - `IA local`, desde Ajustes o un aviso contextual, abre una vista fija con exactamente las filas
   `Traducción IA` y `Revisión IA`, aunque la detección aún no haya terminado.
 - Cada fila muestra solo `Preparado`, `Descargable` o `Equipo insuficiente`; no hay búsqueda,
   selector de tags, endpoint, recomendación general ni borrado arbitrario.
-- La vista no lee ni escribe documentos. La comprobación de catálogo solo usa la API local de Ollama
-  (`/api/version`, `/api/tags` y `/api/show`) y no conserva el contenido de sus respuestas.
+- La vista no lee ni escribe documentos. La comprobación directa usa archivos y metadatos locales,
+  sin consultas a Ollama. La ruta heredada conserva su comprobación local por API.
 - La vista consulta automáticamente al abrirse. Pulsar `Comprobar de nuevo` emite otra petición de
   refresco; pulsar `Descargar componente` emite
   únicamente `translation` o `review`, sin iniciar una descarga genérica.
-- Un componente solo pasa a `Preparado` cuando su manifest y digest coinciden con `/api/tags` y
-  `/api/show`; los tags cloud y los ausentes no se aceptan como seleccionables.
+- Un componente directo solo pasa a `Preparado` cuando coinciden el motor, tamaño y SHA-256 del
+  GGUF fijado. Para trabajos antiguos, Ollama sigue comprobando `/api/tags` y `/api/show` y
+  excluye tags cloud.
 - `Preparado` acredita instalación, identidad y contrato local, no calidad semántica universal ni
   permiso para aprobar propuestas sin revisión.
 
@@ -568,13 +686,15 @@ cifrado debe eliminarse.
 que genera un archivo válido pero conserva fragmentos, incidencias de idioma o avisos PDF debe
 mostrar `REVISAR`, no `OK`.
 
-- `--translation-engine local_ai --profile critical` recorre traducción, corrección y estructura con
+- Sin Ollama, el validador admite únicamente `--translation-engine local_ai --profile translation`
+  sin `--full-matrix`: aísla la traducción con el modelo integrado y sigue pasando `AppSettings` al
+  procesador aunque no haya revisión posterior.
+- Con un modelo heredado de Ollama indicado explícitamente mediante `--model` o `--models`,
+  `--translation-engine local_ai --profile critical` recorre traducción, corrección y estructura con
   los componentes especializados fijados para cada fase; ninguno sustituye silenciosamente a otro.
-- `--translation-engine local_ai --profile translation` aísla la traducción y sigue pasando
-  `AppSettings` al procesador aunque no haya revisión posterior.
-- `--profile review` compara procesamiento directo y revisión semántica; `--profile
-  translation-review` conserva la misma traducción base en ambos brazos, añade el revisor configurado
-  solo al brazo revisado y registra sus pasadas previstas sin texto documental.
+- En esa misma ruta heredada, `--profile review` compara procesamiento directo y revisión semántica;
+  `--profile translation-review` conserva la misma traducción base en ambos brazos, añade el revisor
+  configurado solo al brazo revisado y registra sus pasadas previstas sin texto documental.
 - El informe comparativo no contiene nombres, rutas, prompts, respuestas ni texto documental.
 
 Para un corpus privado largo, registra primero al menos dos ejecuciones del mismo intervalo con
@@ -590,6 +710,9 @@ el mismo intervalo y terminar con EPUBCheck 5.3.0 sin errores nuevos.
 - Metadatos, accesos directos e instalador dicen `Parsezen`.
 - No quedan nombres, módulos, URLs ni recursos de identidades anteriores.
 - El paquete x64 arranca en un perfil limpio de Windows.
+- Un paquete local con el motor GGUF integrado comprueba primero Python, versiones y Vulkan;
+  construye aparte, supera `--package-smoke` antes de sustituir el candidato visible y conserva el
+  paquete anterior si falla cualquier paso previo. El instalador no se descarga ni instala solo.
 - Desinstalar no elimina documentos del usuario.
 - Una actualización elimina el runtime `_internal` anterior, conserva el `AppId` y no toca estado,
   originales ni resultados.

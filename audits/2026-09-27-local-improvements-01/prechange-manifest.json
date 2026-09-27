@@ -1,0 +1,26 @@
+[
+  {
+    "file": "distribution/windows/build.ps1",
+    "sha256": "3b9d7bdcfd249ece3ad5993b103d31c64eb6bcad124455eec97390c5e662bfbf"
+  },
+  {
+    "file": "docs/development.md",
+    "sha256": "01cdbef3b42784d32374ab125f266529e2555f91848df43270b716ceca53cbf6"
+  },
+  {
+    "file": "docs/work-plan.md",
+    "sha256": "1f68c08ede4b4b58b208ae46c4246cba15c5563e2316f5433f541503e4f14b15"
+  },
+  {
+    "file": "docs/acceptance-checklist.md",
+    "sha256": "91da22daeaeb5b70390166731197f560a27285e6c1d684563c0cb27656f20d6d"
+  },
+  {
+    "file": "tests/test_package.py",
+    "sha256": "74cf18a013854807272d602283efb0aad35857afb13bfad6b38cbd3e11862c48"
+  },
+  {
+    "file": "docs/user-guide.md",
+    "sha256": "49bded29cb5fe373af773049b71938e07dc2505512639900730b228ca15c65d5"
+  }
+]

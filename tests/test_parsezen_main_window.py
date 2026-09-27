@@ -5,6 +5,7 @@ from pathlib import Path
 from threading import Event
 from unittest.mock import Mock
 
+import pytest
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
@@ -1355,8 +1356,9 @@ def test_main_window_warns_and_retries_when_state_write_fails(
 
     monkeypatch.setattr(window._state_store, "replace_jobs", original_replace)
 
+    assert not window._sync_workspace()
+    qtbot.waitUntil(window.parsezen_workspace.recovery_warning.isHidden, timeout=3_000)
     assert window._sync_workspace()
-    assert window.parsezen_workspace.recovery_warning.isHidden()
     window._temporal_timer.stop()
     _entries(window).clear()
 
@@ -1631,7 +1633,7 @@ def test_main_window_routes_configuration_review_and_primary_actions(
     window._configure_job(job.id, None)
     editor = window._active_configuration_dialog  # noqa: SLF001
     assert isinstance(editor, JobConfigurationDialog)
-    monkeypatch.setattr(editor, "configuration", lambda: configured)
+    monkeypatch.setattr(editor, "configuration", lambda **_kwargs: configured)
     editor.configuration_changed.emit()
     updated_job = window._job_queue.get(job.id)  # noqa: SLF001
     assert updated_job is not None
@@ -1922,7 +1924,7 @@ def test_main_window_keeps_previous_configuration_when_runtime_mapping_fails(
     window._configure_job(job.id, None)
     editor = window._active_configuration_dialog  # noqa: SLF001
     assert isinstance(editor, JobConfigurationDialog)
-    monkeypatch.setattr(editor, "configuration", lambda: changed)
+    monkeypatch.setattr(editor, "configuration", lambda **_kwargs: changed)
     editor.configuration_changed.emit()
 
     assert window._job_queue.get(job.id).configuration == job.configuration
@@ -1949,6 +1951,43 @@ def test_main_window_handles_unknown_jobs_and_empty_drop_queue(
     window._review_job("missing", None)
     window._remove_job("missing")
     window._move_job("missing", 0)
+
+
+def test_dropping_mixed_files_keeps_valid_documents_and_explains_skips(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    markdown = tmp_path / "notes.markdown"
+    markdown.write_text("# Notes", encoding="utf-8")
+    unsupported = tmp_path / "photo.png"
+    unsupported.write_bytes(b"image")
+    folder = tmp_path / "folder.pdf"
+    folder.mkdir()
+    later = tmp_path / "later.txt"
+    later.write_text("Later", encoding="utf-8")
+    window = ParsezenMainWindow(
+        settings=AppSettings(),
+        auto_discover_ai=False,
+        state_path=tmp_path / "workspace.sqlite3",
+    )
+    qtbot.addWidget(window)
+
+    window._add_dropped_paths((unsupported, folder))
+    assert not window._job_queue.jobs
+    assert not window.parsezen_workspace.source_message.isHidden()
+    assert "2 elementos" in window.parsezen_workspace.source_message.message.text()
+
+    window._add_dropped_paths((markdown, unsupported))
+    assert tuple(job.source.path for job in window._job_queue.jobs) == (markdown.resolve(),)
+    assert window._job_queue.jobs[0].source.format is DocumentFormat.MARKDOWN
+    assert "1 elemento" in window.parsezen_workspace.source_message.message.text()
+
+    window._add_dropped_paths((later,))
+    assert tuple(job.source.path for job in window._job_queue.jobs) == (
+        markdown.resolve(),
+        later.resolve(),
+    )
+    assert window.parsezen_workspace.source_message.isHidden()
 
 
 def test_main_window_confirms_and_cleans_progress_before_removing_paused_job(
@@ -3640,8 +3679,11 @@ def test_review_surfaces_preserve_work_across_editor_and_storage_failures(
         lambda *_args, **_kwargs: (None, saved_book),
     )
     publication.save_book.side_effect = OSError("Disco lleno")
+    warning_count = len(warnings)
     window._personalize_epub(entry.runtime, job, result.review_markdown or "", ())  # noqa: SLF001
-    assert warnings[-1][0] == "No se pudo guardar el borrador"
+    # A returned saved draft was already committed before the dialog closed.
+    publication.save_book.assert_not_called()
+    assert len(warnings) == warning_count
     assert entry.status is ProjectedStatus.REVIEW_PENDING
 
     window._review_flow = original_review_flow  # noqa: SLF001
@@ -3729,3 +3771,49 @@ def test_workspace_commands_route_through_the_active_surface(
     window._run_primary_action("open_folder")  # noqa: SLF001
     assert reviewed == [job.id]
     assert opened == [entry.result.final_path.parent]
+
+
+@pytest.mark.parametrize("persistence_succeeds", [True, False])
+def test_new_version_preserves_previous_file_and_rolls_back_if_save_fails(
+    qtbot, tmp_path, monkeypatch, persistence_succeeds
+):
+    source = tmp_path / "original.txt"
+    source.write_text("Texto original", encoding="utf-8")
+    result = tmp_path / "anterior.md"
+    result.write_text("Resultado anterior", encoding="utf-8")
+    window = ParsezenMainWindow(
+        settings=AppSettings(),
+        auto_discover_ai=False,
+        state_path=tmp_path / "workspace.sqlite3",
+        history_path=tmp_path / "history.json",
+    )
+    qtbot.addWidget(window)
+    window.set_source_paths((source,))
+    job = window._job_queue.jobs[0]
+    completed = replace(
+        job,
+        stages=tuple(
+            replace(stage, status=StageStatus.COMPLETED) if stage.participates else stage
+            for stage in job.stages
+        ),
+        result_path=result,
+    )
+    window._job_queue.replace(completed)
+    previous_runtime = window._queue_session.runtime_for(job.id)
+    if not persistence_succeeds:
+        monkeypatch.setattr(window, "_persist_workspace", lambda *args, **kwargs: False)
+    window._create_job_version(job.id)
+    assert result.read_text(encoding="utf-8") == "Resultado anterior"
+    assert source.read_text(encoding="utf-8") == "Texto original"
+    assert not window._queue_session.running
+    current = window._job_queue.jobs[0]
+    if persistence_succeeds:
+        assert current.id != job.id
+        assert current.result_path is None
+        assert window._active_configuration_dialog is not None
+        assert "Cambios guardados" in window._active_configuration_dialog.save_status.text()
+        window._active_configuration_dialog.reject()
+    else:
+        assert current == completed
+        assert window._active_configuration_dialog is None
+        assert window._queue_session.runtime_for(job.id) is previous_runtime

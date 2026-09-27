@@ -1,0 +1,34 @@
+[
+  {
+    "file": "README.md",
+    "before_sha256": "9ddbea7b42df94eec0c49bd08bb133098dbc8475cd899818abd6c7ec21816c94",
+    "after_sha256": "41a8d90b2f560c098a7637b77e1b4f6d3ac427973c0d64de075600082806efc6",
+    "changed_hunks": 1,
+    "removed_lines": 2,
+    "added_lines": 3
+  },
+  {
+    "file": "SECURITY.md",
+    "before_sha256": "56a44bfb2728116b300807210fb7ad5b80798e7b89cd4fc2f7d9cdcf9fe21f55",
+    "after_sha256": "fdc7fc840a37686046fbdd3549b7ec99f429973641145411c00377ca9510fd4d",
+    "changed_hunks": 3,
+    "removed_lines": 6,
+    "added_lines": 7
+  },
+  {
+    "file": "docs/dependency-security.md",
+    "before_sha256": "1b507950d1d1ffb7aaec53efdad5ac3dffe5e8f3d73a780aad2320ff47371623",
+    "after_sha256": "7f193421991b562dcacd5101d014371778b0a4fe30184aca2375007977abd9f8",
+    "changed_hunks": 3,
+    "removed_lines": 11,
+    "added_lines": 16
+  },
+  {
+    "file": "docs/acceptance-checklist.md",
+    "before_sha256": "d79d464c6a4ccfdd0b94520357e7f5ed57f52f732a67a948c3d6be9ef71d63bd",
+    "after_sha256": "91da22daeaeb5b70390166731197f560a27285e6c1d684563c0cb27656f20d6d",
+    "changed_hunks": 2,
+    "removed_lines": 6,
+    "added_lines": 8
+  }
+]

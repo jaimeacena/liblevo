@@ -47,11 +47,12 @@ from PySide6.QtWidgets import (
 )
 
 from parsezen.application.artifact_repository import ArtifactRepository
-from parsezen.application.book_editor import BookEditor, publish_book
+from parsezen.application.book_editor import BookEditor, preview_book_navigation, publish_book
 from parsezen.domain.books import BookDocument, BookSection
+from parsezen.epub_builder import EpubNavigationNode
 from parsezen.errors import ParsezenError
 from parsezen.output import replace_binary_output
-from parsezen.presentation.components import HorizontalToolStrip
+from parsezen.presentation.components import BookLanguageSelector, HorizontalToolStrip
 from parsezen.presentation.design_system import (
     BREAKPOINTS,
     COLORS,
@@ -129,6 +130,7 @@ class BookEditorDialog(QDialog):
         job_id: str,
         destination: Path | None,
         publish_on_accept: bool = True,
+        save_draft: Callable[[BookDocument], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -137,6 +139,9 @@ class BookEditorDialog(QDialog):
         self._job_id = job_id
         self._destination = destination
         self._publish_on_accept = publish_on_accept
+        self._save_draft = save_draft
+        self._loaded_editor_html = ""
+        self._content_protected = False
         self._loading = False
         self._current_section_id: str | None = None
         self._saved_for_later = False
@@ -182,7 +187,14 @@ class BookEditorDialog(QDialog):
         self.metadata_button.setIconSize(QSize(16, 16))
         self.metadata_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.metadata_button.setAccessibleName("Mostrar metadatos y portada")
-        layout.addWidget(self.metadata_button, 0, Qt.AlignmentFlag.AlignLeft)
+        book_actions = QHBoxLayout()
+        book_actions.addWidget(self.metadata_button)
+        self.index_button = QPushButton("Ver índice", self)
+        self.index_button.setCheckable(True)
+        self.index_button.toggled.connect(self._toggle_index)
+        book_actions.addWidget(self.index_button)
+        book_actions.addStretch(1)
+        layout.addLayout(book_actions)
 
         self.metadata_panel = QFrame(self)
         self.metadata_panel.setObjectName("bookMetadataPanel")
@@ -202,8 +214,7 @@ class BookEditorDialog(QDialog):
         self.author_input.setAccessibleName("Autor del libro")
         self.author_input.setProperty("compactEditorControl", True)
         metadata.addRow("Autor", self.author_input)
-        self.language_input = QLineEdit(book.metadata.language, self)
-        self.language_input.setAccessibleName("Código de idioma del libro")
+        self.language_input = BookLanguageSelector(book.metadata.language, self)
         self.language_input.setProperty("compactEditorControl", True)
         self.language_input.setMaximumWidth(180)
         metadata.addRow("Idioma", self.language_input)
@@ -215,14 +226,33 @@ class BookEditorDialog(QDialog):
         metadata.addRow("Portada", self.cover_selector)
         self.title_input.textChanged.connect(self._mark_dirty)
         self.author_input.textChanged.connect(self._mark_dirty)
-        self.language_input.textChanged.connect(self._mark_dirty)
+        self.language_input.currentIndexChanged.connect(self._mark_dirty)
         layout.addWidget(self.metadata_panel)
         self.metadata_panel.hide()
         self.metadata_button.toggled.connect(self._toggle_metadata)
 
+        self.chapter_navigation = QWidget(self)
+        chapter_controls = QHBoxLayout(self.chapter_navigation)
+        chapter_controls.setContentsMargins(0, 0, 0, 0)
+        self.chapter_selector = QComboBox(self.chapter_navigation)
+        self.chapter_selector.setMinimumWidth(0)
+        self.chapter_selector.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.chapter_selector.setAccessibleName("Ir a un capítulo")
+        self.chapter_selector.activated.connect(self._select_compact_chapter)
+        chapter_controls.addWidget(self.chapter_selector, 1)
+        self.organize_button = QPushButton("Organizar", self.chapter_navigation)
+        self.organize_button.setAccessibleName("Mostrar herramientas para organizar capítulos")
+        self.organize_button.setCheckable(True)
+        self.organize_button.toggled.connect(self._toggle_structure)
+        chapter_controls.addWidget(self.organize_button)
+        layout.addWidget(self.chapter_navigation)
+        self.chapter_navigation.hide()
         self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
         self.splitter.setChildrenCollapsible(False)
         structure_pane = QFrame(self.splitter)
+        self.structure_pane = structure_pane
         structure_pane.setMinimumWidth(0)
         structure_pane.setObjectName("bookStructurePane")
         structure_layout = QVBoxLayout(structure_pane)
@@ -232,13 +262,17 @@ class BookEditorDialog(QDialog):
         self.structure_toolbar.setAccessibleName("Herramientas de capítulos y secciones")
         structure_actions = QHBoxLayout(self.structure_toolbar)
         structure_actions.setContentsMargins(0, 0, 0, 0)
-        structure_actions.setSpacing(3)
-        self._add_icon_tool(
+        structure_actions.setSpacing(2)
+        self.split_button = self._add_icon_tool(
             structure_actions,
             "split",
             self._split,
             "Separar desde aquí",
         )
+        self.split_button.setText("Separar")
+        self.split_button.setObjectName("bookSplitAction")
+        self.split_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.split_button.setFixedWidth(72)
         self._add_icon_tool(
             structure_actions,
             "merge",
@@ -265,6 +299,13 @@ class BookEditorDialog(QDialog):
         self.tree.currentItemChanged.connect(self._section_changed)
         self.tree.itemDoubleClicked.connect(lambda _item, _column: self._rename())
         structure_layout.addWidget(self.tree, 1)
+        self.structure_help = QLabel(
+            "Doble clic en un capítulo para renombrarlo. Las flechas cambian su orden y nivel.",
+            structure_pane,
+        )
+        self.structure_help.setWordWrap(True)
+        self.structure_help.setObjectName("confirmationHelp")
+        structure_layout.addWidget(self.structure_help)
 
         content_pane = QFrame(self.splitter)
         content_pane.setMinimumWidth(0)
@@ -272,6 +313,16 @@ class BookEditorDialog(QDialog):
         content_layout = QVBoxLayout(content_pane)
         content_layout.setContentsMargins(4, 0, 0, 0)
         content_layout.setSpacing(6)
+        self.index_caption = QLabel("Índice que tendrá el EPUB", content_pane)
+        self.index_caption.setWordWrap(True)
+        self.index_caption.setObjectName("reviewCaseSummary")
+        self.index_caption.hide()
+        content_layout.addWidget(self.index_caption)
+        self.index_preview = QTreeWidget(content_pane)
+        self.index_preview.setHeaderHidden(True)
+        self.index_preview.setAccessibleName("Vista previa del índice final")
+        self.index_preview.hide()
+        content_layout.addWidget(self.index_preview, 1)
         self.content_toolbar = QWidget(content_pane)
         self.content_toolbar.setAccessibleName("Herramientas de edición del contenido")
         content_tools = QHBoxLayout(self.content_toolbar)
@@ -426,6 +477,14 @@ class BookEditorDialog(QDialog):
         )
         self.content_tool_strip.setMinimumWidth(0)
         content_layout.addWidget(self.content_tool_strip)
+        self.content_notice = QLabel(content_pane)
+        self.content_notice.setWordWrap(True)
+        self.content_notice.setText(
+            "Vista simplificada, solo lectura: este capítulo contiene elementos que el editor "
+            "no puede modificar con fidelidad. Se conservará completo en el EPUB."
+        )
+        self.content_notice.setVisible(False)
+        content_layout.addWidget(self.content_notice)
         self.editor = QTextEdit(content_pane)
         self.editor.setMinimumWidth(0)
         self._editor_document = _BookTextDocument(
@@ -472,8 +531,8 @@ class BookEditorDialog(QDialog):
         self.cancel_button.setProperty("dangerAction", True)
         self.cancel_button.clicked.connect(self._cancel)
         footer.addWidget(self.cancel_button, 0, 2)
-        self.publish_button = QPushButton("Generar EPUB definitivo", self)
-        self.publish_button.setAccessibleName("Generar EPUB definitivo")
+        self.publish_button = QPushButton("Generar EPUB", self)
+        self.publish_button.setAccessibleName("Generar EPUB")
         self.publish_button.setObjectName("primaryAction")
         self.publish_button.clicked.connect(self._publish)
         footer.addWidget(self.publish_button, 0, 3)
@@ -505,6 +564,17 @@ class BookEditorDialog(QDialog):
         if compact == self._compact:
             return
         self._compact = compact
+        self.split_button.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonIconOnly
+            if compact
+            else Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        )
+        self.split_button.setFixedWidth(_EDITOR_TOOL_CONTENT_SIZE if compact else 72)
+        self._apply_styles()
+        self.chapter_navigation.setVisible(compact)
+        self.structure_pane.setVisible(not compact or self.organize_button.isChecked())
+        self.structure_help.setVisible(not compact)
+        self.structure_pane.setMaximumHeight(170 if compact else 16777215)
         for widget in (
             self.save_later_button,
             self.cancel_button,
@@ -520,11 +590,12 @@ class BookEditorDialog(QDialog):
                 SPACING.sm,
             )
             self.splitter.setOrientation(Qt.Orientation.Vertical)
-            self.splitter.setSizes([260, 380])
+            self.splitter.setSizes([150, 490])
             self.footer_layout.addWidget(self.save_later_button, 0, 0, 1, 2)
             self.footer_layout.addWidget(self.cancel_button, 1, 0)
             self.footer_layout.addWidget(self.publish_button, 1, 1)
             self.save_later_button.setText("Guardar y salir")
+            self.cancel_button.setText("Descartar")
             self.publish_button.setText("Generar EPUB")
         else:
             self.root_layout.setContentsMargins(
@@ -540,7 +611,8 @@ class BookEditorDialog(QDialog):
             self.footer_layout.addWidget(self.cancel_button, 0, 2)
             self.footer_layout.addWidget(self.publish_button, 0, 3)
             self.save_later_button.setText("Guardar y salir")
-            self.publish_button.setText("Generar EPUB definitivo")
+            self.cancel_button.setText("Descartar cambios")
+            self.publish_button.setText("Generar EPUB")
 
     def apply_theme(self) -> None:
         self._apply_styles()
@@ -702,6 +774,55 @@ class BookEditorDialog(QDialog):
             "Ocultar metadatos y portada" if visible else "Mostrar metadatos y portada"
         )
 
+    def _toggle_structure(self, visible: bool) -> None:
+        self.structure_pane.setVisible(not self._compact or visible)
+        self.organize_button.setText("Ocultar" if visible else "Organizar")
+
+    def _select_compact_chapter(self, index: int) -> None:
+        section_id = self.chapter_selector.itemData(index)
+        for item in self.tree.findItems(
+            "*", Qt.MatchFlag.MatchWildcard | Qt.MatchFlag.MatchRecursive
+        ):
+            if item.data(0, _SECTION_ID_ROLE) == section_id:
+                self.tree.setCurrentItem(item)
+                break
+        self.chapter_selector.setCurrentIndex(
+            self.chapter_selector.findData(self._current_section_id)
+        )
+
+    def _toggle_index(self, visible: bool) -> None:
+        if visible:
+            if not self._save_current():
+                self.index_button.setChecked(False)
+                return
+            try:
+                navigation = preview_book_navigation(
+                    self._book, self._artifacts, job_id=self._job_id
+                )
+            except (ParsezenError, ValueError, OSError):
+                self.index_button.setChecked(False)
+                QMessageBox.warning(
+                    self,
+                    "Índice no disponible",
+                    "No se pudo preparar el índice. Guarda el trabajo y vuelve a intentarlo.",
+                )
+                return
+            self.index_preview.clear()
+
+            def add(parent: QTreeWidgetItem, nodes: tuple[EpubNavigationNode, ...]) -> None:
+                for node in nodes:
+                    item = QTreeWidgetItem(parent, [node.title])
+                    item.setToolTip(0, node.title)
+                    add(item, node.children)
+
+            add(self.index_preview.invisibleRootItem(), navigation)
+            self.index_preview.expandAll()
+        self.index_preview.setVisible(visible)
+        self.index_caption.setVisible(visible)
+        self.editor.setVisible(not visible)
+        self.content_tool_strip.setVisible(not visible)
+        self.index_button.setText("Volver al texto" if visible else "Ver índice")
+
     def _populate_cover_selector(self) -> None:
         self.cover_selector.blockSignals(True)
         self.cover_selector.clear()
@@ -726,7 +847,9 @@ class BookEditorDialog(QDialog):
             return
         try:
             path = Path(selected)
-            self._book = self._service().replace_cover(path.name, path.read_bytes())
+            from parsezen.cover_images import read_cover_image
+
+            self._book = self._service().replace_cover(path.name, read_cover_image(path))
             self._dirty = True
         except (ParsezenError, ValueError, OSError) as exc:
             QMessageBox.warning(self, "No se pudo cambiar la portada", str(exc))
@@ -754,6 +877,12 @@ class BookEditorDialog(QDialog):
         return BookEditor(self._book, self._artifacts, job_id=self._job_id)
 
     def _populate(self, selected_id: str | None = None) -> None:
+        if self.index_button.isChecked():
+            self.index_button.setChecked(False)
+        self.chapter_selector.clear()
+        for root in self._book.sections:
+            for section in root.walk():
+                self.chapter_selector.addItem(section.title, section.id)
         self.tree.blockSignals(True)
         self.tree.clear()
         selected: QTreeWidgetItem | None = None
@@ -786,13 +915,17 @@ class BookEditorDialog(QDialog):
             self._book = self._service().update_metadata(
                 title=self.title_input.text(),
                 author=self.author_input.text(),
-                language=self.language_input.text(),
+                language=self.language_input.language_code(),
             )
             if self.cover_selector.currentData() == "remove":
                 self._book = self._service().remove_cover()
                 self._populate_cover_selector()
-            body = _body_from_qt_html(self.editor.toHtml())
-            self._book = self._service().update_content(self._current_section_id, body)
+            current_html = _body_from_qt_html(self.editor.toHtml())
+            if current_html != self._loaded_editor_html:
+                if self._content_protected:
+                    raise ValueError("Este capítulo está protegido para conservar su contenido.")
+                self._book = self._service().update_content(self._current_section_id, current_html)
+                self._loaded_editor_html = current_html
             self._dirty = False
             return True
         except (ParsezenError, ValueError, OSError) as exc:
@@ -803,7 +936,28 @@ class BookEditorDialog(QDialog):
         self._loading = True
         try:
             self._current_section_id = section_id
-            self.editor.setHtml(_html_for_qt_editor(self._service().editable_html(section_id)))
+            self.chapter_selector.setCurrentIndex(self.chapter_selector.findData(section_id))
+            source = self._service().editable_html(section_id)
+            self._content_protected = not _supports_rich_text_editing(source)
+            self.editor.setHtml(_html_for_qt_editor(source))
+            self._loaded_editor_html = _body_from_qt_html(self.editor.toHtml())
+            self.editor.setReadOnly(self._content_protected)
+            self.content_notice.setVisible(self._content_protected)
+            for control in (
+                self.bold_button,
+                self.italic_button,
+                self.underline_button,
+                self.heading,
+                self.bullet_button,
+                self.numbered_button,
+                self.alignment,
+                self.link_button,
+                self.clear_format_button,
+                self.split_button,
+                self.undo_button,
+                self.redo_button,
+            ):
+                control.setEnabled(not self._content_protected)
             position = self._book.spine.index(section_id) + 1
             position_text = f"{position} de {len(self._book.spine)}"
             self.position_label.setText(position_text)
@@ -835,7 +989,7 @@ class BookEditorDialog(QDialog):
 
     def _rename(self) -> None:
         section_id = self._selected_id()
-        if section_id is None:
+        if section_id is None or not self._save_current():
             return
         current = self._book.section(section_id).title
         title, accepted = QInputDialog.getText(self, "Renombrar división", "Título", text=current)
@@ -866,7 +1020,7 @@ class BookEditorDialog(QDialog):
 
     def _split(self) -> None:
         section_id = self._selected_id()
-        if section_id is None:
+        if section_id is None or self._content_protected:
             return
         cursor = self.editor.textCursor()
         split_position = cursor.block().position()
@@ -962,12 +1116,13 @@ class BookEditorDialog(QDialog):
     def _find_item(self, section_id: str) -> QTreeWidgetItem | None:
         iterator = self.tree.invisibleRootItem()
 
-        def find(parent: QTreeWidgetItem) -> QTreeWidgetItem | None:
+        def find(parent: QTreeWidgetItem | None) -> QTreeWidgetItem | None:
+            if parent is None:
+                return None
+            if str(parent.data(0, _SECTION_ID_ROLE)) == section_id:
+                return parent
             for index in range(parent.childCount()):
-                item = parent.child(index)
-                if str(item.data(0, _SECTION_ID_ROLE)) == section_id:
-                    return item
-                nested = find(item)
+                nested = find(parent.child(index))
                 if nested is not None:
                     return nested
             return None
@@ -975,9 +1130,18 @@ class BookEditorDialog(QDialog):
         return find(iterator)
 
     def _save_and_close(self) -> None:
-        if self._save_current():
+        if self._save_current() and self._persist_draft():
             self._saved_for_later = True
             super().reject()
+
+    def _persist_draft(self) -> bool:
+        try:
+            if self._save_draft is not None:
+                self._save_draft(self._book)
+        except (OSError, RuntimeError, ValueError) as exc:
+            QMessageBox.warning(self, "No se pudo guardar el borrador", str(exc))
+            return False
+        return True
 
     def _cancel(self) -> None:
         if self._has_changes():
@@ -1005,14 +1169,12 @@ class BookEditorDialog(QDialog):
         if self._current_section_id is None:
             return False
         try:
-            return _body_from_qt_html(self.editor.toHtml()) != self._service().editable_html(
-                self._current_section_id
-            )
+            return _body_from_qt_html(self.editor.toHtml()) != self._loaded_editor_html
         except (ParsezenError, OSError, ValueError):
             return True
 
     def _publish(self) -> None:
-        if not self._save_current():
+        if not self._save_current() or not self._persist_draft():
             return
         try:
             content = publish_book(self._book, self._artifacts, job_id=self._job_id)
@@ -1047,6 +1209,8 @@ class BookEditorDialog(QDialog):
         self.zoom_in_button.setEnabled(target < self.MAX_ZOOM)
 
     def _bold(self) -> None:
+        if self._content_protected:
+            return
         weight = (
             QFont.Weight.Normal
             if self.editor.fontWeight() >= QFont.Weight.Bold
@@ -1055,9 +1219,13 @@ class BookEditorDialog(QDialog):
         self.editor.setFontWeight(weight)
 
     def _italic(self) -> None:
+        if self._content_protected:
+            return
         self.editor.setFontItalic(not self.editor.fontItalic())
 
     def _underline(self) -> None:
+        if self._content_protected:
+            return
         self.editor.setFontUnderline(not self.editor.fontUnderline())
 
     def _bullet_list(self) -> None:
@@ -1067,6 +1235,8 @@ class BookEditorDialog(QDialog):
         self._create_list(QTextListFormat.Style.ListDecimal)
 
     def _create_list(self, style: QTextListFormat.Style) -> None:
+        if self._content_protected:
+            return
         cursor = self.editor.textCursor()
         list_format = QTextListFormat()
         list_format.setStyle(style)
@@ -1074,7 +1244,7 @@ class BookEditorDialog(QDialog):
         self.editor.setTextCursor(cursor)
 
     def _alignment_changed(self, index: int) -> None:
-        if self._loading or index < 0:
+        if self._loading or self._content_protected or index < 0:
             return
         alignments = (
             Qt.AlignmentFlag.AlignLeft,
@@ -1085,6 +1255,8 @@ class BookEditorDialog(QDialog):
         self.editor.setAlignment(alignments[index])
 
     def _insert_link(self) -> None:
+        if self._content_protected:
+            return
         cursor = self.editor.textCursor()
         if not cursor.hasSelection():
             QMessageBox.information(
@@ -1109,6 +1281,8 @@ class BookEditorDialog(QDialog):
         cursor.mergeCharFormat(link_format)
 
     def _clear_formatting(self) -> None:
+        if self._content_protected:
+            return
         cursor = self.editor.textCursor()
         cursor.setCharFormat(QTextCharFormat())
         cursor.setBlockFormat(QTextBlockFormat())
@@ -1117,7 +1291,7 @@ class BookEditorDialog(QDialog):
         self.alignment.setCurrentIndex(0)
 
     def _heading_changed(self) -> None:
-        if self._loading:
+        if self._loading or self._content_protected:
             return
         level = int(self.heading.currentData() or 0)
         cursor = self.editor.textCursor()
@@ -1286,6 +1460,10 @@ class BookEditorDialog(QDialog):
                 color: {COLORS.text_secondary};
                 background-color: transparent;
             }}
+            QToolButton#bookSplitAction {{
+                min-width: {_EDITOR_TOOL_CONTENT_SIZE if self._compact else 72}px;
+                max-width: {_EDITOR_TOOL_CONTENT_SIZE if self._compact else 72}px;
+            }}
             QToolButton#editorMore::menu-indicator {{
                 image: none;
                 width: 0;
@@ -1341,6 +1519,99 @@ class BookEditorDialog(QDialog):
             }}
             """
         )
+
+
+def _supports_rich_text_editing(source: str) -> bool:
+    """Only round-trip the passive subset represented by the rich-text editor.
+
+    Unknown semantics (MathML, SVG, table scopes, EPUB roles, CSS classes, etc.)
+    remain in their original artifact. A simplified preview never authorizes
+    rewriting them, even if a formatting command is invoked programmatically.
+    """
+    supported_tags = {
+        "a",
+        "b",
+        "blockquote",
+        "br",
+        "div",
+        "em",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "hr",
+        "i",
+        "img",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "s",
+        "span",
+        "strong",
+        "sub",
+        "sup",
+        "table",
+        "tbody",
+        "td",
+        "tr",
+        "u",
+        "ul",
+    }
+    supported_attributes = {
+        "id",
+        "name",
+        "href",
+        "src",
+        "alt",
+        "width",
+        "height",
+        "start",
+        "align",
+        "colspan",
+        "rowspan",
+        "border",
+        "cellpadding",
+        "cellspacing",
+        "style",
+        "data-parsezen-navigation",
+        "data-parsezen-navigation-level",
+    }
+    supported_styles = {
+        "color",
+        "background-color",
+        "font-family",
+        "font-size",
+        "font-style",
+        "font-weight",
+        "text-decoration",
+        "text-align",
+        "text-indent",
+        "vertical-align",
+        "white-space",
+        "margin-top",
+        "margin-bottom",
+        "margin-left",
+        "margin-right",
+        "-qt-block-indent",
+        "-qt-list-indent",
+        "-qt-paragraph-type",
+    }
+    root = html.fragment_fromstring(source, create_parent="div")
+    for element in root.iter():
+        if not isinstance(element.tag, str) or element.tag not in supported_tags:
+            return False
+        for attribute in element.attrib:
+            if attribute == "xmlns" or attribute.startswith("xmlns:"):
+                continue
+            if attribute not in supported_attributes:
+                return False
+        for declaration in element.get("style", "").split(";"):
+            if declaration.strip() and declaration.split(":", 1)[0].strip() not in supported_styles:
+                return False
+    return True
 
 
 def _body_from_qt_html(source: str) -> str:

@@ -178,3 +178,20 @@ def test_local_ai_controller_normalizes_setup_failures(monkeypatch) -> None:
     )
     assert controller.setup(LocalAIAction.START)
     assert "inesperado" in failures[-1]
+
+
+def test_stopped_runtime_does_not_repeat_unreachable_model_requests(monkeypatch) -> None:
+    monkeypatch.setattr(
+        controller_module, "discover_ollama", lambda _model: OllamaConnection(OllamaStatus.STOPPED)
+    )
+
+    calls = []
+    monkeypatch.setattr(
+        controller_module, "inspect_component_catalog", lambda *_args: calls.append(True)
+    )
+    controller = LocalAIController(thread_pool=ImmediatePool())
+    results = []
+    controller.discovery_succeeded.connect(results.append)
+    assert controller.discover(None)
+    assert results[0].status is OllamaStatus.STOPPED
+    assert calls == []

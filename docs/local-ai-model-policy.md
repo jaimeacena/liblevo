@@ -2,16 +2,29 @@
 
 ## Estado
 
+La evaluación vigente sigue [`evaluation.md`](evaluation.md). Las referencias del banco anterior
+están pendientes de revalidación humana: las cifras y decisiones históricas que siguen conservan
+su valor de registro, pero no aprueban una versión nueva ni acreditan precisión general. El cambio
+de motor del 26 de septiembre conserva los artefactos Hy-MT2 y LFM, pero necesita revalidación
+lingüística en libros reales. Lo complejo o dudoso se remite a
+revisión humana, sin habilitar promoción semántica automática por superar umbrales de una muestra.
+
 Esta política fija la pila de componentes propiedad de Parsezen. El runtime consume snapshots
 locales independientes para traducción y revisión, y la interfaz activa muestra únicamente esas
 dos capacidades fijas. No existe un asistente de recomendaciones, un selector genérico ni un campo
 para tags o endpoints arbitrarios.
 
-El componente de traducción fijado es `parsezen/hymt-translation:Q4_K_M`, basado en Hy-MT2 Q4_K_M.
-El componente de revisión fijado es `parsezen/lfm-review:Q6_K`, basado en LFM Q6_K. Sus manifests
-fijan digest, contexto, adaptador, parámetros, licencias y procedencia; no se ofrecen variantes
-alternativas en la UI. «Fijado» acredita identidad y uso dentro de su contrato, no corrección
-semántica universal ni autorización para aprobar cambios sin una persona.
+Para trabajos nuevos el componente de traducción es `parsezen/hymt-gguf:Q4_K_M` y el de revisión
+`parsezen/lfm-gguf:Q6_K`. Se conserva el mismo archivo GGUF de cada modelo aprobado previamente,
+con un motor integrado distinto; sus SHA-256, tamaños, contextos y adaptadores están fijados en
+`direct_models.py`. Las identidades de Ollama (`parsezen/hymt-translation:Q4_K_M` y
+`parsezen/lfm-review:Q6_K`) permanecen reconocibles para trabajos anteriores y no se mezclan con
+checkpoints directos. Ninguna de estas identidades acredita corrección semántica universal.
+
+El motor integrado admitirá un LLM futuro mediante un perfil nuevo, una selección activa posterior
+a pruebas y, solo si cambian las peticiones, un adaptador de prompt nuevo. Se exigirá procedencia,
+licencia, hash, funcionamiento local, límites de recursos, guardas y comparación humana de calidad
+antes de ofrecerlo. La interfaz seguirá mostrando capacidades, no proveedores ni modelos arbitrarios.
 
 ## Decisión de producto
 
@@ -20,8 +33,8 @@ arbitrario:
 
 | Capacidad | Contrato objetivo | Estado |
 |---|---|---|
-| Traducción con IA | `parsezen/hymt-translation:Q4_K_M` | baseline EN→ES verificado en corpus |
-| Revisión bilingüe, revisión de contenido y estructura | `parsezen/lfm-review:Q6_K` | propuestas protegidas y supervisadas; autoaceptación no aprobada |
+| Traducción con IA | `parsezen/hymt-gguf:Q4_K_M` | mismo GGUF histórico; motor directo verificado solo en sintéticos |
+| Revisión bilingüe, revisión de contenido y estructura | `parsezen/lfm-gguf:Q6_K` | propuesta sintética ejecutada; calidad humana pendiente |
 | Traducción sin LLM | Argos offline | se conserva sin cambios |
 | Arbitraje OCR visual | componente visual independiente | fuera de esta selección |
 
@@ -38,7 +51,7 @@ El contrato objetivo no tendrá excepciones de modelo por documento ni degradaci
 - el árbitro visual no se considera parte de la pila textual garantizada.
 
 El procesamiento directo será el recorrido recomendado. Las comprobaciones deterministas pueden
-proponer una revisión dirigida, pero nunca arrancan Ollama por sí solas. La revisión adicional
+proponer una revisión dirigida, pero nunca arrancan el motor por sí solas. La revisión adicional
 proactiva sigue siendo una decisión explícita para trabajos que justifiquen su
 coste y declara su cobertura real; solicitarla no significa que cada bloque haya recibido una
 respuesta válida.
@@ -66,37 +79,41 @@ Cada componente especializado aprobado tiene un manifest versionado por Parsezen
 - capacidad y versión de la política;
 - repositorio, revisión upstream y archivo exacto;
 - SHA-256 del artefacto upstream cuando exista un archivo distribuible identificable;
-- nombre local y digest anunciado por Ollama en `GET /api/tags`;
+- nombre local y digest del archivo GGUF; para trabajos antiguos, alias y digest de Ollama;
 - formato, familia, cuantización y tamaño;
 - licencia, avisos exigidos y decisión de distribución del producto;
-- plantilla, parámetros y capacidades comprobados mediante `/api/show`;
+- plantilla, parámetros y capacidades del perfil directo; en la ruta heredada, `/api/show`;
 - adaptador, versión del prompt y parámetros de generación;
 - ventana de contexto aprobada;
 - idiomas y tareas validados;
-- versión mínima de Ollama y versiones realmente probadas;
+- versión del motor directo y versiones realmente probadas; Ollama solo en la ruta heredada;
 - vectores de autoprueba que no contengan texto documental privado.
 
-La instalación especializada solo queda lista cuando el modelo aparezca en `/api/tags` y
-sus metadatos coincidan con el manifest. La tarjeta de cada capacidad solo puede emitir su identidad
+La instalación directa solo queda lista cuando el archivo coincide en tamaño y SHA-256 con el perfil
+fijado y el motor integrado está disponible. En trabajos antiguos Ollama usa `/api/tags` y
+`/api/show`. La tarjeta de cada capacidad solo puede emitir su identidad
 catalogada; no convierte un nombre de usuario en una orden de instalación. El SHA-256 identifica el artefacto upstream y el digest de Ollama identifica el contenido
 registrado localmente; no se presuponen equivalentes. Un tag mutable sin digest no constituye
 identidad suficiente. La fijación permite repetir la política y detectar cambios, pero no promete
-resultados idénticos bit a bit entre todos los procesadores, controladores y versiones de Ollama.
+resultados idénticos bit a bit entre procesadores, controladores y versiones de motor.
 
-El soporte directo de nombres `hf.co/...`, URLs o endpoints adicionales queda fuera del primer
-incremento. Un GGUF solo puede aprobarse si su procedencia y proceso de cuantización son oficiales o
+No se admiten nombres `hf.co/...`, URLs o endpoints escritos por la persona. Un GGUF solo puede
+aprobarse si su procedencia y proceso de cuantización son oficiales o
 reproducibles y controlados por Parsezen. Los únicos artefactos de la política actual son los
 manifests aprobados de Hy-MT2 Q4_K_M y LFM Q6_K.
 
 ## Contratos de petición
 
-El transporte mecánico de loopback, streaming, cancelación, límites y telemetría sigue siendo común.
-La evaluación convirtió estas hipótesis en los contratos actuales:
+Streaming, cancelación, límites y telemetría se comparten de forma limitada. Solo los trabajos
+heredados usan loopback. Los contratos de contenido y prompt fijados por la evaluación siguen siendo:
 
-- Hy-MT2 usa su prompt oficial plano y `POST /api/generate` en modo raw, con los parámetros fijados
-  en el manifest;
+- Hy-MT2 usa su prompt oficial plano; el motor directo llama a `llama-cpp-python` y los trabajos
+  heredados usan `POST /api/generate` de Ollama. Temperatura, top-p y top-k quedan fijados por el
+  adaptador. No se añade penalización de repetición;
 - LFM usa el contrato ChatML raw de revisión, descarta razonamiento acotado y extrae la salida JSON
-  completa cuando la tarea lo exige;
+  completa cuando la tarea lo exige. La reserva mínima de generación es 4.096 tokens, limitada
+  a la mitad del contexto; evita truncar el razonamiento de respuestas finales cortas. Siguen
+  vigentes el plazo total y el rechazo de respuestas incompletas;
 - cada adaptador fija contexto y parámetros en su manifest; no hereda automáticamente los valores
   del antiguo modelo general;
 - prompts, respuestas y contenido documental nunca se registran.

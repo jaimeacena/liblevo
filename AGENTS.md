@@ -21,17 +21,18 @@
   resultado pueda atribuirse a una causa; una muestra pequeña puede descartar, pero no aprobar.
 - Mantén la arquitectura pequeña; evita capas, interfaces y abstracciones sin una necesidad actual.
 - Mantén PySide6 fuera de la lógica de procesamiento.
-- Mantén el sistema visual nuevo en `presentation/design_system.py`; `theme.py` es únicamente una
-  compatibilidad transitoria para diálogos aún no extraídos. Conserva el branding oficial, la
+- Mantén el sistema visual en `presentation/design_system.py`. Conserva el branding oficial, la
   tipografía legible, el foco visible y el layout sin scroll horizontal.
-- Nunca envíes documentos a servicios remotos. La IA usa únicamente Ollama mediante su API nativa
-  fija en `127.0.0.1`; no añadas proveedores remotos ni compatibilidad con OpenAI.
+- Nunca envíes documentos a servicios remotos. La aplicación nueva usa GGUF verificados con el motor
+  integrado `llama-cpp-python` y no requiere Ollama. Conserva Ollama solo para trabajos antiguos que
+  guardaron expresamente esa identidad; no añadas proveedores remotos ni endpoints configurables.
 - Mantén la traducción sin LLM gratuita y offline con Argos; solo sus paquetes públicos de idioma
   pueden descargarse y nunca el contenido del usuario.
-- El selector activo de modelos debe proceder de Ollama `GET /api/tags`; el asistente de instalación
-  puede recomendar con el `llmfit` local administrado o aceptar un nombre de catálogo validado, pero
-  nunca un endpoint. Un modelo solo puede quedar seleccionado después de aparecer en `/api/tags`.
-  Muestra nombres amigables y excluye siempre tags `:cloud`/`-cloud`.
+- La interfaz solo ofrece las capacidades fijas `Traducción IA` y `Revisión IA` del catálogo local.
+  El instalador recibe una capacidad, nunca un tag arbitrario ni un endpoint. Solo publica el estado
+  preparado tras comprobar licencia, tamaño y SHA-256 del archivo GGUF directo; los trabajos antiguos
+  de Ollama siguen usando su manifest y `/api/tags` y `/api/show`. Conserva nombres amigables y
+  excluye siempre tags `:cloud`/`-cloud` en la ruta heredada.
 - Mantén el OCR completamente local, con servicios remotos y plugins externos desactivados; una
   capa de texto útil tiene prioridad sobre una interpretación OCR incierta.
 - Mantén EPUB en `epub_conversion.py`: paquete/índice con `zipfile` y `defusedxml`, XHTML→Markdown
@@ -51,6 +52,9 @@
   dependencias o al instalador sin una decisión explícita.
 - No registres contenido documental, prompts completos, respuestas completas ni rutas sensibles.
 - Conserva el contenido existente y evalúa las decisiones previas antes de cambiarlas.
+- El banco documental anterior está pendiente de revalidación humana. No lo importes como verdad
+  ni apruebes mejoras por sus referencias históricas. Usa `docs/evaluation.md`: lo complejo o
+  dudoso queda para revisión humana; las muestras nuevas requieren procedencia explícita.
 - Ejecuta pytest, `ruff check .` y `ruff format --check .` para cada cambio aplicable.
 - Verifica en escalera: reproducción o prueba focal, contratos vecinos, lint/formato y suite completa
   cuando cambie producto; después usa canarios, corpus, holdouts y revisión humana según el riesgo.

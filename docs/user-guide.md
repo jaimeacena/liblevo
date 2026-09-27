@@ -2,6 +2,26 @@
 
 Esta guía describe la versión actual de Parsezen.
 
+Las opciones se guardan automáticamente: espera a ver **Cambios guardados** antes de volver a la
+cola. Si aparece un aviso de guardado, los cambios aún no están asegurados para la próxima apertura.
+En **Páginas → Intervalo**, la app comprueba el total del PDF. Los números cuentan desde la primera
+página del archivo, incluida la portada, aunque el libro lleve otra numeración impresa.
+
+Durante una revisión, **Seleccionada** indica la versión elegida provisionalmente. Usa la acción
+inferior para confirmar la decisión y continuar. El caso actual y las decisiones ya confirmadas
+aparecen por separado. Las diferencias breves de corrección y estructura se resaltan y subrayan;
+en OCR puedes abrir la página a tamaño real.
+
+Antes de **Generar EPUB** puedes corregir título, autor e idioma y comprobar la carpeta de destino.
+**Guardar y salir** conserva el borrador para continuar después. En el editor, **Ver índice** muestra
+la navegación que tendrá el libro; en una ventana pequeña el selector de capítulos permite moverte
+y **Organizar** despliega las herramientas de estructura. El resumen del resultado presenta primero
+lo que conviene revisar y permite desplegar los detalles del proceso.
+
+Para repetir un documento terminado con otras opciones, abre su menú con el botón derecho y elige
+**Crear otra versión…**. Se abrirá su configuración con las mismas elecciones. El resultado anterior
+se conserva y la nueva versión no empieza a procesarse hasta que lo indiques.
+
 ## La pantalla principal
 
 Cada documento ocupa una fila. Las columnas muestran el recorrido real:
@@ -52,6 +72,8 @@ imposibles.
 - En vacío, arrastra TXT, Markdown, DOCX, PDF o EPUB a la zona situada bajo la cabecera o pulsa
   `Seleccionar archivos`. Después, `Añadir` y la acción principal aparecen en la misma cabecera que
   el destino y Ajustes. La cola crece hasta seis filas visibles antes de usar desplazamiento.
+- Puedes añadir Markdown con extensión `.md` o `.markdown`. Si arrastras una mezcla con carpetas o
+  formatos no compatibles, se añaden los documentos válidos y aparece un aviso con los omitidos.
 - Arrastra una fila para cambiar el orden.
 - La configuración, las acciones de estado y el resultado responden al pasar el puntero; el asa de
   ordenación muestra un cursor de arrastre.
@@ -87,6 +109,11 @@ Adecuado para texto estructurado, Obsidian y sistemas de conocimiento. Parsezen 
 archivo canónico y conserva las imágenes compatibles sin pedir decisiones de organización antes de
 procesar.
 
+Si un resultado de una configuración anterior incluye una carpeta de capítulos, conserva y
+comparte esa carpeta junto al archivo principal y las imágenes. Al revisar el resultado, Parsezen
+puede crear una carpeta de capítulos con otro nombre: utiliza siempre la que enlaza el índice
+actual. Cuando la división no permite conservar los enlaces con seguridad, mantiene un solo archivo.
+
 ### EPUB
 
 Adecuado para lectores electrónicos. Integra los recursos compatibles dentro del libro. Antes de
@@ -115,13 +142,13 @@ Al elegir un idioma en **Traducción**, aparecen dos motores que funcionan dentr
   expresamente.
 
 La ayuda situada bajo el traductor se actualiza con el motor, la revisión y el formato elegidos.
-Indica si el recorrido usa Argos u Ollama, si la comprobación bilingüe es independiente, cuántas
+Indica si el recorrido usa Argos o IA local, si la comprobación bilingüe es independiente, cuántas
 pasadas habrá y un coste cualitativo bajo, medio o alto. No es una estimación monetaria: todo sigue
 siendo local y gratuito; resume tiempo, cómputo y memoria relativos.
 
 La elección del traductor es independiente del nivel de revisión. Parsezen no cambia de traductor
-dentro del documento: si eliges Argos y revisión semántica, Argos traduce primero y Ollama revisa
-después. Si Ollama no está disponible, el trabajo se detiene con un diagnóstico recuperable en vez
+dentro del documento: si eliges Argos y revisión semántica, Argos traduce primero y el modelo local
+revisa después. Si ese componente no está preparado, el trabajo se detiene con un diagnóstico en vez
 de degradarse silenciosamente a Argos. El modelo solo propone
 sustituciones breves: Parsezen las aplica una a una cuando conservan cifras, enlaces, nombres,
 párrafos y estructura. Una propuesta rechazada no elimina otras correcciones seguras ni permite
@@ -169,12 +196,13 @@ propia línea; una palabra equivalente a «por» dentro de la prosa no protege e
 `IA local`, en la cabecera, abre `Componentes de IA local`. Esa página muestra exactamente dos
 tarjetas: `Traducción IA` y `Revisión IA`. Cada una indica si está `Preparado`, `Descargable` o si el
 `Equipo es insuficiente`. No hay búsqueda, selector de tags, endpoint, recomendaciones generales ni
-eliminación arbitraria. Las comprobaciones usan solo metadatos locales de Ollama y nunca envían
+eliminación arbitraria. Las comprobaciones del motor integrado usan archivos locales y nunca envían
 documentos.
 
 Los trabajos conservan en su instantánea el perfil efectivo y la política de componentes. La vista
 no permite convertir un tag escrito por el usuario en un modelo seleccionado; un componente solo se
-considera preparado cuando su manifest y digest coinciden con `/api/tags` y `/api/show`.
+considera preparado cuando el archivo GGUF coincide con el tamaño y SHA-256 fijados, y el motor
+integrado está disponible.
 
 ## Revisión semántica con IA local
 
@@ -221,12 +249,12 @@ asociar a bloques concretos, la fila cambia a `Revisión sugerida` y ofrece `Rev
 
 La sugerencia solo guarda tipos, cantidades, posiciones y huellas no reversibles del resultado;
 no guarda extractos del documento. No
-inicia Ollama, no cambia el resultado y no impide abrirlo. Si aceptas, Parsezen envía al modelo local
+inicia el modelo, no cambia el resultado y no impide abrirlo. Si aceptas, Parsezen envía al modelo local
 un máximo de 64 bloques afectados, excluye código, imágenes y metadatos internos y conserva el resto
 exactamente como estaba. En una traducción, compara cada bloque con su original cuando puede
 alinearlos. Los cambios se presentan como propuesta antes de sustituir el resultado.
 
-Puedes ignorar la recomendación. Si cancelas la revisión o Ollama falla, el trabajo vuelve a
+Puedes ignorar la recomendación. Si cancelas la revisión o falla el modelo local, el trabajo vuelve a
 `Completado` y el archivo anterior permanece intacto. La recomendación también se conserva al cerrar
 Parsezen; al retomarla, el texto se reconstruye desde los archivos locales y sus huellas se vuelven
 a validar. Los bloques se pueden volver a localizar tras el empaquetado EPUB, pero si su contenido
@@ -235,7 +263,7 @@ cambió fuera de Parsezen deberá procesarse de nuevo.
 ## EPUB y estructura
 
 Todo EPUB recibe la estructura técnica mínima necesaria para ser válido. Con procesamiento directo no
-se decide nada más antes de procesar. Con revisión semántica, Ollama prepara un esquema de conjunto a
+se decide nada más antes de procesar. Con revisión semántica, el modelo local prepara un esquema de conjunto a
 partir del índice, la geometría y páginas de origen, los encabezados existentes y los roles
 semánticos. No puede reescribir el texto: devuelve solo pares seguros de línea y nivel, que Parsezen
 aplica con las palabras exactas del original. Una respuesta inválida conserva el documento entero.
@@ -448,7 +476,11 @@ revisiones posteriores sin aumentar intentos y no vuelve a ejecutar OCR, traducc
 
 Todo resultado EPUB abre primero una confirmación ligera. Revisa título, autor, idioma, presencia de
 portada y número de capítulos. `Publicar EPUB` termina sin añadir pasos; `Abrir editor completo`
-entra en las herramientas avanzadas y `Guardar y salir` conserva el borrador.
+entra en las herramientas avanzadas y Las nuevas portadas deben ser imágenes estáticas PNG, JPG, GIF o WebP de hasta 20 MB y 16 millones
+de píxeles, o SVG de vectores autocontenidos. Si una imagen está dañada o depende de recursos
+externos, Parsezen pide elegir otra. Los EPUB de entrada admiten hasta 512 MB.
+
+`Guardar y salir` conserva el borrador.
 
 El panel izquierdo contiene la estructura y el derecho el contenido editable.
 
@@ -469,25 +501,32 @@ si solo modificas el texto de capítulos, mantiene byte por byte su navegación,
 imágenes y demás recursos. Los cambios estructurales o de metadatos usan la reconstrucción EPUB
 normalizada.
 
+Si no puede guardar, el editor permanece abierto con tus cambios para que puedas reintentarlo.
+Esto también se comprueba al publicar y al cerrar la aplicación. Abrir un capítulo o cambiar el
+zoom no modifica su contenido. Si contiene fórmulas u otros elementos que el editor no puede
+conservar al editar, aparece una vista simplificada de solo lectura con un aviso; el capítulo
+completo se conserva en el EPUB. Puedes seguir cambiando los datos generales y el orden del libro.
+
 El editor no aparece por defecto: solo se abre si lo solicitas desde la confirmación o si una
 condición bloqueante necesita revisión avanzada. El documento solo cambia a `Completado` cuando el
 EPUB definitivo ya se ha validado y sustituido de forma segura.
 
 ## IA por primera vez
 
-Cuando una acción requiere Ollama, sigue el botón que aparezca:
-
-1. `Instalar Ollama`;
-2. `Iniciar`;
-3. `Proteger y reiniciar`, si el modo local no está activo;
-4. `Componentes de IA local`.
+Abre `Componentes de IA local` desde Ajustes. Si `Traducción IA` está `Descargable`, pulsa
+`Preparar componente`. La app reutiliza el archivo público del modelo si ya está en este PC o lo
+descarga y verifica; ocupa unos 4,6 GB. `Revisión IA` es opcional y ocupa unos 2,2 GB.
+Los documentos no se envían durante la preparación ni al procesarlos. Ollama puede estar cerrado.
 
 La pantalla fija, accesible desde Ajustes y desde los avisos que requieren IA, comprueba al abrirse
 los dos componentes fijados por Parsezen. `Comprobar de nuevo` permite repetir manualmente la
 consulta local.
+Un componente pendiente de comprobar no significa que el ordenador sea insuficiente. Si falta memoria o espacio,
+el aviso identifica el recurso. El idioma y las demás opciones se conservan como borrador mientras
+preparas la IA; vuelve a la configuración para comprobarlas antes de procesar.
 Si una fila está `Descargable`, la señal de preparación contiene
 solo su capacidad (`translation` o `review`); la vista no acepta nombres de catálogo ni endpoints.
-Los tags cloud y los metadatos que no coinciden con el manifest no se consideran preparados.
+Un archivo incompleto o cuyo SHA-256 no coincida no se considera preparado.
 Que una fila esté `Preparada` confirma su instalación e identidad local; las propuestas de revisión
 siguen necesitando tus decisiones y no equivalen a una garantía semántica automática.
 
@@ -583,20 +622,21 @@ tienen página propia aparecen separados de la entrada anterior.
 
 Cuando una página con capa de texto también contiene una imagen completa y presenta señales de riesgo
 —por ejemplo, un índice, fórmulas o glifos extraños—, Parsezen puede contrastarla localmente con OCR y
-un segundo extractor. Si una región breve sigue siendo ambigua y tienes instalado un modelo visual
-compatible de tamaño estándar en Ollama, lo usa como árbitro solo para ese pequeño recorte. La capa
-nativa sigue teniendo prioridad y ninguna página ni documento se envía fuera del ordenador. Sin un
-modelo visual compatible, el flujo continúa normalmente y mantiene el caso dudoso para revisión.
+un segundo extractor. En la ruta directa, una región breve que siga ambigua queda señalada para
+revisión: el árbitro visual opcional de la ruta antigua de Ollama todavía no forma parte del motor
+integrado. La capa nativa sigue teniendo prioridad y ninguna página ni documento se envía fuera del
+ordenador.
 
 ### El EPUB no abre
 
 Conserva el archivo y el identificador local del error. El resultado final no se sustituye por un
 parcial. En desarrollo puede validarse con EPUBCheck.
 
-### Ollama no responde
+### El modelo local no está preparado
 
-Usa la acción de refresco o `Iniciar`. Parsezen espera la API local; no requiere mantener abierta una
-ventana de chat.
+Abre `Componentes de IA local` y pulsa `Comprobar de nuevo`. Si falta el archivo público,
+`Preparar componente` permite obtenerlo; si está dañado, la app impide usarlo. Los trabajos antiguos
+que guardaron una identidad de Ollama pueden seguir necesitándolo hasta que los reconfigures.
 
 ### No aparece un formato
 
@@ -606,5 +646,19 @@ puede editarse.
 ## Copias de seguridad
 
 Los originales nunca se modifican, pero debes conservarlos y respaldar los resultados importantes.
-La caché y las revisiones cifradas son mecanismos de continuidad, no una biblioteca ni una copia de
-seguridad permanente.
+Cuando termines un libro:
+
+1. En el menú de la fila terminada, elige **Abrir carpeta** para localizar el EPUB final. También
+   puedes hacerlo desde el resumen del resultado. Copia ese archivo a tu
+   lugar habitual de respaldo. Si elegiste **Junto al original**, estará junto al PDF; si elegiste
+   otra carpeta de destino, estará allí.
+2. Conserva también una copia del PDF original. No dependas de la cola de Parsezen para localizarlo
+   en el futuro.
+3. Abre **la copia** del EPUB en Calibre u otro lector de PC y comprueba principio, mitad, final e
+   índice. Así sabrás que la copia se puede leer antes de necesitarla.
+
+La caché y las revisiones cifradas permiten continuar trabajos en esta cuenta de Windows; no son
+una biblioteca ni una copia portable del trabajo pendiente. No copies la carpeta interna de Parsezen
+mientras la app esté abierta esperando que eso restaure un trabajo en otro PC o en otra cuenta. Si
+cambias de equipo, lleva el PDF y el EPUB terminados; puede ser necesario empezar de nuevo una
+conversión que todavía no haya terminado.

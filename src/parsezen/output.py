@@ -3,19 +3,22 @@
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Callable
+from functools import partial
 from itertools import count
 from pathlib import Path, PurePosixPath
 from tempfile import mkdtemp, mkstemp
+from uuid import uuid4
 
 from parsezen.conversion import materialize_converted_markdown
 from parsezen.document_model import ConvertedResource
 from parsezen.domain.jobs import MarkdownOrganization
-from parsezen.errors import OutputWriteError
+from parsezen.errors import FinalIntegrityError, OutputWriteError
 from parsezen.markdown_export import (
     MarkdownChapter,
+    MarkdownExport,
     prepare_markdown_export,
-    rebase_relative_markdown_links,
 )
 
 
@@ -75,9 +78,10 @@ def replace_markdown_output(
     include_page_references: bool,
     validate_staged: Callable[[Path], None] | None = None,
 ) -> None:
-    """Replace a reviewed Markdown publication and keep its chapter companion in sync."""
+    """Commit the index after a fresh, complete chapter generation is available."""
 
-    chapters_directory = destination.with_suffix(".chapters")
+    chapters_directory = destination.with_name(f"{destination.stem}.chapters-{uuid4().hex}")
+    previous_chapters = _referenced_chapter_files(destination)
     export = prepare_markdown_export(
         markdown,
         organization=organization,
@@ -88,9 +92,8 @@ def replace_markdown_output(
     )
     staged_chapters: Path | None = None
     staged_primary: Path | None = None
-    backup_chapters: Path | None = None
     chapters_published = False
-    manage_chapters = organization is MarkdownOrganization.BY_CHAPTER
+    committed = False
     try:
         if export.chapters:
             staged_chapters = _stage_chapter_directory(
@@ -98,33 +101,30 @@ def replace_markdown_output(
                 export.chapters,
                 None,
             )
-        if validate_staged is not None:
-            _validate_canonical_markdown(destination.parent, markdown, validate_staged)
         staged_primary = _stage_markdown(destination.parent, export.primary_markdown)
-
-        if manage_chapters and chapters_directory.exists():
-            backup_chapters = Path(
-                mkdtemp(dir=chapters_directory.parent, prefix=".parsezen-previous-chapters-")
-            )
-            backup_chapters.rmdir()
-            chapters_directory.rename(backup_chapters)
+        _validate_markdown_publication(
+            staged_primary,
+            export,
+            chapters_directory=staged_chapters,
+            resources_directory=None,
+            canonical=markdown
+            if export.chapters or include_metadata or include_page_references
+            else None,
+            validate_staged=validate_staged,
+        )
         if staged_chapters is not None:
             staged_chapters.rename(chapters_directory)
             staged_chapters = None
             chapters_published = True
         os.replace(staged_primary, destination)
+        committed = True
         staged_primary = None
-        _remove_resource_directory(backup_chapters)
+        _remove_referenced_chapters(previous_chapters)
     except (OSError, UnicodeError) as exc:
-        if chapters_published:
-            _remove_resource_directory(chapters_directory)
-        if backup_chapters is not None and backup_chapters.exists():
-            try:
-                backup_chapters.rename(chapters_directory)
-            except OSError:
-                pass
         raise OutputWriteError(f"No se pudo actualizar el resultado {destination.name}.") from exc
     finally:
+        if chapters_published and not committed:
+            _remove_resource_directory(chapters_directory)
         _remove_resource_directory(staged_chapters)
         _remove_if_present(staged_primary)
 
@@ -214,12 +214,18 @@ def write_conversion_output(
                 export.primary_markdown,
                 _resource_reference(destination.parent, resources_directory),
             )
-            if derived_export and validate_staged is not None:
-                _validate_canonical_markdown(destination.parent, markdown, validate_staged)
+
             _write_exclusively(
                 destination,
                 resolved_markdown,
-                validate_staged=None if derived_export else validate_staged,
+                validate_staged=partial(
+                    _validate_markdown_publication,
+                    export=export,
+                    chapters_directory=chapters_directory if has_chapters else None,
+                    resources_directory=resources_directory,
+                    canonical=markdown if derived_export else None,
+                    validate_staged=validate_staged,
+                ),
             )
         except FileExistsError:
             if resources_written:
@@ -316,10 +322,14 @@ def write_improvement_outputs(
             if raw_path is not None:
                 staged_raw = _stage_markdown(raw_path.parent, resolved_raw)
             staged_final = _stage_markdown(final_path.parent, resolved_improved)
-            if derived_export and validate_staged is not None:
-                _validate_canonical_markdown(final_path.parent, improved_markdown, validate_staged)
-            elif validate_staged is not None:
-                validate_staged(staged_final)
+            _validate_markdown_publication(
+                staged_final,
+                export,
+                chapters_directory=staged_chapters,
+                resources_directory=resources_directory,
+                canonical=improved_markdown if derived_export else None,
+                validate_staged=validate_staged,
+            )
 
             if resources_directory is not None and staged_resources is not None:
                 staged_resources.rename(resources_directory)
@@ -561,8 +571,6 @@ def _stage_chapter_directory(
         for chapter in chapters:
             resource_reference = _resource_reference(staging, resources_directory)
             content = materialize_converted_markdown(chapter.markdown, resource_reference)
-            if resources_directory is None:
-                content = rebase_relative_markdown_links(content)
             destination = staging / chapter.filename
             with destination.open("x", encoding="utf-8", newline="\n") as output_file:
                 output_file.write(content)
@@ -574,16 +582,89 @@ def _stage_chapter_directory(
         raise OutputWriteError("No se pudieron preparar los capítulos Markdown.") from exc
 
 
-def _validate_canonical_markdown(
-    directory: Path,
-    markdown: str,
-    validate_staged: Callable[[Path], None],
+def _validate_markdown_publication(
+    staged_primary: Path,
+    export: MarkdownExport,
+    *,
+    chapters_directory: Path | None,
+    resources_directory: Path | None,
+    canonical: str | None,
+    validate_staged: Callable[[Path], None] | None,
 ) -> None:
-    staged = _stage_markdown(directory, markdown)
+    """Read every actual file, then apply the caller's approved-content contract."""
+
+    _verify_markdown_bytes(
+        staged_primary,
+        materialize_converted_markdown(
+            export.primary_markdown,
+            _resource_reference(staged_primary.parent, resources_directory),
+        ),
+    )
+    if export.chapters:
+        if chapters_directory is None:
+            raise FinalIntegrityError("Faltan los capítulos del resultado Markdown.")
+        for chapter in export.chapters:
+            _verify_markdown_bytes(
+                chapters_directory / chapter.filename,
+                materialize_converted_markdown(
+                    chapter.markdown,
+                    _resource_reference(chapters_directory, resources_directory),
+                ),
+            )
+    if validate_staged is None:
+        return
+    if canonical is None:
+        validate_staged(staged_primary)
+        return
+    # The splitter proved source conservation and all rendered files matched above.
+    # Keep the canonical callback contract without treating it as proof of publication alone.
+    staged = _stage_markdown(staged_primary.parent, canonical)
     try:
         validate_staged(staged)
     finally:
         _remove_if_present(staged)
+
+
+def _verify_markdown_bytes(path: Path, expected: str) -> None:
+    try:
+        if path.read_bytes() == expected.encode("utf-8"):
+            return
+    except OSError as exc:
+        raise FinalIntegrityError(
+            "No se pudo volver a leer el resultado Markdown completo."
+        ) from exc
+    raise FinalIntegrityError(
+        "El resultado Markdown escrito no coincide con el contenido preparado."
+    )
+
+
+def _referenced_chapter_files(destination: Path) -> tuple[Path, ...]:
+    """Recognize only chapter files linked by this result's previous generated index."""
+
+    try:
+        index = destination.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return ()
+    folder = re.escape(f"{destination.stem}.chapters") + r"(?:-[a-f0-9]{32})?"
+    pattern = re.compile(r"(?m)^- \[.*\]\(<(" + folder + r")/(\d{2,}-[a-z0-9-]+\.md)>\)$")
+    paths: list[Path] = []
+    for match in pattern.finditer(index):
+        directory = destination.parent / match.group(1)
+        path = directory / match.group(2)
+        if not directory.is_symlink() and path.resolve().parent == directory.absolute():
+            paths.append(path)
+    return tuple(paths)
+
+
+def _remove_referenced_chapters(paths: tuple[Path, ...]) -> None:
+    # Leave unreferenced files and interrupted generations alone; ownership is not proven.
+    for path in paths:
+        _remove_if_present(path)
+    for directory in {path.parent for path in paths}:
+        try:
+            directory.rmdir()
+        except OSError:
+            pass
 
 
 def _validate_resource_path(relative_path: PurePosixPath) -> PurePosixPath:

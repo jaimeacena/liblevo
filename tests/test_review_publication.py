@@ -39,6 +39,7 @@ def reversible(payload: bytes) -> bytes:
 class DraftRepository:
     def __init__(self) -> None:
         self.book: BookDocument | None = None
+        self.completed_jobs = []
         self.saved_books: list[BookDocument] = []
         self.deleted: list[str] = []
         self.reviews: list[ReviewSession] = []
@@ -49,6 +50,9 @@ class DraftRepository:
     def save_book(self, _job_id: str, book: BookDocument) -> None:
         self.book = book
         self.saved_books.append(book)
+
+    def upsert_job(self, job) -> None:
+        self.completed_jobs.append(job)
 
     def save_review(self, review: ReviewSession) -> None:
         self.reviews.append(review)

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Parsezen · Revisar documento</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#20323d;background:#f3f6f8;line-height:1.5}*{box-sizing:border-box}[hidden]{display:none!important}
+body{max-width:1440px;margin:auto;padding:24px}header{margin-bottom:20px}h1{font-size:1.6rem;margin:0}h2{font-size:1.1rem;margin:0}p{margin:10px 0}
+.topline,.toolbar,nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.note,figcaption{color:#53646f;font-size:.9rem}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}.column{min-width:0;background:white;border:1px solid #d3dde3;border-radius:12px;overflow:hidden}.toolbar{padding:12px 18px;border-bottom:1px solid #d3dde3}
+.reader{padding:24px;height:62vh;min-height:300px;overflow:auto;overflow-wrap:anywhere}.reader.result{font-family:Georgia,serif;font-size:18px;line-height:1.7}.reader img{max-width:100%;height:auto}.reader figure{margin:0 0 20px}.reader figcaption{font-family:system-ui,sans-serif;margin-bottom:8px}
+.reader h1,.reader h2,.reader h3{font-size:1.3em;line-height:1.3;margin:1em 0 .5em}.reader table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:.95em}.reader th,.reader td{border:1px solid #c6d1d8;padding:8px;vertical-align:top;overflow-wrap:anywhere}.reader pre{white-space:pre-wrap}.reader blockquote{margin:16px 0;padding-left:16px;border-left:3px solid #a6bac7}.plain-text{white-space:pre-wrap}
+.feedback{padding:18px;border-top:1px solid #d3dde3}fieldset{border:0;padding:0;margin:0 0 12px}legend{font-weight:600;margin-bottom:8px}.choices{display:flex;gap:8px;flex-wrap:wrap}.choice{padding:8px 10px;border:1px solid #b9c9d3;border-radius:8px;cursor:pointer}.choice:has(input:checked){background:#e4f1f5;border-color:#164b63}input{accent-color:#164b63}
+label.comment{display:block;font-weight:600}textarea{display:block;width:100%;min-height:86px;padding:10px;margin-top:6px;border:1px solid #a7b9c5;border-radius:8px;font:inherit;resize:vertical}
+button{font:inherit;padding:10px 16px;border-radius:8px;border:1px solid #164b63;background:#164b63;color:white;cursor:pointer}button.secondary{background:white;color:#164b63}button:disabled{opacity:.45;cursor:default}a{color:#145778}button[aria-pressed=true]{background:#164b63;color:white}:focus-visible{outline:3px solid #b25c00;outline-offset:3px}
+.tabs{display:flex;gap:6px}.tabs button{padding:5px 10px}.warning{padding:10px 18px;background:#fff3d9}.practice{background:#fff3d9;padding:10px;border-radius:8px}footer{margin-top:18px}nav{margin:16px 0}summary{cursor:pointer}details{margin-top:16px}.status{min-height:24px}
+@media(max-width:760px){body{padding:12px}.compare{grid-template-columns:1fr}.reader{height:46vh;padding:16px}.reader.result{font-size:17px}.choices{display:grid;grid-template-columns:1fr 1fr}.toolbar{padding:10px}.feedback{padding:12px}}
+</style>
+<header><div class="topline"><h1>Revisar documento</h1><strong id="progress"></strong></div><p>Mira el original, valora el resultado y añade lo que cambiarías.</p><p id="practice" class="practice" hidden>Práctica con documentos inventados. No valida la calidad con documentos reales.</p></header>
+<main id="cases"></main>
+<footer>
+<nav><button id="previous" class="secondary" type="button">Anterior</button><span id="remaining" class="note"></span><button id="next" type="button">Siguiente caso</button><button id="copy" type="button" hidden>Confirmar y copiar revisión</button></nav>
+<p id="confirmation" class="note" hidden>Al confirmar declaras que has comparado los resultados con el original. Si no puedes comprobar alguno, marca «Necesito ayuda». Después pega la revisión en esta conversación; incluye tus comentarios y no se envía automáticamente.</p>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<details><summary>Guardar o recuperar una revisión</summary><p><button id="save" class="secondary" type="button">Guardar borrador</button></p><label>Recuperar borrador <input id="restore" type="file" accept="application/json,.json"></label><p class="note">También puedes adjuntar el archivo guardado en esta conversación. Los comentarios son privados: evita incluir información sensible.</p></details>
+</footer>
+<script id="data" type="application/json">__PAYLOAD__</script>
+<script>
+'use strict';
+const data=JSON.parse(document.getElementById('data').textContent);
+const labels=[['no_error_observed','Lo veo bien'],['minor','Detalle menor'],['major','Problema importante'],['not_evaluable','Necesito ayuda']];
+const sections=[],groups=[],allIds=new Set(data.cards.flatMap(c=>c.panels.flatMap(p=>p.ids)));
+let current=0,dirty=false,confirmed=false;
+function element(tag,text,parent){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(parent)parent.append(e);return e;}
+function link(parent,text,file){const a=element('a',text,parent);a.href=file;a.target='_blank';a.rel='noopener noreferrer';}
+function value(g){return g.radios.find(r=>r.checked)?.value||'';}
+function complete(index){return groups.filter(g=>g.card===index).every(g=>value(g)!=='');}
+function refresh(){
+ sections.forEach((s,i)=>s.hidden=i!==current);
+ document.getElementById('progress').textContent=`Caso ${current+1} de ${sections.length}`;
+ document.getElementById('previous').disabled=current===0;
+ const last=current===sections.length-1;
+ document.getElementById('next').hidden=last;document.getElementById('next').disabled=!complete(current);
+ document.getElementById('copy').hidden=!last;document.getElementById('copy').disabled=groups.some(g=>!value(g));
+ document.getElementById('confirmation').hidden=!last;
+ const remaining=groups.filter(g=>!value(g)).length;document.getElementById('remaining').textContent=remaining?`${remaining} resultados pendientes`:'Todas las valoraciones completas';
+}
+function changed(){dirty=true;confirmed=false;document.getElementById('status').textContent='';refresh();}
+document.getElementById('practice').hidden=!data.practice;
+data.cards.forEach((card,index)=>{
+ const section=element('section',undefined,document.getElementById('cases'));sections.push(section);
+ const scope=`${card.pages?`Páginas ${card.pages[0]}–${card.pages[1]} del PDF · `:''}${card.translate_to?`Traducción al ${card.translate_to==='es'?'español':'inglés'}`:'Sin traducción'}`;
+ element('p',scope,section).className='note';
+ const compare=element('div',undefined,section);compare.className='compare';
+ const original=element('div',undefined,compare);original.className='column';const top=element('div',undefined,original);top.className='toolbar';element('h2','Original',top);link(top,'Abrir archivo',card.source+(card.pages?'#page='+card.pages[0]:''));
+ if(card.source_needs_full)element('p','Vista parcial. Abre el archivo para completar la revisión.',original).className='warning';
+ const source=element('div',undefined,original);source.className='reader';source.innerHTML=card.source_html;
+ const result=element('div',undefined,compare);result.className='column';const bar=element('div',undefined,result);bar.className='toolbar';element('h2','Resultado',bar);
+ const tabs=element('div',undefined,bar);tabs.className='tabs';const bodies=[],buttons=[];
+ card.panels.forEach((panel,panelIndex)=>{
+  const body=element('div',undefined,result);bodies.push(body);body.hidden=panelIndex!==0;
+  if(card.panels.length>1){const button=element('button',`Versión ${panelIndex+1}`,tabs);button.type='button';button.className='secondary';button.setAttribute('aria-pressed',String(panelIndex===0));buttons.push(button);button.onclick=()=>{bodies.forEach((b,i)=>b.hidden=i!==panelIndex);buttons.forEach((b,i)=>b.setAttribute('aria-pressed',String(i===panelIndex)));};}
+  const line=element('div',undefined,body);line.className='toolbar';element('span',panel.ids.length>1?'Las salidas son idénticas: basta una revisión.':'Vista de lectura',line).className='note';if(panel.file)link(line,'Abrir archivo',panel.file);
+  if(panel.needs_full)element('p',panel.completed?'Vista limitada: abre el archivo completo o marca «Necesito ayuda».':'No se completó la conversión. Marca «Necesito ayuda».',body).className='warning';
+  const reader=element('div',undefined,body);reader.className='reader result';reader.innerHTML=panel.html;
+  const feedback=element('div',undefined,body);feedback.className='feedback';
+  const fieldset=element('fieldset',undefined,feedback);element('legend','¿Cómo lo ves?',fieldset);const choices=element('div',undefined,fieldset);choices.className='choices';
+  const radios=labels.map(([key,title])=>{const label=element('label',undefined,choices);label.className='choice';const input=element('input',undefined,label);input.type='radio';input.name=panel.id;input.value=key;input.disabled=!panel.completed&&key!=='not_evaluable';label.append(document.createTextNode(' '+title));return input;});
+  const label=element('label','¿Qué cambiarías? (opcional)',feedback);label.className='comment';const comment=element('textarea',undefined,label);comment.maxLength=2000;comment.placeholder='Por ejemplo: sobra el pie de página o esta frase queda cortada.';
+  const group={ids:panel.ids,card:index,radios,comment};groups.push(group);feedback.addEventListener('input',changed);
+ });
+});
+function move(step){current+=step;refresh();document.querySelector('h1').scrollIntoView({block:'start'});}
+document.getElementById('previous').onclick=()=>move(-1);document.getElementById('next').onclick=()=>move(1);
+function answers(inspected=false){return {review_id:data.review_id,plan_sha256:data.plan_sha256,payload_sha256:data.payload_sha256,verdicts:groups.flatMap(g=>g.ids.map(panel_id=>({panel_id,label:value(g),comment:g.comment.value,source_inspected:inspected&&!!value(g)&&value(g)!=='not_evaluable',full_result_inspected:inspected&&!!value(g)&&value(g)!=='not_evaluable',review_seconds:null})))};}
+function download(result){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(result,null,2)],{type:'application/json'}));a.href=url;a.download='revision-'+data.review_id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+document.getElementById('copy').onclick=async()=>{if(groups.some(g=>!value(g)))return;confirmed=true;try{await navigator.clipboard.writeText(JSON.stringify(answers(true),null,2));document.getElementById('status').textContent='Revisión copiada, incluidos tus comentarios. Pégala en esta conversación.';}catch{download(answers(true));document.getElementById('status').textContent='El navegador no permite copiar. He descargado la revisión: adjunta ese archivo en esta conversación.';}dirty=false;};
+document.getElementById('save').onclick=()=>{download(answers(confirmed));dirty=false;document.getElementById('status').textContent='Borrador guardado con tus comentarios.';};
+document.getElementById('restore').onchange=async event=>{
+ try{
+  const file=event.target.files[0];if(!file||file.size>8388608)throw Error();const saved=JSON.parse(await file.text());
+  if(saved.review_id!==data.review_id||saved.plan_sha256!==data.plan_sha256||saved.payload_sha256!==data.payload_sha256||!Array.isArray(saved.verdicts)||saved.verdicts.length!==allIds.size)throw Error();
+  const byId=new Map();for(const v of saved.verdicts){if(!allIds.has(v.panel_id)||byId.has(v.panel_id)||!(v.label===''||labels.some(([key])=>key===v.label))||typeof(v.comment??'')!=='string'||(v.comment??'').length>2000||(v.comment??'').includes('\0'))throw Error();byId.set(v.panel_id,v);}
+  for(const g of groups){const v=byId.get(g.ids[0]);if(g.radios.some(r=>r.value===v.label&&r.disabled)||g.ids.some(id=>{const other=byId.get(id);return other.label!==v.label||(other.comment??'')!==(v.comment??'');}))throw Error();}
+  for(const g of groups){const v=byId.get(g.ids[0]);g.radios.forEach(r=>r.checked=r.value===v.label);g.comment.value=v.comment??'';}
+  confirmed=false;dirty=false;current=groups.find(g=>!value(g))?.card||0;refresh();document.getElementById('status').textContent='Borrador recuperado, incluidos tus comentarios.';
+ }catch{document.getElementById('status').textContent='No se pudo recuperar este borrador. Debe pertenecer a esta misma revisión.';}
+};
+window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});refresh();
+</script>
+</html>

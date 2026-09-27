@@ -1,0 +1,15 @@
+{
+  "metrics": {
+    "cold_start_seconds": 1.1570000000065193,
+    "installation_bytes": 1152963941,
+    "installer_bytes": null,
+    "payload_bytes": 8388608,
+    "protect_seconds": 0.4379999999946449,
+    "snapshot_disk_bytes": 8390204,
+    "snapshot_recovery_seconds": 0.4529999999795109,
+    "snapshot_write_seconds": 0.46900000001187436,
+    "temporary_peak_bytes": 8455780,
+    "unprotect_seconds": 0.42199999999138527
+  },
+  "schema_version": 1
+}

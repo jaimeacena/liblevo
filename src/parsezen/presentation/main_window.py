@@ -211,6 +211,7 @@ class ParsezenMainWindow(QMainWindow):
         # propagated through the queue service.
         self._local_ai_policy = local_ai_policy or LocalAIPolicySnapshot()
         self._active_configuration_dialog: JobConfigurationDialog | None = None
+        self._active_book_dialog: BookEditorDialog | EpubConfirmationDialog | None = None
         self._sleep_blocker = SystemSleepBlocker()
         self._notification_tray: QSystemTrayIcon | None = None
         self._early_check_reports: dict[str, EarlyCheckReport] = {}
@@ -229,7 +230,7 @@ class ParsezenMainWindow(QMainWindow):
         self._processing_runner.failed.connect(self._processing_failed)
         self._processing_runner.cancelled.connect(self._processing_cancelled)
         self._processing_runner.finished.connect(self._processing_worker_finished)
-        self._local_ai = LocalAIController(self)
+        self._local_ai = LocalAIController(self, direct=True)
 
         self.setWindowTitle(APP_DISPLAY_NAME)
         app_icon = QIcon(str(APP_ICON_PATH))
@@ -411,6 +412,9 @@ class ParsezenMainWindow(QMainWindow):
         self._local_ai_policy = policy
         current = _ai_profile_from_settings(self._settings, policy)
         self._queue_configuration.propagate_ai_profile(previous, current)
+        editor = self._active_configuration_dialog
+        if editor is not None:
+            editor.update_ai_profile(current)
         self._sync_workspace(force_persist=True)
 
     def add_source_paths(self, paths: Sequence[str | Path]) -> None:
@@ -624,6 +628,11 @@ class ParsezenMainWindow(QMainWindow):
         self._sync_workspace()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
+        if self._active_book_dialog is not None:
+            self._active_book_dialog.reject()
+            if not self._active_book_dialog.saved_for_later:
+                event.ignore()
+                return
         if self._preflight_runner.preparing:
             self._start_after_preparation = False
             self._preflight_runner.cancel_preparation()
@@ -658,7 +667,6 @@ class ParsezenMainWindow(QMainWindow):
             not persisted
             and not self._queue_session.running
             and self.isVisible()
-            and self._has_unfinished_jobs()
             and QMessageBox.question(
                 self,
                 "Recuperación no disponible",
@@ -840,6 +848,7 @@ class ParsezenMainWindow(QMainWindow):
         workspace.result_summary_requested.connect(self._show_result_summary)
         workspace.activity_requested.connect(self._show_recent_activity)
         workspace.remove_requested.connect(self._remove_job)
+        workspace.new_version_requested.connect(self._create_job_version)
         workspace.move_requested.connect(self._move_job)
         workspace.primary_requested.connect(self._run_primary_action)
 
@@ -976,10 +985,27 @@ class ParsezenMainWindow(QMainWindow):
     def _add_dropped_paths(self, paths: object) -> None:
         if not isinstance(paths, tuple):
             return
+        accepted: list[Path] = []
+        skipped = 0
+        for raw_path in paths:
+            try:
+                path = Path(raw_path)
+                DocumentFormat.from_path(path)
+                if not path.is_file():
+                    skipped += 1
+                    continue
+            except (OSError, TypeError, ValueError):
+                skipped += 1
+                continue
+            accepted.append(path)
+        if not accepted:
+            self.parsezen_workspace.set_source_addition_feedback(skipped, focus=bool(skipped))
+            return
         if self._job_queue.jobs:
-            self.add_source_paths(paths)
+            self.add_source_paths(accepted)
         else:
-            self.set_source_paths(paths)
+            self.set_source_paths(accepted)
+        self.parsezen_workspace.set_source_addition_feedback(skipped)
 
     @Slot()
     def _select_file(self) -> None:
@@ -993,10 +1019,7 @@ class ParsezenMainWindow(QMainWindow):
         )
         if not filenames:
             return
-        if self._job_queue.jobs:
-            self.add_source_paths(filenames)
-        else:
-            self.set_source_paths(filenames)
+        self._add_dropped_paths(tuple(filenames))
 
     @Slot()
     def _show_parsezen_settings(self) -> None:
@@ -1258,7 +1281,8 @@ class ParsezenMainWindow(QMainWindow):
                 self,
                 "Documento bloqueado",
                 "La configuración queda bloqueada al comenzar. "
-                "Duplica o reinicia el trabajo para usar otras opciones.",
+                "Cuando termine, usa «Crear otra versión» en el menú del documento "
+                "para elegir otras opciones.",
             )
             return
         stage = requested_stage if isinstance(requested_stage, StageKind) else None
@@ -1364,7 +1388,13 @@ class ParsezenMainWindow(QMainWindow):
         loop = QEventLoop(self)
         dialog.finished.connect(loop.quit)
         self.parsezen_workspace.show_internal_view(dialog, title)
-        loop.exec()
+        previous_book_dialog = self._active_book_dialog
+        if isinstance(dialog, (BookEditorDialog, EpubConfirmationDialog)):
+            self._active_book_dialog = dialog
+        try:
+            loop.exec()
+        finally:
+            self._active_book_dialog = previous_book_dialog
         result = dialog.result()
         self.parsezen_workspace.close_internal_view(dialog)
         return result
@@ -1433,7 +1463,7 @@ class ParsezenMainWindow(QMainWindow):
             dialog.reject()
             return
         try:
-            configuration = dialog.configuration()
+            configuration = dialog.configuration(allow_unprepared=True)
             configured_job = job.with_configuration(configuration)
             request = None
             if configured_job.is_configured:
@@ -1448,8 +1478,10 @@ class ParsezenMainWindow(QMainWindow):
         self._job_queue.replace(configured_job)
         entry.pdf_page_range = request.pdf_page_range if request is not None else None
         entry.result = None
-        self._sync_workspace(force_persist=True)
-        dialog.mark_persisted(configured_job)
+        if self._sync_workspace(force_persist=True):
+            dialog.mark_persisted(configured_job)
+        else:
+            dialog.mark_save_failed()
 
     def _apply_configuration_to_compatible_jobs(
         self,
@@ -1589,10 +1621,16 @@ class ParsezenMainWindow(QMainWindow):
     ) -> tuple[BookDocument | None, BookDocument | None]:
         """Return either a book to publish or a draft that must remain recoverable."""
 
+        entry = self._entry_for_job_id(job_id)
         confirmation = EpubConfirmationDialog(
             book,
             self._artifact_store,
             job_id=job_id,
+            destination=destination,
+            preserved_review_chunks=(
+                entry.result.preserved_review_chunks if entry and entry.result else 0
+            ),
+            save_draft=lambda draft: self._review_flow.save_book(job_id, draft),
             parent=self,
         )
         confirmed = (
@@ -1610,6 +1648,7 @@ class ParsezenMainWindow(QMainWindow):
             job_id=job_id,
             destination=destination,
             publish_on_accept=False,
+            save_draft=lambda draft: self._review_flow.save_book(job_id, draft),
             parent=self,
         )
         accepted = (
@@ -1638,7 +1677,7 @@ class ParsezenMainWindow(QMainWindow):
             QMessageBox.warning(self, "No se pudo preparar el editor", str(exc))
             return
         try:
-            publishable_book, saved_draft = self._confirm_epub_book(
+            publishable_book, _saved_draft = self._confirm_epub_book(
                 book,
                 job_id=job.id,
                 destination=result.final_path,
@@ -1648,15 +1687,6 @@ class ParsezenMainWindow(QMainWindow):
             QMessageBox.warning(self, "No se pudo abrir el editor", str(exc))
             return
         if publishable_book is None:
-            if saved_draft is not None:
-                try:
-                    self._review_flow.save_book(job.id, saved_draft)
-                except (StateStoreError, ValueError, OSError) as exc:
-                    QMessageBox.warning(
-                        self,
-                        "No se pudo guardar el borrador",
-                        str(exc),
-                    )
             self._keep_review_pending(entry, result)
             return
         try:
@@ -1942,7 +1972,7 @@ class ParsezenMainWindow(QMainWindow):
                 QMessageBox.warning(self, "No se pudo preparar el editor", str(exc))
                 return
             try:
-                publishable_book, saved_draft = self._confirm_epub_book(
+                publishable_book, _saved_draft = self._confirm_epub_book(
                     book,
                     job_id=job.id,
                     destination=result.final_path,
@@ -1952,15 +1982,6 @@ class ParsezenMainWindow(QMainWindow):
                 QMessageBox.warning(self, "No se pudo abrir el editor", str(exc))
                 return
             if publishable_book is None:
-                if saved_draft is not None:
-                    try:
-                        self._review_flow.save_book(job.id, saved_draft)
-                    except (StateStoreError, ValueError, OSError) as exc:
-                        QMessageBox.warning(
-                            self,
-                            "No se pudo guardar el borrador",
-                            str(exc),
-                        )
                 self._keep_review_pending(entry, result)
                 return
             try:
@@ -2349,6 +2370,39 @@ class ParsezenMainWindow(QMainWindow):
         entry = self._queue_session.runtime_for(job.id) if job is not None else None
         if entry is not None and entry.result is not None:
             self._open_local_path(entry.result.final_path)
+
+    @Slot(str)
+    def _create_job_version(self, job_id: str) -> None:
+        job = self._job_queue.get(job_id)
+        if job is None or job.status is not JobStatus.COMPLETED or self._queue_session.running:
+            return
+        previous_jobs = self._job_queue.jobs
+        try:
+            source = DocumentSource.inspect(job.source.path, include_content_hash=False)
+            created = self._job_queue.create_version(job_id, source)
+        except (OSError, ValueError):
+            QMessageBox.warning(
+                self,
+                "Original no disponible",
+                "No se pudo abrir el documento original para crear otra versión.",
+            )
+            return
+        if not self._persist_workspace(self._job_queue.jobs, force=True):
+            self._job_queue.restore(previous_jobs)
+            self._sync_workspace()
+            return
+        self._queue_session.remove_runtime(job_id)
+        self._queue_session.ensure_runtime(created.id)
+        self._queue_session.set_prepared_run(None)
+        self._queue_session.reset_idle_selection()
+        self._finished_batch_job_ids = tuple(
+            value for value in self._finished_batch_job_ids if value != job_id
+        )
+        if self._selected_result_job_id == job_id:
+            self._selected_result_job_id = None
+            self._result = None
+        self._sync_workspace()
+        self._configure_job(created.id, None)
 
     @Slot(str)
     def _remove_job(self, job_id: str) -> None:
@@ -2853,12 +2907,6 @@ class ParsezenMainWindow(QMainWindow):
         if persistence.status is QueuePersistenceStatus.SAVED:
             self.parsezen_workspace.set_recovery_warning(self._state_recovery_notice)
         return True
-
-    def _has_unfinished_jobs(self) -> bool:
-        return any(
-            job.status not in {JobStatus.COMPLETED, JobStatus.CANCELLED}
-            for job in self._job_queue.jobs
-        )
 
     def _entry_for_job_id(self, job_id: str) -> JobRuntime | None:
         return (

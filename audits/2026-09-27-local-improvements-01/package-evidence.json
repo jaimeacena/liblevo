@@ -1,0 +1,24 @@
+{
+  "environment": "Windows 11; Python 3.12.10; PyInstaller 6.21.0; llama-cpp-python 0.3.35 Vulkan",
+  "build": "PASS",
+  "packaged_smoke": "PASS",
+  "ollama_stopped_during_smoke": false,
+  "installer_tested": false,
+  "roles": [
+    {
+      "role": "current",
+      "directory": "outputs/package/Parsezen",
+      "files": 7535,
+      "bytes": 1152963941,
+      "exe_sha256": "7e4fb502f3b59999d4d30b4f774c88bf7af95273e4605d53e5043360f6c655ae"
+    },
+    {
+      "role": "previous",
+      "directory": "outputs/package/Parsezen.previous-5d9f31aaf930477f95447854abadece0",
+      "files": 7520,
+      "bytes": 1090638951,
+      "exe_sha256": "f7074d87e0f64c1af43fac6ea331f2af110cb47b82edc6d0a9a00d21ffb551ce"
+    }
+  ],
+  "temporary_cleanup": "PASS: only candidate and cache folders created by this build were removed after successful smoke; current and previous bundles remain."
+}

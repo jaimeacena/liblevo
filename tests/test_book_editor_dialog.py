@@ -17,6 +17,35 @@ def reversible(payload: bytes) -> bytes:
     return bytes(value ^ 0x44 for value in payload)
 
 
+def test_compact_editor_navigates_chapters_and_previews_index_without_publication(qtbot, tmp_path):
+    store = ArtifactStore(tmp_path / "artifacts", protect=reversible, unprotect=reversible)
+    book = create_book_from_markdown(
+        f"# Uno\n\nTexto uno.\n\n{EPUB_CHAPTER_MARKER}\n\n# Dos\n\nTexto dos.",
+        (),
+        EpubBookMetadata("Libro", "es"),
+        store,
+        job_id="job",
+    )
+    destination = tmp_path / "book.epub"
+    dialog = BookEditorDialog(book, store, job_id="job", destination=destination)
+    qtbot.addWidget(dialog)
+    dialog.resize(320, 720)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+    assert dialog.structure_pane.isHidden()
+    assert dialog.chapter_selector.count() == 2
+    dialog._select_compact_chapter(1)
+    assert "Texto dos" in dialog.editor.toPlainText()
+    dialog.index_button.click()
+    assert dialog.index_preview.isVisible()
+    assert [dialog.index_preview.topLevelItem(i).text(0) for i in range(2)] == ["Uno", "Dos"]
+    assert not destination.exists()
+    dialog.index_button.click()
+    assert dialog.editor.isVisible()
+    dialog.organize_button.click()
+    assert dialog.structure_pane.isVisible()
+
+
 def test_qt_editor_round_trip_preserves_internal_anchors_and_links(qtbot) -> None:
     del qtbot
     source = (
@@ -255,7 +284,9 @@ def test_book_editor_groups_metadata_and_cover_in_one_dropdown(
         job_id="job",
     )
     cover = tmp_path / "cover.png"
-    cover.write_bytes(b"cover")
+    from PIL import Image
+
+    Image.new("RGB", (2, 2), "white").save(cover)
     dialog = BookEditorDialog(book, store, job_id="job", destination=None)
     qtbot.addWidget(dialog)
 

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QPoint, QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFocusEvent, QPainter, QPaintEvent, QPen, QWheelEvent
+from PySide6.QtCore import QEvent, QPoint, QRectF, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QFocusEvent, QPainter, QPaintEvent, QPen, QResizeEvent
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -17,30 +17,62 @@ from PySide6.QtWidgets import (
 )
 
 from parsezen.presentation.design_system import COLORS, CONTROLS, RADII, SPACING
+from parsezen.translation_quality import TARGET_LANGUAGE_CODES
 
 
-class ChevronComboBox(QComboBox):
-    """Native combo box with a visible vector chevron and safe wheel behaviour."""
+class BookLanguageSelector(QComboBox):
+    """Display language names while preserving the book's exact language tag."""
 
-    def wheelEvent(self, event: QWheelEvent) -> None:  # noqa: N802
-        if not self.hasFocus():
-            event.ignore()
-            return
-        super().wheelEvent(event)
+    def __init__(self, language: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setAccessibleName("Idioma del libro")
+        self.setMinimumWidth(0)
+        self.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.addItem("Sin especificar", "und")
+        for name, code in TARGET_LANGUAGE_CODES.items():
+            self.addItem(name, code)
+        index = self.findData(language)
+        if index < 0:
+            # Existing regional/other tags must survive a metadata-only edit unchanged.
+            base = language.split("-")[0].lower()
+            language_name = next(
+                (name for name, code in TARGET_LANGUAGE_CODES.items() if code == base), None
+            )
+            self.addItem(f"{language_name} ({language})" if language_name else language, language)
+            index = self.count() - 1
+        self.setCurrentIndex(index)
 
-    def paintEvent(self, event: QPaintEvent) -> None:  # noqa: N802
-        super().paintEvent(event)
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        color = COLORS.text_secondary if self.isEnabled() else COLORS.text_disabled
-        pen = QPen(QColor(color), 1.6)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
-        painter.setPen(pen)
-        center_x = self.width() - 15
-        center_y = self.height() // 2
-        painter.drawLine(center_x - 4, center_y - 2, center_x, center_y + 2)
-        painter.drawLine(center_x, center_y + 2, center_x + 4, center_y - 2)
+    def language_code(self) -> str:
+        return str(self.currentData())
+
+
+class ElidedLabel(QLabel):
+    """Keep full accessible text while deliberately eliding constrained headings."""
+
+    def __init__(self, text: str, parent: QWidget | None = None) -> None:
+        super().__init__(text, parent)
+        self.full_text = text
+        self.setTextFormat(Qt.TextFormat.PlainText)
+        self.setAccessibleName(text)
+        self.setToolTip(text)
+        self.setMinimumWidth(0)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self._elide()
+
+    def changeEvent(self, event: QEvent) -> None:  # noqa: N802
+        super().changeEvent(event)
+        if hasattr(self, "full_text"):
+            self._elide()
+
+    def _elide(self) -> None:
+        text = self.fontMetrics().elidedText(
+            self.full_text, Qt.TextElideMode.ElideMiddle, self.contentsRect().width()
+        )
+        if text != self.text():
+            super().setText(text)
 
 
 class Switch(QCheckBox):

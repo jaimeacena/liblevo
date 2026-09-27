@@ -57,6 +57,60 @@ def test_repeated_margin_lines_detect_local_running_headers_in_a_long_book() -> 
     assert repeated == {pdf_conversion_module._margin_key("CHAPTER 6")}
 
 
+@pytest.mark.parametrize("label_text", ["Chapter overview", "The 24 houses"])
+@pytest.mark.parametrize("left_folio", [False, True])
+def test_isolated_footer_label_is_removed_without_repetition(
+    left_folio: bool, label_text: str
+) -> None:
+    body = _margin_line(20, "The final sentence of the body remains intact.", top=650)
+    label = replace(_margin_line(20, label_text, top=715), x0=265, x1=335, italic=True)
+    folio = replace(
+        _margin_line(20, "21", top=715),
+        x0=60 if left_folio else 530,
+        x1=70 if left_folio else 540,
+    )
+    lines = [body, label, folio]
+    assert pdf_conversion_module._omit_margin_line(label, set(), body, 10, page_lines=lines)
+    assert not pdf_conversion_module._omit_margin_line(body, set(), None, 10, page_lines=lines)
+
+
+@pytest.mark.parametrize(
+    "ambiguity",
+    [
+        "note",
+        "near_body",
+        "no_folio",
+        "body_below",
+        "outline",
+        "not_italic",
+        "wide",
+        "toc",
+    ],
+)
+def test_ambiguous_footer_content_is_preserved(ambiguity: str) -> None:
+    body = _margin_line(20, "A complete sentence in the body.", top=650)
+    label = replace(_margin_line(20, "Short note", top=715), x0=265, x1=335, italic=True)
+    folio = replace(_margin_line(20, "21", top=715), x0=530, x1=540)
+    if ambiguity == "note":
+        label = replace(label, text="1 Short note.")
+    elif ambiguity == "near_body":
+        body = replace(body, top=695, bottom=707)
+    elif ambiguity == "outline":
+        label = replace(label, outline_level=2)
+    elif ambiguity == "not_italic":
+        label = replace(label, italic=False)
+    elif ambiguity == "wide":
+        label = replace(label, x0=150, x1=450)
+    lines = [body, label]
+    if ambiguity != "no_folio":
+        lines.append(folio)
+    if ambiguity == "body_below":
+        lines.append(_margin_line(20, "The note continues below.", top=740))
+    assert not pdf_conversion_module._omit_margin_line(
+        label, set(), body, 10, page_lines=lines, toc_page=ambiguity == "toc"
+    )
+
+
 def test_repeated_margin_lines_detect_centered_headers_below_the_strict_margin() -> None:
     lines = [
         _margin_line(20, "CHAPTER 40", top=112),
@@ -4572,7 +4626,7 @@ def test_spatial_character_deduplication_preserves_the_original_choice() -> None
     ]
 
 
-def test_never_joins_paragraphs_across_pdf_pages() -> None:
+def test_does_not_join_a_new_sentence_across_pdf_pages() -> None:
     previous = pdf_conversion_module._PdfLine(
         page_number=1,
         page_width=600,
@@ -4609,6 +4663,46 @@ def test_never_joins_paragraphs_across_pdf_pages() -> None:
     )
 
     assert not pdf_conversion_module._should_join_lines(previous, current, 12, 24)
+
+
+@pytest.mark.parametrize(
+    "boundary", ["continuation", "sentence", "list", "heading", "gap", "anchor"]
+)
+def test_page_provenance_does_not_split_a_confirmed_paragraph(boundary: str) -> None:
+    first = replace(_margin_line(1, "The traveller reaches a place where", top=700), font_size=10)
+    last_text = {
+        "sentence": "A new sentence begins.",
+        "list": "- a separate list item",
+        "heading": "A Separate Heading",
+    }.get(boundary, "the journey continues.")
+    second_number = 3 if boundary == "gap" else 2
+    second = replace(
+        _margin_line(second_number, last_text, top=72),
+        font_size=16 if boundary == "heading" else 10,
+        bold=boundary == "heading",
+    )
+    pages = [
+        pdf_conversion_module._PdfPage(number, (line,), False, (), False, False)
+        for number, line in [(1, first), (second_number, second)]
+    ]
+    markdown, _ = pdf_conversion_module._render_document(
+        pages,
+        body_size=10,
+        heading_sizes={16: 2},
+        repeated_margins=set(),
+        referenced_pages={2} if boundary == "anchor" else set(),
+        ocr_pages={},
+        ocr_failed_pages=set(),
+    )
+    marker = pdf_conversion_module._pdf_page_marker(second_number)
+    assert markdown.count(marker) == 1
+    if boundary == "continuation":
+        assert f"where {marker}the journey continues." in markdown
+        assert "where the journey continues." in pdf_conversion_module.strip_pdf_page_markers(
+            markdown
+        )
+    else:
+        assert f"where\n\n{marker}" in markdown
 
 
 def test_renders_a_visually_confirmed_numbered_sequence_as_one_ordered_list() -> None:
@@ -5891,6 +5985,58 @@ def test_hidden_text_budget_selects_scanned_contents_but_not_ordinary_prose() ->
     )
 
     assert selected == {1}
+
+
+def test_readable_native_table_does_not_spend_a_second_full_page_ocr_pass() -> None:
+    line = _pdf_model_line(
+        1,
+        "A complete native table already provides clear selectable labels and values "
+        "with enough natural language to validate its text layer reliably.",
+    )
+    table = pdf_conversion_module._PdfTable(
+        (50.0, 100.0, 550.0, 700.0),
+        (("Label", "Value"), ("First row", "Complete value")),
+        pdf_conversion_module._TableRendering.MARKDOWN,
+    )
+    page = pdf_conversion_module._PdfPage(
+        1,
+        (line,),
+        has_images=True,
+        image_area_ratios=(1.0,),
+        has_table=True,
+        image_orientation_mismatch=False,
+        tables=(table,),
+    )
+
+    plan = pdf_conversion_module._build_ocr_plan([page], force_ocr=False)
+
+    assert plan.page_numbers == set()
+    assert plan.force_full_page_numbers == set()
+
+
+def test_inferred_raster_table_still_receives_local_ocr() -> None:
+    line = _pdf_model_line(
+        1,
+        "A raster table may look readable in its partial text layer but still needs "
+        "the bounded local recognition path to recover its visual structure.",
+    )
+    table = pdf_conversion_module._PdfTable(
+        (50.0, 100.0, 550.0, 700.0),
+        (("Label", "Value"), ("First row", "Partial value")),
+        pdf_conversion_module._TableRendering.MARKDOWN,
+        inferred_from_raster=True,
+    )
+    page = pdf_conversion_module._PdfPage(
+        1,
+        (line,),
+        has_images=True,
+        image_area_ratios=(1.0,),
+        has_table=True,
+        image_orientation_mismatch=False,
+        tables=(table,),
+    )
+
+    assert pdf_conversion_module._build_ocr_plan([page], force_ocr=False).page_numbers == {1}
 
 
 def test_hidden_text_audit_budget_scales_with_the_selected_interval() -> None:
@@ -7225,3 +7371,202 @@ def _write_pdf(destination: Path, objects: list[bytes]) -> None:
     document.extend(f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n".encode())
     document.extend(f"startxref\n{xref_offset}\n%%EOF\n".encode())
     destination.write_bytes(document)
+
+
+@pytest.mark.parametrize("font_size", [7.5, 12])
+@pytest.mark.parametrize(
+    ("indent_em", "previous_text", "separate"),
+    [
+        (1.8, "The first paragraph ends.", True),
+        (0.2, "One sentence ends.", False),
+        (0, "One sentence ends.", False),
+        (1.8, "The sentence continues with", False),
+    ],
+)
+def test_render_preserves_sentence_closed_paragraph_indent(
+    font_size: float, indent_em: float, previous_text: str, separate: bool
+) -> None:
+    previous = replace(
+        _margin_line(1, previous_text, top=200), font_size=font_size, bottom=200 + font_size
+    )
+    current = replace(
+        _margin_line(1, "Another part of the text follows.", top=200 + font_size * 1.8),
+        font_size=font_size,
+        x0=previous.x0 + indent_em * font_size,
+        bottom=200 + font_size * 2.8,
+    )
+    page = pdf_conversion_module._PdfPage(1, (previous, current), False, (), False, False)
+    markdown, _ = pdf_conversion_module._render_document(
+        [page],
+        body_size=font_size,
+        heading_sizes={},
+        repeated_margins=set(),
+        referenced_pages=set(),
+        ocr_pages={},
+        ocr_failed_pages=set(),
+    )
+    expected = previous_text + ("\n\n" if separate else " ") + current.text
+    assert expected in markdown
+
+
+def test_isolated_footer_rule_does_not_accept_a_leading_note_number() -> None:
+    body = _margin_line(20, "A complete sentence.", top=650)
+    label = replace(_margin_line(20, "1 Short note", top=715), x0=265, x1=335, italic=True)
+    folio = replace(_margin_line(20, "21", top=715), x0=530, x1=540)
+    assert not pdf_conversion_module._is_isolated_footer_label(label, [body, label, folio], 10)
+
+
+@pytest.mark.parametrize("initial", ["I", "O"])
+@pytest.mark.parametrize(
+    "variant",
+    [
+        "split",
+        "same_size",
+        "word_gap",
+        "raised",
+        "rotated",
+        "no_next_word",
+        "long_token",
+        "in_sentence",
+    ],
+)
+def test_build_line_repairs_only_a_geometrically_split_initial_pair(
+    initial: str, variant: str
+) -> None:
+    text = f"{initial} n ordinary prose follows."
+    raw_chars = [
+        {"text": initial, "x0": 70, "x1": 74, "top": 100, "bottom": 110, "size": 10},
+        {"text": "n", "x0": 76, "x1": 82, "top": 102, "bottom": 110, "size": 8},
+        {"text": "o", "x0": 87, "x1": 92, "top": 100, "bottom": 110, "size": 10},
+    ]
+    if variant == "same_size":
+        raw_chars[1].update(size=10)
+    elif variant == "word_gap":
+        raw_chars[1].update(x0=78)
+    elif variant == "raised":
+        raw_chars[1].update(top=96, bottom=104)
+    elif variant == "rotated":
+        raw_chars[1].update(upright=False)
+    elif variant == "no_next_word":
+        text = f"{initial} n"
+        raw_chars = raw_chars[:2]
+    elif variant == "long_token":
+        text = f"{initial} name follows."
+    elif variant == "in_sentence":
+        text = f"Earlier {text}"
+    line = pdf_conversion_module._build_line(
+        1,
+        600,
+        800,
+        {"text": text, "chars": raw_chars, "x0": 70, "x1": 300, "top": 100, "bottom": 110},
+        (),
+    )
+    assert line is not None
+    assert line.text == (
+        text.replace(f"{initial} n", f"{initial}n", 1) if variant == "split" else text
+    )
+
+
+@pytest.mark.parametrize("ending", [".", "?”", ":"])
+@pytest.mark.parametrize("extra_gap", [False, True])
+def test_page_relative_spacing_preserves_closed_paragraphs(ending: str, extra_gap: bool) -> None:
+    lines = [
+        replace(_margin_line(1, text, top=100 + i * 18), bottom=112 + i * 18, font_size=12)
+        for i, text in enumerate(
+            [
+                "The opening continues",
+                "with more ordinary words",
+                "and further context",
+                "ending here" + ending,
+            ]
+        )
+    ]
+    following = replace(
+        _margin_line(1, "Another complete paragraph.", top=172 + (3.6 if extra_gap else 0)),
+        bottom=184 + (3.6 if extra_gap else 0),
+        font_size=12,
+    )
+    page = pdf_conversion_module._PdfPage(1, tuple([*lines, following]), False, (), False, False)
+    md, _ = pdf_conversion_module._render_document(
+        [page],
+        body_size=12,
+        heading_sizes={},
+        repeated_margins=set(),
+        referenced_pages=set(),
+        ocr_pages={},
+        ocr_failed_pages=set(),
+    )
+    assert ("ending here" + ending + ("\n\n" if extra_gap else " ") + following.text) in md
+
+
+@pytest.mark.parametrize("introduced", [False, True])
+def test_two_item_list_requires_an_explicit_introduction(introduced: bool) -> None:
+    lines = [
+        _margin_line(1, "Choose an option:" if introduced else "Unrelated text.", top=100),
+        _margin_line(1, "1. First possibility.", top=120),
+        _margin_line(1, "2. Second possibility.", top=140),
+    ]
+    assert pdf_conversion_module._ordered_list_item_indexes(lines, 10) == (
+        {1, 2} if introduced else set()
+    )
+
+
+def test_mixed_bold_wrapped_prose_keeps_complete_emphasis() -> None:
+    def line(text: str, top: float, **kw):
+        return replace(_margin_line(1, text, top=top), font_size=12, bottom=top + 12, **kw)
+
+    first = line("The explanation contin-", 100, hard_hyphen_end=True)
+    second = line(
+        "ues here. An important sen-",
+        119,
+        hard_hyphen_end=True,
+        bold=True,
+        emphasis_spans=(pdf_conversion_module._PdfEmphasisSpan("An important sen-", True, False),),
+    )
+    third = line(
+        "tence stays bold.",
+        138,
+        bold=True,
+        emphasis_spans=(pdf_conversion_module._PdfEmphasisSpan("tence stays bold.", True, False),),
+    )
+    page = pdf_conversion_module._PdfPage(1, (first, second, third), False, (), False, False)
+    md, _ = pdf_conversion_module._render_document(
+        [page],
+        body_size=12,
+        heading_sizes={},
+        repeated_margins=set(),
+        referenced_pages=set(),
+        ocr_pages={},
+        ocr_failed_pages=set(),
+    )
+    assert "continues here. **An important sentence stays bold.**" in md
+
+
+def test_paragraph_spacing_learns_from_wrapped_indented_openings() -> None:
+    lines = [
+        replace(
+            _margin_line(
+                1,
+                "An indented opening continues" if i % 2 == 0 else "with further explanation.",
+                top=100 + i * 18,
+            ),
+            x0=47 if i % 2 == 0 else 40,
+            bottom=112 + i * 18,
+            font_size=12,
+        )
+        for i in range(6)
+    ]
+    following = replace(
+        _margin_line(1, "Another paragraph.", top=211.6), bottom=223.6, font_size=12
+    )
+    page = pdf_conversion_module._PdfPage(1, tuple([*lines, following]), False, (), False, False)
+    md, _ = pdf_conversion_module._render_document(
+        [page],
+        body_size=12,
+        heading_sizes={},
+        repeated_margins=set(),
+        referenced_pages=set(),
+        ocr_pages={},
+        ocr_failed_pages=set(),
+    )
+    assert "explanation.\n\nAnother paragraph." in md

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from base64 import b64encode
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from time import monotonic
 
@@ -14,6 +15,7 @@ import httpx
 from parsezen.cancellation import CancellationToken, check_cancelled
 from parsezen.errors import ImprovementError
 from parsezen.improvement_contracts import MAX_LOCAL_AI_OUTPUT_CHARACTERS
+from parsezen.local_ai_client import LocalAiClient
 from parsezen.local_models import OLLAMA_BASE_URL
 from parsezen.processing_metrics import record_local_ai_request
 
@@ -37,7 +39,7 @@ class LocalAiMetrics:
 
 
 def request_local_ai(
-    client: httpx.Client,
+    client: LocalAiClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -92,7 +94,7 @@ def request_local_ai(
 
 
 def request_local_ai_raw(
-    client: httpx.Client,
+    client: LocalAiClient,
     model: str,
     context_window: int,
     prompt: str,
@@ -105,6 +107,7 @@ def request_local_ai_raw(
     temperature: float = 0.0,
     top_p: float | None = None,
     top_k: int | None = None,
+    minimum_prediction_tokens: int = 0,
 ) -> str:
     """Generate one complete prompt with Ollama's raw ``/api/generate`` contract.
 
@@ -125,13 +128,21 @@ def request_local_ai_raw(
         isinstance(top_k, bool) or not isinstance(top_k, int) or not 1 <= top_k <= 1_000
     ):
         raise ValueError("El muestreo top-k local no es válido.")
+    if (
+        isinstance(minimum_prediction_tokens, bool)
+        or not isinstance(minimum_prediction_tokens, int)
+        or not 0 <= minimum_prediction_tokens <= 4_096
+    ):
+        raise ValueError("La reserva de generación local no es válida.")
+    token_limit = prediction_token_limit(
+        prediction_characters if prediction_characters is not None else len(prompt),
+        context_window,
+    )
+    token_limit = max(token_limit, min(minimum_prediction_tokens, max(context_window // 2, 128)))
     generation_options: dict[str, int | float] = {
         "temperature": float(temperature),
         "num_ctx": context_window,
-        "num_predict": prediction_token_limit(
-            prediction_characters if prediction_characters is not None else len(prompt),
-            context_window,
-        ),
+        "num_predict": token_limit,
         "seed": 0,
     }
     if top_p is not None:
@@ -162,7 +173,81 @@ def request_local_ai_raw(
 
 
 def _stream_local_ai_response(
-    client: httpx.Client,
+    client: LocalAiClient,
+    url: str,
+    request_payload: dict[str, object],
+    cancellation: CancellationToken | None,
+    max_generation_seconds: float | None,
+    *,
+    input_characters: int,
+    operation: str,
+    raw_response: bool,
+    on_metrics: Callable[[LocalAiMetrics], None] | None,
+) -> str:
+    check_cancelled(cancellation)
+
+    async def guarded() -> str:
+        generation = asyncio.create_task(
+            _consume_local_ai_response(
+                client,
+                url,
+                request_payload,
+                cancellation,
+                max_generation_seconds,
+                input_characters=input_characters,
+                operation=operation,
+                raw_response=raw_response,
+                on_metrics=on_metrics,
+            )
+        )
+        try:
+            async with asyncio.timeout(_generation_timeout_seconds(client, max_generation_seconds)):
+                while not generation.done():
+                    check_cancelled(cancellation)
+                    await asyncio.wait({generation}, timeout=0.05)
+                check_cancelled(cancellation)
+                return await generation
+        except TimeoutError as exc:
+            raise ImprovementError(
+                "El modelo local superó el tiempo máximo total de generación."
+            ) from exc
+        finally:
+            generation.cancel()
+            await asyncio.gather(generation, return_exceptions=True)
+
+    return client.run(guarded())
+
+
+async def _bounded_response_lines(response: httpx.Response) -> AsyncIterator[str]:
+    # Includes JSON escaping and metadata; bounds incomplete lines and blank-line floods.
+    line_limit = MAX_LOCAL_AI_OUTPUT_CHARACTERS * 6 + 65_536
+    total_limit = line_limit * 2
+    pending = bytearray()
+    total = 0
+    async for chunk in response.aiter_bytes():
+        total += len(chunk)
+        if total > total_limit:
+            raise ImprovementError("La respuesta del modelo supera el tamaño permitido.")
+        fragments = chunk.split(b"\n")
+        for index, fragment in enumerate(fragments):
+            if len(pending) + len(fragment) > line_limit:
+                raise ImprovementError("La respuesta del modelo supera el tamaño permitido.")
+            pending.extend(fragment)
+            if index < len(fragments) - 1:
+                try:
+                    yield pending.decode("utf-8")
+                except UnicodeError as exc:
+                    raise ImprovementError("Ollama devolvió una respuesta incompatible.") from exc
+                pending.clear()
+    if pending:
+        try:
+            yield pending.decode("utf-8")
+        except UnicodeError as exc:
+            raise ImprovementError("Ollama devolvió una respuesta incompatible.") from exc
+
+
+async def _consume_local_ai_response(
+    client: LocalAiClient,
     url: str,
     request_payload: dict[str, object],
     cancellation: CancellationToken | None,
@@ -184,7 +269,7 @@ def _stream_local_ai_response(
     ollama_total_duration_ns = 0
     ollama_load_duration_ns = 0
     ollama_eval_duration_ns = 0
-    with client.stream("POST", url, json=request_payload) as response:
+    async with client.http.stream("POST", url, json=request_payload) as response:
         if response.is_redirect:
             raise ImprovementError("Ollama intentó redirigir la solicitud y fue bloqueado.")
         try:
@@ -196,8 +281,8 @@ def _stream_local_ai_response(
 
         content_parts: list[str] = []
         content_length = 0
-        saw_content = False
-        for line in response.iter_lines():
+        saw_done = False
+        async for line in _bounded_response_lines(response):
             check_cancelled(cancellation)
             if monotonic() > deadline:
                 raise ImprovementError(
@@ -207,11 +292,11 @@ def _stream_local_ai_response(
                 continue
             try:
                 payload = json.loads(line)
+                if not isinstance(payload, dict):
+                    raise TypeError
+                if payload.get("error"):
+                    raise ImprovementError("Ollama no pudo completar la generación local.")
                 if raw_response:
-                    if not isinstance(payload, dict):
-                        raise TypeError
-                    if payload.get("error"):
-                        raise ImprovementError("Ollama no pudo completar la generación local.")
                     content = payload["response"]
                 else:
                     message = payload["message"]
@@ -222,8 +307,16 @@ def _stream_local_ai_response(
                 raise ImprovementError("Ollama devolvió una respuesta incompatible.") from exc
             if not isinstance(content, str):
                 raise ImprovementError("Ollama devolvió una respuesta incompatible.")
-            saw_content = True
             if payload.get("done") is True:
+                reason = payload.get("done_reason")
+                if reason == "length":
+                    raise ImprovementError(
+                        "El modelo local agotó el límite de generación; "
+                        "la respuesta está incompleta."
+                    )
+                if reason not in (None, "stop"):
+                    raise ImprovementError("Ollama no confirmó una finalización normal.")
+                saw_done = True
                 prompt_tokens = _safe_nonnegative_int(payload.get("prompt_eval_count"))
                 output_tokens = _safe_nonnegative_int(payload.get("eval_count"))
                 ollama_total_duration_ns = _safe_nonnegative_int(payload.get("total_duration"))
@@ -233,9 +326,11 @@ def _stream_local_ai_response(
             if content_length > MAX_LOCAL_AI_OUTPUT_CHARACTERS:
                 raise ImprovementError("La respuesta del modelo supera el tamaño permitido.")
             content_parts.append(content)
+            if saw_done:
+                break
         check_cancelled(cancellation)
-    if not saw_content:
-        raise ImprovementError("Ollama devolvió una respuesta incompatible.")
+    if not saw_done:
+        raise ImprovementError("Ollama interrumpió la respuesta sin confirmar su finalización.")
     wall_duration_ms = max(0, round((monotonic() - started_at) * 1_000))
     tokens_per_second = (
         output_tokens / (ollama_eval_duration_ns / 1_000_000_000)
@@ -275,30 +370,31 @@ def _stream_local_ai_response(
     return "".join(content_parts)
 
 
-def release_local_ai_model(client: httpx.Client, model: str) -> None:
-    """Unload one model explicitly after its phase, without deleting its weights."""
+def release_local_ai_model(client: LocalAiClient, model: str) -> None:
+    """Best-effort bounded unload; a silent Ollama must not delay cancellation."""
 
-    response = client.post(
-        f"{OLLAMA_BASE_URL}/api/generate",
-        json={
-            "model": model,
-            "prompt": "",
-            "stream": False,
-            "keep_alive": 0,
-        },
-    )
-    if response.is_redirect:
-        raise ImprovementError("Ollama intentó redirigir la liberación y fue bloqueado.")
+    async def release() -> None:
+        async with asyncio.timeout(0.5):
+            async with client.http.stream(
+                "POST",
+                f"{OLLAMA_BASE_URL}/api/generate",
+                json={"model": model, "prompt": "", "stream": False, "keep_alive": 0},
+            ) as response:
+                if response.is_redirect:
+                    raise ImprovementError("Ollama intentó redirigir la solicitud y fue bloqueado.")
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    raise ImprovementError("Ollama no pudo liberar el modelo local.") from exc
+
     try:
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        raise ImprovementError(
-            f"Ollama no pudo liberar el modelo (HTTP {response.status_code})."
-        ) from exc
+        client.run(release())
+    except TimeoutError as exc:
+        raise ImprovementError("Ollama no confirmó la liberación del modelo a tiempo.") from exc
 
 
 def _generation_timeout_seconds(
-    client: httpx.Client,
+    client: LocalAiClient,
     requested: float | None,
 ) -> float:
     if requested is not None and requested > 0:

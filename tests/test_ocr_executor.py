@@ -12,6 +12,7 @@ import parsezen.ocr_executor as executor
 from parsezen.cancellation import CancellationToken
 from parsezen.errors import ConversionError, ProcessingCancelledError
 from parsezen.ocr_protocol import PROTOCOL_VERSION, OcrProtocolError
+from parsezen.workers import private_channel
 
 
 class _Connection:
@@ -81,6 +82,32 @@ def test_worker_source_path_uses_ascii_directly_and_copies_unicode(
     with pytest.raises(ConversionError, match="preparar"):
         with executor._worker_source_path(tmp_path / "missing.pdf"):
             pass
+
+
+def test_worker_source_cleanup_retries_a_transient_windows_handle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    directory = tmp_path / "worker-source"
+    directory.mkdir()
+    (directory / "parsezen.pdf").write_bytes(b"pdf")
+    real_rmtree = executor.shutil.rmtree
+    calls = 0
+
+    def transient_rmtree(path: Path) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise PermissionError
+        real_rmtree(path)
+
+    monkeypatch.setattr(executor.shutil, "rmtree", transient_rmtree)
+    monkeypatch.setattr(executor.time, "sleep", lambda _seconds: None)
+
+    executor._cleanup_worker_source_directory(directory)
+
+    assert calls == 2
+    assert not directory.exists()
 
 
 def test_receive_worker_result_accepts_the_strict_protocol(
@@ -480,6 +507,23 @@ def test_process_lifecycle_handles_nonzero_timeout_and_forced_kill(
     forced.wait = stop_timeout  # type: ignore[method-assign]
     executor._stop_worker(forced)  # type: ignore[arg-type]
     assert forced.terminated and forced.killed
+
+
+def test_private_process_shutdown_prefers_the_windows_process_tree(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    process = _Process()
+
+    def stop_tree(worker: _Process, _timeout: float) -> bool:
+        worker.poll_result = -1
+        return True
+
+    monkeypatch.setattr(private_channel, "_terminate_windows_process_tree", stop_tree)
+
+    private_channel.stop_private_process(process, exit_timeout_seconds=1)  # type: ignore[arg-type]
+
+    assert not process.terminated
+    assert not process.killed
 
 
 def test_cancelled_token_is_checked_before_starting(tmp_path: Path) -> None:

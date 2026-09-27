@@ -15,7 +15,6 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory, mkstemp
-from threading import Event
 
 import httpx
 
@@ -32,7 +31,6 @@ MAX_OLLAMA_INSTALLER_BYTES = 1024 * 1024 * 1024
 MAX_PULL_RESPONSE_LINE_BYTES = 64 * 1024
 OLLAMA_START_TIMEOUT_SECONDS = 45.0
 OLLAMA_INSTALL_TIMEOUT_SECONDS = 20 * 60
-MODEL_DOWNLOAD_DISK_MARGIN = 1.35
 OLLAMA_LIBRARY_URL = "https://ollama.com/library"
 OLLAMA_MODEL_ID_PATTERN = re.compile(
     r"^[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._-]*)?(?::[a-z0-9][a-z0-9._-]*)?$",
@@ -494,146 +492,6 @@ def restart_ollama_local_only(on_progress: ProgressCallback | None = None) -> No
     start_ollama(on_progress)
 
 
-def pull_ollama_model(
-    model_id: str,
-    *,
-    on_progress: ProgressCallback | None = None,
-    cancellation: Event | None = None,
-    transport: httpx.BaseTransport | None = None,
-    available_bytes: int | None = None,
-    expected_download_size_bytes: int | None = None,
-) -> None:
-    """Download one validated local model through Ollama's streaming local API."""
-    model_id = validate_ollama_model_id(model_id)
-    free_bytes = _ollama_model_free_bytes() if available_bytes is None else available_bytes
-    required_bytes = (
-        int(expected_download_size_bytes * MODEL_DOWNLOAD_DISK_MARGIN)
-        if isinstance(expected_download_size_bytes, int)
-        and not isinstance(expected_download_size_bytes, bool)
-        and expected_download_size_bytes > 0
-        else None
-    )
-    if required_bytes is not None and free_bytes < required_bytes:
-        required_gib = required_bytes / (1024**3)
-        raise LocalModelUnavailableError(
-            f"Se necesitan aproximadamente {required_gib:.1f} GB libres para instalar este modelo."
-        )
-
-    cancel_event = cancellation if cancellation is not None else Event()
-    timeout = httpx.Timeout(connect=10.0, read=None, write=30.0, pool=10.0)
-    success = False
-    try:
-        with httpx.Client(
-            timeout=timeout,
-            follow_redirects=False,
-            trust_env=False,
-            transport=transport,
-        ) as client:
-            with client.stream(
-                "POST",
-                f"{OLLAMA_BASE_URL}/api/pull",
-                json={"model": model_id, "stream": True},
-            ) as response:
-                if response.is_redirect:
-                    raise LocalModelUnavailableError(
-                        "Ollama intentó redirigir la descarga y fue bloqueado."
-                    )
-                try:
-                    response.raise_for_status()
-                except httpx.HTTPStatusError as exc:
-                    raise LocalModelUnavailableError(
-                        f"Ollama no pudo descargar el modelo (HTTP {response.status_code})."
-                    ) from exc
-                for line in response.iter_lines():
-                    if cancel_event.is_set():
-                        raise LocalAISetupCancelled("Descarga del modelo cancelada.")
-                    if not line:
-                        continue
-                    if len(line.encode("utf-8")) > MAX_PULL_RESPONSE_LINE_BYTES:
-                        raise LocalModelUnavailableError(
-                            "Ollama envió una respuesta de descarga inesperadamente grande."
-                        )
-                    update = _parse_pull_update(line)
-                    error = update.get("error")
-                    if isinstance(error, str) and error.strip():
-                        raise LocalModelUnavailableError(
-                            "Ollama no encontró ese modelo o no pudo completar su descarga. "
-                            "Comprueba el nombre en el catálogo."
-                        )
-                    status = update.get("status")
-                    if status == "success":
-                        success = True
-                        _report_progress(on_progress, 100, "Modelo instalado.")
-                        continue
-                    total = update.get("total")
-                    completed = update.get("completed")
-                    if (
-                        required_bytes is None
-                        and isinstance(total, int)
-                        and not isinstance(total, bool)
-                        and total > 0
-                        and free_bytes < int(total * MODEL_DOWNLOAD_DISK_MARGIN)
-                    ):
-                        required_gib = int(total * MODEL_DOWNLOAD_DISK_MARGIN) / (1024**3)
-                        raise LocalModelUnavailableError(
-                            "No hay espacio suficiente para este modelo; necesita aproximadamente "
-                            f"{required_gib:.1f} GB libres."
-                        )
-                    percent = (
-                        min(99, max(0, round(completed * 100 / total)))
-                        if isinstance(total, int)
-                        and not isinstance(total, bool)
-                        and total > 0
-                        and isinstance(completed, int)
-                        and not isinstance(completed, bool)
-                        else None
-                    )
-                    _report_progress(on_progress, percent, _friendly_pull_status(status))
-    except httpx.RequestError as exc:
-        raise LocalModelUnavailableError(
-            "Se interrumpió la conexión local con Ollama durante la descarga."
-        ) from exc
-    if not success:
-        raise LocalModelUnavailableError("Ollama no confirmó la instalación del modelo.")
-
-
-def delete_ollama_model(
-    model_id: str,
-    *,
-    transport: httpx.BaseTransport | None = None,
-) -> None:
-    """Delete one validated local model through Ollama's native loopback API."""
-    model_id = validate_ollama_model_id(model_id)
-    try:
-        with httpx.Client(
-            timeout=DISCOVERY_TIMEOUT_SECONDS,
-            follow_redirects=False,
-            trust_env=False,
-            transport=transport,
-        ) as client:
-            response = client.request(
-                "DELETE",
-                f"{OLLAMA_BASE_URL}/api/delete",
-                json={"model": model_id},
-            )
-    except httpx.RequestError as exc:
-        raise LocalModelUnavailableError(
-            "Se interrumpió la conexión local con Ollama al eliminar el modelo."
-        ) from exc
-    if response.is_redirect:
-        raise LocalModelUnavailableError("Ollama intentó redirigir la eliminación y fue bloqueado.")
-    try:
-        response.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        if response.status_code == 404:
-            raise LocalModelUnavailableError(
-                "Ollama ya no encuentra ese modelo instalado. Actualiza la lista."
-            ) from exc
-        raise LocalModelUnavailableError(
-            f"Ollama no pudo eliminar el modelo (HTTP {response.status_code})."
-        ) from exc
-
-
 def _backup_invalid_ollama_config(path: Path) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -779,47 +637,6 @@ def _ollama_api_is_ready() -> bool:
     except httpx.RequestError:
         return False
     return response.status_code == 200 and not response.is_redirect
-
-
-def _ollama_model_free_bytes() -> int:
-    configured = os.environ.get("OLLAMA_MODELS")
-    model_root = Path(configured) if configured else Path.home() / ".ollama" / "models"
-    existing_root = model_root
-    while not existing_root.exists() and existing_root != existing_root.parent:
-        existing_root = existing_root.parent
-    try:
-        return shutil.disk_usage(existing_root).free
-    except OSError as exc:
-        raise LocalModelUnavailableError(
-            "No se pudo comprobar el espacio disponible para el modelo."
-        ) from exc
-
-
-def _parse_pull_update(line: str) -> dict[str, object]:
-    try:
-        update = json.loads(line)
-    except json.JSONDecodeError as exc:
-        raise LocalModelUnavailableError(
-            "Ollama devolvió un progreso de descarga incompatible."
-        ) from exc
-    if not isinstance(update, dict):
-        raise LocalModelUnavailableError("Ollama devolvió un progreso de descarga incompatible.")
-    return update
-
-
-def _friendly_pull_status(status: object) -> str:
-    if not isinstance(status, str):
-        return "Descargando el modelo…"
-    lowered = status.casefold()
-    if "manifest" in lowered:
-        return "Preparando el modelo…"
-    if "verifying" in lowered:
-        return "Comprobando la descarga…"
-    if "writing" in lowered:
-        return "Finalizando la instalación…"
-    if "removing" in lowered:
-        return "Liberando espacio temporal…"
-    return "Descargando el modelo…"
 
 
 def _report_progress(

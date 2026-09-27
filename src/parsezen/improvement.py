@@ -1,4 +1,4 @@
-"""Conservative Markdown improvement through Ollama's native local API."""
+"""Conservative Markdown improvement through a verified local model."""
 
 from __future__ import annotations
 
@@ -17,7 +17,6 @@ from enum import StrEnum
 import httpx
 
 import parsezen.translation_quality as translation_quality_module
-from parsezen.ai_markdown_safety import EMAIL_ADDRESS_PATTERN
 from parsezen.ai_markdown_safety import (
     _is_fenced_code_block as _is_fenced_code_block,
 )
@@ -82,6 +81,8 @@ from parsezen.ai_markdown_safety import (
     _validated_language as _validated_language,
 )
 from parsezen.cancellation import CancellationToken, check_cancelled
+from parsezen.direct_ai_runtime import DirectAiClient
+from parsezen.direct_models import direct_model_present
 from parsezen.errors import (
     ImprovementError,
     LocalModelUnavailableError,
@@ -109,6 +110,7 @@ from parsezen.local_ai_adapters import (
 from parsezen.local_ai_adapters import (
     request_adapted_local_ai as _request_improvement,
 )
+from parsezen.local_ai_client import LocalAiClient
 from parsezen.local_models import (
     DEFAULT_CONTEXT_WINDOW,
     is_cloud_model_id,
@@ -122,6 +124,63 @@ from parsezen.processing_metrics import (
 from parsezen.revision import split_markdown_blocks
 from parsezen.semantic_blocks import SemanticRole, analyze_markdown
 from parsezen.settings import AppSettings, validate_settings
+from parsezen.table_translation import (
+    MAX_ALIGNED_TRANSLATION_CONTEXT_CHARACTERS as MAX_ALIGNED_TRANSLATION_CONTEXT_CHARACTERS,
+)
+from parsezen.table_translation import (
+    _aligned_table_response_values as _aligned_table_response_values,
+)
+from parsezen.table_translation import (
+    _alphabetic_marker_index as _alphabetic_marker_index,
+)
+from parsezen.table_translation import (
+    _escaped_table_text_replacement as _escaped_table_text_replacement,
+)
+from parsezen.table_translation import (
+    _escaped_table_text_replacement_preserving_entities,
+)
+from parsezen.table_translation import (
+    _ground_established_table_terms as _ground_established_table_terms,
+)
+from parsezen.table_translation import (
+    _has_aligned_table_source_language_residue as _has_aligned_table_source_language_residue,
+)
+from parsezen.table_translation import (
+    _has_source_language_title_residue as _has_source_language_title_residue,
+)
+from parsezen.table_translation import (
+    _has_table_source_language_residue as _has_table_source_language_residue,
+)
+from parsezen.table_translation import (
+    _html_table_text_node_context as _html_table_text_node_context,
+)
+from parsezen.table_translation import (
+    _log_table_numeric_surface_change as _log_table_numeric_surface_change,
+)
+from parsezen.table_translation import (
+    _normalize_aligned_table_translation as _normalize_aligned_table_translation,
+)
+from parsezen.table_translation import (
+    _normalize_established_table_translation as _normalize_established_table_translation,
+)
+from parsezen.table_translation import (
+    _restore_table_text_entities as _restore_table_text_entities,
+)
+from parsezen.table_translation import (
+    _strip_added_table_text_markup as _strip_added_table_text_markup,
+)
+from parsezen.table_translation import (
+    _table_cell_translation_collapsed as _table_cell_translation_collapsed,
+)
+from parsezen.table_translation import (
+    _table_text_translation_value as _table_text_translation_value,
+)
+from parsezen.table_translation import (
+    _table_validation_failure_kind as _table_validation_failure_kind,
+)
+from parsezen.table_translation import (
+    _translate_established_table_cell as _translate_established_table_cell,
+)
 from parsezen.translation_quality import (
     ATX_HEADING_PATTERN,
     HTML_COMMENT_PATTERN,
@@ -144,11 +203,9 @@ from parsezen.translation_quality import (
     is_index_entry,
     is_probable_organization_name_line,
     is_probable_proper_name_line,
-    is_probable_third_language_compact_value,
     is_reference_or_catalogue_text,
     is_unmarked_title_line,
     natural_language_text,
-    replace_established_compact_term_residues,
     replace_established_index_term_residues,
     resolve_language_code,
     source_language_word_residues,
@@ -157,6 +214,42 @@ from parsezen.translation_quality import (
     translate_established_index_classification,
     validate_translation_content_coverage,
     validate_translation_quality,
+)
+from parsezen.translation_review_patches import (
+    MAX_TRANSLATION_REVIEW_PATCH_CHARACTERS as MAX_TRANSLATION_REVIEW_PATCH_CHARACTERS,
+)
+from parsezen.translation_review_patches import (
+    MAX_TRANSLATION_REVIEW_PATCHES as MAX_TRANSLATION_REVIEW_PATCHES,
+)
+from parsezen.translation_review_patches import (
+    RAW_URL_PATTERN as RAW_URL_PATTERN,
+)
+from parsezen.translation_review_patches import (
+    _apply_translation_review_patches as _apply_translation_review_patches,
+)
+from parsezen.translation_review_patches import (
+    _minimize_translation_review_patch as _minimize_translation_review_patch,
+)
+from parsezen.translation_review_patches import (
+    _recover_complete_json_array_items as _recover_complete_json_array_items,
+)
+from parsezen.translation_review_patches import (
+    _source_words_protected_from_increase as _source_words_protected_from_increase,
+)
+from parsezen.translation_review_patches import (
+    _translation_review_patch_records as _translation_review_patch_records,
+)
+from parsezen.translation_review_patches import (
+    _translation_review_protected_literal_spans as _translation_review_protected_literal_spans,
+)
+from parsezen.translation_review_patches import (
+    _translation_word_counts as _translation_word_counts,
+)
+from parsezen.translation_review_patches import (
+    _TranslationReviewPart as _TranslationReviewPart,
+)
+from parsezen.translation_review_patches import (
+    _validate_translation_review_candidate as _validate_translation_review_candidate,
 )
 
 __all__ = (
@@ -179,7 +272,6 @@ MIN_ALIGNED_TRANSLATION_BATCH_ITEMS = 6
 MAX_ALIGNED_TRANSLATION_BATCH_ITEMS = 8
 MAX_ALIGNED_TRANSLATION_BATCH_CHARACTERS = 1_200
 MAX_ALIGNED_TRANSLATION_ITEM_CHARACTERS = 320
-MAX_ALIGNED_TRANSLATION_CONTEXT_CHARACTERS = 420
 MAX_ALIGNED_TRANSLATION_CONTEXT_NEIGHBORS = 2
 MAX_PRIORITY_TRANSLATION_REVIEW_BLOCKS = 32
 MAX_PRIORITY_TRANSLATION_REVIEW_GROUP_BLOCKS = 6
@@ -198,8 +290,8 @@ MAX_DOCUMENT_CHARACTERS = 1_000_000
 MAX_DOCUMENT_OUTPUT_CHARACTERS = 2_000_000
 
 LOGGER = logging.getLogger(__name__)
+LocalGenerationClient = LocalAiClient | DirectAiClient
 
-RAW_URL_PATTERN = re.compile(r"(?:https?://|mailto:)[^\s<>)\]]+")
 TITLE_ROMAN_REFERENCE_PATTERN = re.compile(
     r"(?<![A-Za-z])([IVXLCDM]+)(?=[ \t]+[+-]?\d)",
 )
@@ -556,16 +648,7 @@ referencias. No resumas, expliques, anadas ni omitas contenido. Devuelve solo un
 {"translation": "traduccion completa"}, sin cercas ni texto adicional.
 """
 
-MAX_TRANSLATION_REVIEW_PATCHES = 64
-MAX_TRANSLATION_REVIEW_PATCH_CHARACTERS = 1_200
 MAX_CONSECUTIVE_TRANSLATION_REVIEW_CONTRACT_FAILURES = 3
-
-
-@dataclass(frozen=True, slots=True)
-class _TranslationReviewPart:
-    source: str
-    translated: str
-    segment_numbers: frozenset[int] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
@@ -680,13 +763,15 @@ def _local_ai_client(
     timeout_seconds: float,
     transport: httpx.BaseTransport | None,
     model: str,
-) -> Iterator[httpx.Client]:
+) -> Iterator[LocalGenerationClient]:
     """Share a protected client and unload Parsezen-owned phase models afterwards."""
 
-    with httpx.Client(
+    if transport is None and direct_model_present(model):
+        with DirectAiClient() as client:
+            yield client
+        return
+    with LocalAiClient(
         timeout=timeout_seconds,
-        follow_redirects=False,
-        trust_env=False,
         transport=transport,
     ) as client:
         try:
@@ -713,6 +798,7 @@ def improve_markdown(
     plain_text: bool = False,
     source_language_code: str | None = None,
     focused_source_repair: bool = False,
+    on_review_preserved: Callable[[], None] | None = None,
 ) -> str:
     """Improve Markdown through ordered, structurally bounded local requests."""
     check_cancelled(cancellation)
@@ -723,7 +809,11 @@ def improve_markdown(
         raise SettingsError("Elige un modelo de IA instalado antes de usar la IA.")
     if is_cloud_model_id(model):
         raise SettingsError("Parsezen solo permite modelos almacenados localmente.")
-    if transport is None and not is_ollama_local_only_configured():
+    if (
+        transport is None
+        and not direct_model_present(model)
+        and not is_ollama_local_only_configured()
+    ):
         raise SettingsError("Activa el modo solo local de Ollama antes de procesar documentos.")
     context_window = normalized_settings.context_window or DEFAULT_CONTEXT_WINDOW
 
@@ -772,6 +862,8 @@ def improve_markdown(
                         "global_structure_unavailable=true reason=%s",
                         str(exc),
                     )
+                    if on_review_preserved is not None:
+                        on_review_preserved()
                     return markdown
         except httpx.RequestError as exc:
             raise LocalModelUnavailableError(
@@ -1035,6 +1127,8 @@ def improve_markdown(
                 def mark_preserved_failure() -> None:
                     nonlocal preserved_after_validation_failure
                     preserved_after_validation_failure = True
+                    if on_review_preserved is not None:
+                        on_review_preserved()
 
                 try:
                     executed_chunks += 1
@@ -1080,6 +1174,14 @@ def improve_markdown(
                     ):
                         save_checkpoint(part_key, improved_part)
                 except ImprovementError as exc:
+                    if mode in {ImprovementMode.REVIEW_CONTENT, ImprovementMode.REVIEW_STRUCTURE}:
+                        check_cancelled(cancellation)
+                        record_validation_rejection()
+                        improved_parts.append(part.text)
+                        if on_review_preserved is not None:
+                            on_review_preserved()
+                        LOGGER.warning("review_chunk_preserved incomplete_or_invalid_response=true")
+                        continue
                     if translation_context is not None:
                         preserved_translation_chunks += 1
                         improved_parts.append(part.text)
@@ -1184,6 +1286,9 @@ def improve_markdown(
             preserved_count,
         )
         if not recoverable_translation:
+            if on_review_preserved is not None:
+                for _index in range(preserved_count):
+                    on_review_preserved()
             return recovered
         improved = recovered
         preserved_translation_chunks += preserved_count
@@ -1375,7 +1480,11 @@ def review_translation_markdown(
         raise SettingsError("Elige un modelo de IA instalado antes de usar la IA.")
     if is_cloud_model_id(model):
         raise SettingsError("Parsezen solo permite modelos almacenados localmente.")
-    if transport is None and not is_ollama_local_only_configured():
+    if (
+        transport is None
+        and not direct_model_present(model)
+        and not is_ollama_local_only_configured()
+    ):
         raise SettingsError("Activa el modo solo local de Ollama antes de procesar documentos.")
 
     target_code = resolve_language_code(target_language)
@@ -1805,7 +1914,11 @@ def retranslate_residual_title(
         raise SettingsError("Elige un modelo de IA instalado antes de usar la IA.")
     if is_cloud_model_id(model):
         raise SettingsError("Parsezen solo permite modelos almacenados localmente.")
-    if transport is None and not is_ollama_local_only_configured():
+    if (
+        transport is None
+        and not direct_model_present(model)
+        and not is_ollama_local_only_configured()
+    ):
         raise SettingsError("Activa el modo solo local de Ollama antes de procesar documentos.")
     target_code = resolve_language_code(target_language)
     if target_code is None:
@@ -2206,7 +2319,7 @@ def _plan_residual_translation_review_units(
 
 
 def _review_residual_translation_part(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     part: _TranslationReviewPart,
@@ -2276,7 +2389,7 @@ def _review_residual_translation_part(
 
 
 def _review_residual_translation_unit(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     part: _TranslationReviewPart,
@@ -2399,7 +2512,7 @@ def _review_residual_translation_unit(
 
 
 def _retranslate_exact_source_text_unit(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     part: _TranslationReviewPart,
@@ -2521,7 +2634,7 @@ def _residual_translation_review_targets(
 
 
 def _review_residual_translation_tokens(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     part: _TranslationReviewPart,
@@ -2619,17 +2732,6 @@ def _validate_residual_translation_review_candidate(
     candidate_words = _translation_word_counts(candidate)
     if any(candidate_words[word] > current_words[word] for word in source_words):
         raise ImprovementError("La revisión residual introdujo texto del idioma de origen.")
-
-
-def _source_words_protected_from_increase(value: str) -> frozenset[str]:
-    return frozenset(
-        word.casefold()
-        for word in re.findall(
-            r"[^\W\d_]{6,}",
-            natural_language_text(value),
-            flags=re.UNICODE,
-        )
-    )
 
 
 def _has_exact_source_text_residue(
@@ -2809,17 +2911,6 @@ def _residual_translation_review_score(
     return score
 
 
-def _translation_word_counts(value: str) -> Counter[str]:
-    return Counter(
-        word.casefold()
-        for word in re.findall(
-            r"[^\W\d_]{5,}",
-            natural_language_text(value),
-            flags=re.UNICODE,
-        )
-    )
-
-
 def _suspicious_rare_translation_words(counts: Counter[str]) -> frozenset[str]:
     common_by_shape: dict[tuple[str, int], list[str]] = {}
     for word, count in counts.items():
@@ -2982,7 +3073,7 @@ def _priority_translation_review_checkpoint_key(
 
 
 def _review_priority_translation_ranges(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     *,
@@ -3059,7 +3150,7 @@ def _review_priority_translation_ranges(
 
 
 def _review_priority_translation_lines(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     *,
@@ -3167,7 +3258,7 @@ def _repeated_title_phrase_score(markdown: str) -> int:
 
 
 def _retranslate_priority_title(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     part: _TranslationReviewPart,
@@ -3679,7 +3770,7 @@ def _translation_review_checkpoint_key(
 
 
 def _review_translation_part(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     part: _TranslationReviewPart,
@@ -3766,321 +3857,6 @@ def _translation_review_payload(part: _TranslationReviewPart) -> str:
         f"{original_delimiter}\n{part.source}\n{original_delimiter}\n"
         f"{translation_delimiter}\n{part.translated}\n{translation_delimiter}"
     )
-
-
-def _apply_translation_review_patches(
-    part: _TranslationReviewPart,
-    response: str,
-    *,
-    source_language: str | None,
-    target_language: str,
-    require_target_language: bool = True,
-    allowed_patch_terms: frozenset[str] | None = None,
-    allow_source_text_retranslation: bool = False,
-) -> str:
-    raw_patches = _translation_review_patch_records(response)
-    protected_literal_spans = _translation_review_protected_literal_spans(part.translated)
-
-    patches: list[tuple[int, int, str]] = []
-    seen_originals: set[str] = set()
-    for raw_patch in raw_patches:
-        if not isinstance(raw_patch, dict) or "old" not in raw_patch or "new" not in raw_patch:
-            continue
-        old = raw_patch.get("old")
-        new = raw_patch.get("new")
-        if (
-            not isinstance(old, str)
-            or not isinstance(new, str)
-            or not old
-            or old == new
-            or len(old) > MAX_TRANSLATION_REVIEW_PATCH_CHARACTERS
-            or len(new) > MAX_TRANSLATION_REVIEW_PATCH_CHARACTERS
-            or "\0" in old
-            or "\0" in new
-        ):
-            continue
-        if old in seen_originals:
-            continue
-        seen_originals.add(old)
-        if allowed_patch_terms is not None:
-            old_counts = _translation_word_counts(old)
-            new_counts = _translation_word_counts(new)
-            if not any(new_counts[term] < old_counts[term] for term in allowed_patch_terms):
-                continue
-        if part.translated.count(old) != 1:
-            continue
-        raw_start = part.translated.index(old)
-        offset, minimized_old, minimized_new = _minimize_translation_review_patch(old, new)
-        if minimized_old == minimized_new or (not minimized_old and not minimized_new):
-            continue
-        start = raw_start + offset
-        end = start + len(minimized_old)
-        if (
-            any(
-                start < literal_end and end > literal_start
-                for literal_start, literal_end in protected_literal_spans
-            )
-            or EMAIL_ADDRESS_PATTERN.search(minimized_new)
-            or RAW_URL_PATTERN.search(minimized_new)
-        ):
-            continue
-        patches.append((start, end, minimized_new))
-
-    patches.sort(key=lambda patch: patch[0])
-    accepted: list[tuple[int, int, str]] = []
-    guard_rejections: Counter[str] = Counter()
-    for patch in patches:
-        if accepted and accepted[-1][1] > patch[0]:
-            continue
-        trial_patches = (*accepted, patch)
-        pieces: list[str] = []
-        cursor = 0
-        for start, end, replacement in trial_patches:
-            pieces.extend((part.translated[cursor:start], replacement))
-            cursor = end
-        pieces.append(part.translated[cursor:])
-        try:
-            proposed = "".join(pieces)
-            candidate = (
-                proposed
-                if allow_source_text_retranslation
-                else _prepare_and_validate_response(
-                    part.translated,
-                    proposed,
-                    None,
-                    ImprovementMode.REVIEW_CONTENT,
-                )
-            )
-            _validate_translation_review_candidate(
-                part,
-                candidate,
-                source_language=source_language,
-                target_language=target_language,
-                require_target_language=require_target_language,
-                allow_source_text_retranslation=allow_source_text_retranslation,
-            )
-        except ImprovementError as exc:
-            guard_rejections[str(exc)] += 1
-            continue
-        accepted.append(patch)
-
-    LOGGER.info(
-        "translation_review_patches proposed=%d eligible=%d accepted=%d rejected=%d "
-        "guard_reasons=%s",
-        len(raw_patches),
-        len(patches),
-        len(accepted),
-        len(raw_patches) - len(accepted),
-        "|".join(f"{reason}:{count}" for reason, count in sorted(guard_rejections.items()))
-        or "none",
-    )
-    if raw_patches and not accepted:
-        raise ImprovementError("Ninguna corrección propuesta superó las guardas de fidelidad.")
-    if not accepted:
-        return part.translated
-
-    pieces = []
-    cursor = 0
-    for start, end, replacement in accepted:
-        pieces.extend((part.translated[cursor:start], replacement))
-        cursor = end
-    pieces.append(part.translated[cursor:])
-    return "".join(pieces)
-
-
-def _translation_review_protected_literal_spans(markdown: str) -> tuple[tuple[int, int], ...]:
-    """Locate bare web values that a linguistic review must never edit."""
-
-    return tuple(
-        sorted(
-            {
-                *((match.start(), match.end()) for match in RAW_URL_PATTERN.finditer(markdown)),
-                *(
-                    (match.start(), match.end())
-                    for match in EMAIL_ADDRESS_PATTERN.finditer(markdown)
-                ),
-            }
-        )
-    )
-
-
-def _minimize_translation_review_patch(old: str, new: str) -> tuple[int, str, str]:
-    """Keep shared context and surrounding layout outside a model-proposed replacement."""
-
-    prefix = 0
-    limit = min(len(old), len(new))
-    while prefix < limit and old[prefix] == new[prefix]:
-        prefix += 1
-    old_core = old[prefix:]
-    new_core = new[prefix:]
-
-    suffix = 0
-    limit = min(len(old_core), len(new_core))
-    while suffix < limit and old_core[-(suffix + 1)] == new_core[-(suffix + 1)]:
-        suffix += 1
-    if suffix:
-        old_core = old_core[:-suffix]
-        new_core = new_core[:-suffix]
-
-    old_leading = len(old_core) - len(old_core.lstrip())
-    new_leading = len(new_core) - len(new_core.lstrip())
-    if old_leading and new_leading:
-        prefix += old_leading
-        old_core = old_core[old_leading:]
-        new_core = new_core[new_leading:]
-
-    old_trailing = len(old_core) - len(old_core.rstrip())
-    new_trailing = len(new_core) - len(new_core.rstrip())
-    if old_trailing and new_trailing:
-        old_core = old_core[:-old_trailing]
-        new_core = new_core[:-new_trailing]
-
-    inner_prefix = 0
-    limit = min(len(old_core), len(new_core))
-    while inner_prefix < limit and old_core[inner_prefix] == new_core[inner_prefix]:
-        inner_prefix += 1
-    prefix += inner_prefix
-    old_core = old_core[inner_prefix:]
-    new_core = new_core[inner_prefix:]
-
-    inner_suffix = 0
-    limit = min(len(old_core), len(new_core))
-    while inner_suffix < limit and old_core[-(inner_suffix + 1)] == new_core[-(inner_suffix + 1)]:
-        inner_suffix += 1
-    if inner_suffix:
-        old_core = old_core[:-inner_suffix]
-        new_core = new_core[:-inner_suffix]
-    return prefix, old_core, new_core
-
-
-def _translation_review_patch_records(response: str) -> list[object]:
-    stripped = response.strip()
-    fence = re.fullmatch(r"```(?:json)?\s*\n([\s\S]*?)\n```", stripped, re.IGNORECASE)
-    if fence is not None:
-        stripped = fence.group(1).strip()
-    elif re.match(r"^```(?:json)?\s*\n", stripped, re.IGNORECASE):
-        stripped = re.sub(r"^```(?:json)?\s*\n", "", stripped, count=1, flags=re.IGNORECASE)
-
-    try:
-        parsed = json.loads(stripped)
-    except json.JSONDecodeError:
-        parsed = _recover_complete_json_array_items(stripped)
-    if isinstance(parsed, dict) and set(parsed) == {"corrections"}:
-        parsed = parsed["corrections"]
-    if not isinstance(parsed, list) or len(parsed) > MAX_TRANSLATION_REVIEW_PATCHES:
-        raise ImprovementError("El modelo no devolvió correcciones JSON válidas.")
-    return parsed
-
-
-def _recover_complete_json_array_items(value: str) -> list[object] | None:
-    if not value.startswith("["):
-        return None
-    decoder = json.JSONDecoder()
-    cursor = 1
-    recovered: list[object] = []
-    while cursor < len(value):
-        while cursor < len(value) and value[cursor].isspace():
-            cursor += 1
-        if cursor >= len(value) or value[cursor] == "]":
-            break
-        try:
-            item, cursor = decoder.raw_decode(value, cursor)
-        except json.JSONDecodeError:
-            break
-        recovered.append(item)
-        if len(recovered) > MAX_TRANSLATION_REVIEW_PATCHES:
-            return None
-        while cursor < len(value) and value[cursor].isspace():
-            cursor += 1
-        if cursor < len(value) and value[cursor] == ",":
-            cursor += 1
-            continue
-        break
-    return recovered or None
-
-
-def _validate_translation_review_candidate(
-    part: _TranslationReviewPart,
-    candidate: str,
-    *,
-    source_language: str | None,
-    target_language: str,
-    require_target_language: bool = True,
-    allow_source_text_retranslation: bool = False,
-    allow_ocr_word_separation: bool = False,
-) -> None:
-    for pattern, label in (
-        (RAW_URL_PATTERN, "las URL protegidas"),
-        (EMAIL_ADDRESS_PATTERN, "los correos electrónicos protegidos"),
-    ):
-        current_values = Counter(match.group(0) for match in pattern.finditer(part.translated))
-        candidate_values = Counter(match.group(0) for match in pattern.finditer(candidate))
-        if current_values != candidate_values:
-            raise ImprovementError(f"La revisión alteró {label}.")
-    if allow_source_text_retranslation:
-        try:
-            validate_translation_quality(
-                part.translated,
-                candidate,
-                source_language=target_language,
-                target_language=None,
-                preserve_paragraphs=True,
-            )
-        except TranslationQualityError as exc:
-            raise ImprovementError(str(exc)) from exc
-    else:
-        _validate_mode_output(
-            part.translated,
-            candidate,
-            ImprovementMode.REVIEW_CONTENT,
-        )
-    try:
-        validate_translation_quality(
-            part.source,
-            candidate,
-            source_language=source_language,
-            target_language=target_language if require_target_language else None,
-            preserve_paragraphs=True,
-        )
-    except TranslationQualityError as exc:
-        raise ImprovementError(str(exc)) from exc
-    source_words = _source_words_protected_from_increase(part.source)
-    current_words = _translation_word_counts(part.translated)
-    candidate_words = _translation_word_counts(candidate)
-    separated_ocr_words = (
-        {
-            word
-            for word in source_words
-            if any(word != current_word and word in current_word for current_word in current_words)
-        }
-        if allow_ocr_word_separation
-        else set()
-    )
-    if any(
-        candidate_words[word] > current_words[word] and word not in separated_ocr_words
-        for word in source_words
-    ):
-        raise ImprovementError("La revisión introdujo texto del idioma de origen.")
-    if source_language is not None:
-        for source_term in established_terms_requiring_translation(
-            part.source,
-            source_language,
-            target_language,
-        ):
-            target_term = established_term_translation(
-                source_term,
-                source_language,
-                target_language,
-            )
-            if target_term is None:
-                continue
-            target_pattern = rf"(?<!\w){re.escape(target_term)}(?!\w)"
-            current_count = len(re.findall(target_pattern, part.translated, re.IGNORECASE))
-            candidate_count = len(re.findall(target_pattern, candidate, re.IGNORECASE))
-            if current_count > candidate_count:
-                raise ImprovementError(
-                    "La revisión alteró una equivalencia terminológica establecida."
-                )
 
 
 def _assemble_markdown_parts(
@@ -4196,7 +3972,7 @@ def _recover_review_reassembly(
 
 
 def _ground_focused_translation_terms(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     markdown: str,
@@ -4476,7 +4252,7 @@ def _is_short_translation_title(markdown: str) -> bool:
 
 
 def _translate_aligned_batch(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -4700,7 +4476,7 @@ def _translate_established_markdown_label(
 
 
 def _improve_part(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -5252,7 +5028,7 @@ def _improve_part(
 
 
 def _translate_safe_html_table(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -5504,23 +5280,8 @@ def _translate_safe_html_table(
     return rebuilt
 
 
-def _html_table_text_node_context(table: str, node: re.Match[str]) -> str:
-    """Return the complete visible parent-cell text for a split HTML text node."""
-
-    for cell in re.finditer(
-        r"<(?P<tag>td|th)\b[^>]*>(?P<body>.*?)</(?P=tag)\s*>",
-        table,
-        re.IGNORECASE | re.DOTALL,
-    ):
-        if not (cell.start("body") <= node.start() and node.end() <= cell.end("body")):
-            continue
-        visible = html.unescape(re.sub(r"<[^>]+>", " ", cell.group("body")))
-        return re.sub(r"\s+", " ", visible).strip()[:MAX_ALIGNED_TRANSLATION_CONTEXT_CHARACTERS]
-    return ""
-
-
 def _translate_safe_markdown_table(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -5588,356 +5349,8 @@ def _translate_safe_markdown_table(
     return rebuilt
 
 
-def _log_table_numeric_surface_change(stage: str, source: str, translated: str) -> None:
-    """Expose count-only diagnostics for safe tables without logging document values."""
-
-    source_numbers = Counter(NUMBER_PATTERN.findall(source))
-    translated_numbers = Counter(NUMBER_PATTERN.findall(translated))
-    if source_numbers == translated_numbers:
-        return
-    LOGGER.info(
-        "translation_table_numeric_surface_changed stage=%s source=%d translated=%d "
-        "missing=%d added=%d source_entities=%d translated_entities=%d",
-        stage,
-        sum(source_numbers.values()),
-        sum(translated_numbers.values()),
-        sum((source_numbers - translated_numbers).values()),
-        sum((translated_numbers - source_numbers).values()),
-        len(re.findall(r"&#(?:x[0-9a-f]+|\d+);", source, re.IGNORECASE)),
-        len(re.findall(r"&#(?:x[0-9a-f]+|\d+);", translated, re.IGNORECASE)),
-    )
-
-
-def _strip_added_table_text_markup(source: str, translated: str) -> str:
-    """Remove model-added wrappers from a plain table text node."""
-
-    if any(character in source for character in "<>"):
-        return translated
-    candidate = translated.strip()
-    candidate = re.sub(
-        r"</?(?:span|em|strong|b|i|small|sup|sub|mark|code|p|div|br)"
-        r"(?:\s+[^<>\r\n]{0,80})?/?>",
-        "",
-        candidate,
-        flags=re.IGNORECASE,
-    )
-
-    def unwrap_angle_text(match: re.Match[str]) -> str:
-        body = match.group("body")
-        return body if sum(character.isalpha() for character in body) >= 2 else match.group(0)
-
-    candidate = re.sub(r"<(?P<body>[^<>\r\n]+)>", unwrap_angle_text, candidate)
-    # A source node without angle signs cannot legitimately gain them during
-    # translation. Drop any malformed or unmatched remnants while retaining
-    # every translated word; the caller still escapes the resulting text.
-    return candidate.replace("<", "").replace(">", "").strip()
-
-
-def _table_validation_failure_kind(error: ImprovementError) -> str:
-    reason = str(error).casefold()
-    categories = (
-        ("alignment", ("alineación", "unidades", "celdas")),
-        ("protected_value", ("valor protegido", "marcador")),
-        ("number", ("números", "fechas", "romanos")),
-        ("coverage", ("omitido", "duplicado", "añadido", "reescribe")),
-        ("language", ("idioma solicitado", "texto de origen")),
-        ("structure", ("estructura", "markdown", "html")),
-    )
-    for category, markers in categories:
-        if any(marker in reason for marker in markers):
-            return category
-    return "validation"
-
-
-def _translate_established_table_cell(
-    source: str,
-    context: _TranslationContext,
-) -> str | None:
-    """Resolve exact conventional titles before a model sees a generated TOC cell."""
-
-    if context.source_language is None:
-        return None
-    match = re.fullmatch(
-        r"(?P<prefix>(?:(?:\d{1,4}|\d[A-Za-z])[.):·-][ \t]+)?)"
-        r"(?P<title>\S(?:.*\S)?)",
-        source,
-    )
-    if match is None:
-        return None
-    source_title = match.group("title")
-    if is_probable_third_language_compact_value(
-        source_title,
-        source_language=context.source_language,
-        target_language=context.target_language,
-    ):
-        return source
-    translated_title = established_compact_label_translation(
-        source_title,
-        context.source_language,
-        context.target_language,
-    )
-    if translated_title is None and re.fullmatch(r"[IVXLCDM]{1,12}", source_title, re.IGNORECASE):
-        return source
-    if (
-        translated_title is None
-        and re.fullmatch(r"\([A-Za-zÀ-ÖØ-öø-ÿ'’\-]{3,48}\)", source_title)
-        and not translation_quality_module._has_title_language_hint(
-            source_title,
-            context.source_language,
-        )
-    ):
-        return source
-    suffix = ""
-    source_title_for_case = source_title
-    if translated_title is None:
-        suffix_match = re.fullmatch(
-            r"(?P<title>\S(?:.*?\S)?)[ \t]+(?P<roman>[IVXLCDM]{1,8})",
-            source_title,
-        )
-        if suffix_match is None:
-            return None
-        source_title_for_case = suffix_match.group("title")
-        translated_title = established_term_translation(
-            source_title_for_case,
-            context.source_language,
-            context.target_language,
-        )
-        if translated_title is None:
-            return None
-        suffix = f" {suffix_match.group('roman')}"
-    if source_title_for_case.isupper():
-        translated_title = translated_title.upper()
-    if source_language_word_residues(
-        source_title,
-        translated_title,
-        context.source_language,
-    ):
-        # A conventional-term replacement may improve only one word inside a longer free-form
-        # cell.  That mixed result still needs the local model; it is not a deterministic answer.
-        return None
-    return f"{match.group('prefix')}{translated_title}{suffix}"
-
-
-def _normalize_established_table_translation(
-    source: str,
-    translated: str,
-    context: _TranslationContext,
-) -> str:
-    """Repair copied conventional labels without rewriting free-form table text."""
-
-    if context.source_language is None:
-        return translated
-    normalized = replace_established_compact_term_residues(
-        source,
-        translated,
-        context.source_language,
-        context.target_language,
-    )
-    if translated.lstrip()[:1].isupper() and normalized.lstrip()[:1].islower():
-        leading = len(normalized) - len(normalized.lstrip())
-        normalized = (
-            f"{normalized[:leading]}{normalized[leading].upper()}{normalized[leading + 1 :]}"
-        )
-    if (context.source_language, context.target_language) != ("en", "es"):
-        return normalized
-    source_part = re.search(
-        r"(?<!\w)PART[ \t]+(?P<roman>[IVXLCDM]{1,8})(?!\w)",
-        source,
-        re.IGNORECASE,
-    )
-    translated_part = re.search(
-        r"(?<!\w)(?:PART|PARTE)[ \t]+[IVXLCDM]{1,8}(?!\w)",
-        normalized,
-        re.IGNORECASE,
-    )
-    if source_part is None or translated_part is None:
-        return normalized
-    replacement = f"PARTE {source_part.group('roman').upper()}"
-    if translated_part.group(0).islower():
-        replacement = replacement.lower()
-    return (
-        f"{normalized[: translated_part.start()]}{replacement}{normalized[translated_part.end() :]}"
-    )
-
-
-def _ground_established_table_terms(
-    source: str,
-    context: _TranslationContext,
-) -> str:
-    """Pre-resolve known phrases inside a longer cell before local model translation."""
-
-    if context.source_language is None:
-        return source
-    return replace_established_compact_term_residues(
-        source,
-        source,
-        context.source_language,
-        context.target_language,
-    )
-
-
-def _has_aligned_table_source_language_residue(
-    source: str,
-    translated: str,
-    context: _TranslationContext,
-) -> bool:
-    """Validate each aligned table cell when reusing an otherwise valid checkpoint."""
-
-    if not (
-        _is_safe_translation_html_table(source) and _is_safe_translation_html_table(translated)
-    ):
-        return False
-    source_nodes = list(re.finditer(r"(?<=>)[^<>]+(?=<)", source))
-    translated_nodes = list(re.finditer(r"(?<=>)[^<>]+(?=<)", translated))
-    if len(source_nodes) != len(translated_nodes):
-        return False
-    return any(
-        _has_table_source_language_residue(
-            html.unescape(source_node.group(0)).strip(),
-            html.unescape(translated_node.group(0)).strip(),
-            context.source_language,
-            context.target_language,
-        )
-        for source_node, translated_node in zip(source_nodes, translated_nodes, strict=True)
-        if sum(character.isalpha() for character in html.unescape(source_node.group(0))) >= 2
-    )
-
-
-def _normalize_aligned_table_translation(
-    source: str,
-    translated: str,
-    context: _TranslationContext,
-) -> str:
-    """Upgrade a structurally aligned table, including a result loaded from cache."""
-
-    if not (
-        _is_safe_translation_html_table(source) and _is_safe_translation_html_table(translated)
-    ):
-        return translated
-    source_nodes = list(re.finditer(r"(?<=>)[^<>]+(?=<)", source))
-    translated_nodes = list(re.finditer(r"(?<=>)[^<>]+(?=<)", translated))
-    if len(source_nodes) != len(translated_nodes):
-        return translated
-    replacements: list[tuple[int, int, str]] = []
-    for source_node, translated_node in zip(source_nodes, translated_nodes, strict=True):
-        source_value = html.unescape(source_node.group(0)).strip()
-        translated_value = html.unescape(translated_node.group(0)).strip()
-        if sum(character.isalpha() for character in source_value) < 2:
-            continue
-        normalized = _translate_established_table_cell(source_value, context)
-        if normalized is None and _table_cell_translation_collapsed(
-            source_value,
-            translated_value,
-        ):
-            normalized = source_value
-        if normalized is None:
-            normalized = _normalize_established_table_translation(
-                source_value,
-                translated_value,
-                context,
-            )
-        if normalized == translated_value:
-            continue
-        replacements.append(
-            (
-                translated_node.start(),
-                translated_node.end(),
-                _escaped_table_text_replacement(translated_node.group(0), normalized),
-            )
-        )
-    for start, end, replacement in reversed(replacements):
-        translated = f"{translated[:start]}{replacement}{translated[end:]}"
-    return translated
-
-
-def _table_cell_translation_collapsed(source: str, translated: str) -> bool:
-    """Reject a substantive label collapsed to a numeral or tiny fragment."""
-
-    source_visible = re.sub(r"\s+", " ", natural_language_text(source)).strip()
-    translated_visible = re.sub(r"\s+", " ", natural_language_text(translated)).strip()
-    source_letters = sum(character.isalpha() for character in source_visible)
-    if source_letters < 12:
-        return False
-    if re.fullmatch(r"[IVXLCDM]{1,8}", translated_visible, re.IGNORECASE):
-        return re.fullmatch(r"[IVXLCDM]{1,8}", source_visible, re.IGNORECASE) is None
-    translated_letters = sum(character.isalpha() for character in translated_visible)
-    return translated_letters < max(4, int(source_letters * 0.25))
-
-
-def _escaped_table_text_replacement(source_node: str, translated_value: str) -> str:
-    leading = source_node[: len(source_node) - len(source_node.lstrip())]
-    trailing = source_node[len(source_node.rstrip()) :]
-    return f"{leading}{html.escape(translated_value, quote=False)}{trailing}"
-
-
-def _escaped_table_text_replacement_preserving_entities(
-    source_node: str,
-    translated_value: str,
-) -> str:
-    _protected_source, entities = _table_text_translation_value(source_node)
-    return _restore_table_text_entities(
-        _escaped_table_text_replacement(source_node, translated_value),
-        entities,
-    )
-
-
-def _table_text_translation_value(source_node: str) -> tuple[str, tuple[tuple[str, str], ...]]:
-    """Keep source HTML entities byte-exact while exposing surrounding text to translation."""
-
-    entity_pattern = re.compile(r"&(?:#(?:x[0-9a-f]+|\d+)|[a-z][a-z0-9]+);", re.IGNORECASE)
-    matches = tuple(entity_pattern.finditer(source_node))
-    if not matches:
-        return html.unescape(source_node), ()
-    prefix = "PZTABLEENTITY"
-    while prefix in source_node:
-        prefix = f"Z{prefix}"
-    protected = source_node
-    entities: list[tuple[str, str]] = []
-    for index, match in reversed(tuple(enumerate(matches))):
-        token = f"`{prefix}{_alphabetic_marker_index(index)}XZQ`"
-        entities.append((token, match.group(0)))
-        protected = f"{protected[: match.start()]}{token}{protected[match.end() :]}"
-    entities.reverse()
-    return html.unescape(protected), tuple(entities)
-
-
-def _alphabetic_marker_index(index: int) -> str:
-    """Return a compact letter-only index that cannot be mistaken for document data."""
-
-    letters: list[str] = []
-    value = index
-    while True:
-        value, remainder = divmod(value, 26)
-        letters.append(chr(ord("A") + remainder))
-        if value == 0:
-            break
-        value -= 1
-    return "".join(reversed(letters))
-
-
-def _restore_table_text_entities(
-    translated: str,
-    entities: tuple[tuple[str, str], ...],
-) -> str:
-    restored = translated
-    for token, entity in entities:
-        if restored.count(token) == 1:
-            restored = restored.replace(token, entity)
-            continue
-        serialized_value = html.escape(html.unescape(entity), quote=False)
-        if (
-            serialized_value
-            and not serialized_value.isspace()
-            and restored.count(serialized_value) == 1
-        ):
-            restored = restored.replace(serialized_value, entity)
-            continue
-        raise ImprovementError("La traducción tabular cambió una entidad HTML protegida.")
-    return restored
-
-
 def _translate_table_text_batch(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -6075,16 +5488,6 @@ def _translate_table_text_batch(
         return request(request_instructions)
     except ImprovementError:
         return request(f"{request_instructions}\n{VALIDATION_RETRY_INSTRUCTION}")
-
-
-def _aligned_table_response_values(response: str, expected_count: int) -> list[str]:
-    blocks = [block.markdown.strip() for block in split_markdown_blocks(response)]
-    if len(blocks) == expected_count:
-        return blocks
-    lines = [line.strip() for line in response.splitlines() if line.strip()]
-    if len(lines) == expected_count:
-        return lines
-    return blocks
 
 
 def _restore_established_index_classifications(
@@ -6242,7 +5645,7 @@ def _specialized_retry_instruction(error: ImprovementError) -> str:
 
 
 def _improve_structure_with_directives(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     markdown: str,
@@ -6307,7 +5710,7 @@ def _improve_structure_with_directives(
 
 
 def _improve_structure_globally(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     markdown: str,
@@ -6477,7 +5880,7 @@ def _is_safe_structure_level(source_line: str, proposed_level: int) -> bool:
 
 
 def _improve_review_content_segments(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -6520,7 +5923,7 @@ def _improve_review_content_segments(
 
 
 def _improve_translation_segments(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -6835,7 +6238,7 @@ def _translation_fallback_parts(markdown: str) -> list[_MarkdownPart]:
 
 
 def _improve_translation_with_locked_values(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -6918,7 +6321,7 @@ def _improve_translation_with_locked_values(
 
 
 def _repair_untranslated_titles(
-    client: httpx.Client,
+    client: LocalGenerationClient,
     model: str,
     context_window: int,
     instructions: str,
@@ -7124,78 +6527,6 @@ def _repair_established_title_residual_phrase(
     if source_language_word_residues(source_phrase, candidate, context.source_language):
         return None
     return current_title.replace(current_phrase, candidate, 1)
-
-
-def _has_source_language_title_residue(
-    source: str,
-    translated: str,
-    source_language: str | None,
-    target_language: str | None = None,
-) -> bool:
-    if source_language is None:
-        return False
-    return bool(
-        translation_quality_module._title_source_language_residues(
-            source,
-            translated,
-            source_language,
-            target_language,
-        )
-    )
-
-
-def _has_table_source_language_residue(
-    source: str,
-    translated: str,
-    source_language: str | None,
-    target_language: str | None = None,
-) -> bool:
-    """Recognize compact residual labels inside cells, which are semantic title units."""
-
-    if source_language is None:
-        return False
-    source_natural = re.sub(r"\s+", " ", natural_language_text(source)).strip()
-    translated_natural = re.sub(r"\s+", " ", natural_language_text(translated)).strip()
-    if (
-        source_natural.casefold() == translated_natural.casefold()
-        and source_natural[:1].islower()
-        and sum(character.isalpha() for character in source_natural) >= 4
-        and not is_reference_or_catalogue_text(source)
-        and not is_probable_third_language_compact_value(
-            source_natural,
-            source_language=source_language,
-            target_language=target_language or "",
-        )
-    ):
-        # Lowercase index terms and short cell fragments are often too small for language
-        # detection.  Exact copying is still a reliable signal that translation did not happen;
-        # the guarded fallback may preserve genuine cross-language terms if no safe rewrite exists.
-        return True
-    if _has_source_language_title_residue(
-        source,
-        translated,
-        source_language,
-        target_language,
-    ):
-        return True
-    if source_language_word_residues(
-        natural_language_text(source),
-        natural_language_text(translated),
-        source_language,
-    ):
-        return True
-    hints = TITLE_LANGUAGE_HINTS.get(source_language, frozenset())
-    if not hints:
-        return False
-    source_words = {
-        word.casefold()
-        for word in re.findall(r"[^\W\d_]+", natural_language_text(source), re.UNICODE)
-    }
-    translated_words = {
-        word.casefold()
-        for word in re.findall(r"[^\W\d_]+", natural_language_text(translated), re.UNICODE)
-    }
-    return bool(source_words & translated_words & hints)
 
 
 def _replace_exact_title_lines(markdown: str, source_title: str, translated_title: str) -> str:

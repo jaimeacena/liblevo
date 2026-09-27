@@ -20,6 +20,7 @@ from parsezen.translation_quality import (
 
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _MAX_REVIEW_MARKDOWN_CHARACTERS = 2_000_000
+_MAX_ALIGNMENT_PAIRS = 100_000
 _INTERNAL_COMMENT_PATTERN = re.compile(r"<!--(?P<body>[\s\S]*?)-->")
 _PRIVATE_RESOURCE_PATTERN = re.compile(
     re.escape(RESOURCE_REFERENCE_PREFIX) + r"[^\s)>'\"]+",
@@ -188,6 +189,10 @@ def build_revision_draft(
 ) -> RevisionDraft:
     """Build compact independently reviewable replacements from two documents."""
     original_blocks = split_markdown_blocks(original_markdown)
+    if original_markdown == proposed_markdown:
+        # SequenceMatcher is quadratic on long runs of repeated, identical blocks.
+        # Keep the input-size check above, but no alignment is needed here.
+        return RevisionDraft(original_markdown, proposed_markdown, (), kinds)
     proposed_blocks = split_markdown_blocks(proposed_markdown)
     translation_source_blocks = (
         split_markdown_blocks(translation_source_markdown)
@@ -199,10 +204,9 @@ def build_revision_draft(
         and len(translation_source_blocks) == len(original_blocks)
         and resolve_language_code(translation_target_language) is not None
     )
-    matcher = SequenceMatcher(
-        a=[block.markdown for block in original_blocks],
-        b=[block.markdown for block in proposed_blocks],
-        autojunk=False,
+    opcodes = _bounded_opcodes(
+        [block.markdown for block in original_blocks],
+        [block.markdown for block in proposed_blocks],
     )
     changes: list[RevisionChange] = []
     default_kind = (
@@ -210,7 +214,7 @@ def build_revision_draft(
         if kinds == frozenset({RevisionKind.STRUCTURE})
         else RevisionKind.CONTENT
     )
-    for tag, original_start, original_end, proposed_start, proposed_end in matcher.get_opcodes():
+    for tag, original_start, original_end, proposed_start, proposed_end in opcodes:
         if tag == "equal":
             continue
         original = "".join(block.markdown for block in original_blocks[original_start:original_end])
@@ -274,6 +278,72 @@ def build_revision_draft(
         changes=tuple(changes),
         kinds=kinds,
     )
+
+
+def _bounded_opcodes(
+    original: list[str] | tuple[str, ...],
+    proposed: list[str] | tuple[str, ...],
+) -> list[tuple[str, int, int, int, int]]:
+    """Align a bounded middle, retaining equal edges and conservative large gaps.
+
+    No occurrence is discarded as junk. Large equally sized ranges use only
+    equal-position anchors; ambiguous gaps stay replacements and must still pass
+    the shared content guards. Work never expands quadratically with document size.
+    """
+    prefix = 0
+    end_a, end_b = len(original), len(proposed)
+    while prefix < min(end_a, end_b) and original[prefix] == proposed[prefix]:
+        prefix += 1
+    suffix_a, suffix_b = end_a, end_b
+    while (
+        suffix_a > prefix and suffix_b > prefix and original[suffix_a - 1] == proposed[suffix_b - 1]
+    ):
+        suffix_a -= 1
+        suffix_b -= 1
+    operations: list[tuple[str, int, int, int, int]] = []
+    if prefix:
+        operations.append(("equal", 0, prefix, 0, prefix))
+    count_a, count_b = suffix_a - prefix, suffix_b - prefix
+    if not count_a or not count_b:
+        if count_a or count_b:
+            operations.append(
+                ("delete" if count_a else "insert", prefix, suffix_a, prefix, suffix_b)
+            )
+    elif count_a * count_b <= _MAX_ALIGNMENT_PAIRS:
+        matcher = SequenceMatcher(
+            a=original[prefix:suffix_a],
+            b=proposed[prefix:suffix_b],
+            autojunk=False,
+        )
+        operations.extend(
+            (tag, a + prefix, a_end + prefix, b + prefix, b_end + prefix)
+            for tag, a, a_end, b, b_end in matcher.get_opcodes()
+        )
+    elif count_a == count_b:
+        start = prefix
+        equal = original[start] == proposed[start]
+        for index in range(prefix + 1, suffix_a + 1):
+            next_equal = index < suffix_a and original[index] == proposed[index]
+            if index == suffix_a or next_equal != equal:
+                operations.append(("equal" if equal else "replace", start, index, start, index))
+                start, equal = index, next_equal
+    else:
+        operations.append(("replace", prefix, suffix_a, prefix, suffix_b))
+    if suffix_a < end_a:
+        operations.append(("equal", suffix_a, end_a, suffix_b, end_b))
+    return operations
+
+
+def _bounded_word_similarity(original: tuple[str, ...], proposed: tuple[str, ...]) -> float:
+    total = len(original) + len(proposed)
+    if not total:
+        return 1.0
+    matched = sum(
+        end - start
+        for tag, start, end, _other, _other_end in _bounded_opcodes(original, proposed)
+        if tag == "equal"
+    )
+    return 2 * matched / total
 
 
 def markdown_headings(markdown: str) -> tuple[tuple[int, str], ...]:
@@ -432,11 +502,7 @@ def _revision_risk(
                 "La propuesta añade o elimina una parte sustancial del texto.",
             )
         if len(original_words) >= 10:
-            similarity = SequenceMatcher(
-                a=original_words,
-                b=proposed_words,
-                autojunk=False,
-            ).ratio()
+            similarity = _bounded_word_similarity(original_words, proposed_words)
             if similarity < 0.55:
                 return RevisionRisk.HIGH, "La propuesta reescribe gran parte del contenido."
     return RevisionRisk.LOW, None
@@ -568,11 +634,7 @@ def validate_review_content_candidate(original: str, proposed: str) -> None:
         if len(original_words) >= 5 and len(proposed_words) < round(len(original_words) * 0.60):
             raise ImprovementError("La propuesta omite una parte sustancial del contenido.")
         if len(original_words) >= 5:
-            similarity = SequenceMatcher(
-                a=original_words,
-                b=proposed_words,
-                autojunk=False,
-            ).ratio()
+            similarity = _bounded_word_similarity(original_words, proposed_words)
             if similarity < 0.60:
                 raise ImprovementError("La propuesta reescribe demasiado contenido.")
 
@@ -638,8 +700,10 @@ def _protected_revision_terms(markdown: str) -> Counter[str]:
         token = match.group(0)
         if len(token) < 2:
             continue
-        preceding = markdown[: match.start()].rstrip(" \t")
-        starts_sentence = not preceding or preceding[-1] in ".!?\n:#"
+        preceding = match.start() - 1
+        while preceding >= 0 and markdown[preceding] in " \t":
+            preceding -= 1
+        starts_sentence = preceding < 0 or markdown[preceding] in ".!?\n:#"
         if token.isupper() or (token[0].isupper() and not starts_sentence):
             protected[token.casefold()] += 1
     return protected
@@ -648,3 +712,13 @@ def _protected_revision_terms(markdown: str) -> Counter[str]:
 def _heading_only(markdown: str) -> bool:
     lines = tuple(line.strip() for line in markdown.splitlines() if line.strip())
     return bool(lines) and all(_HEADING_PATTERN.fullmatch(line) is not None for line in lines)
+
+
+def contains_conversion_damage(markdown: str) -> bool:
+    visible = re.sub(r"<!--[\s\S]*?-->", "", markdown)
+    return bool(
+        "\ufffd" in visible
+        or re.search(r"(?i)\b(?:aviso|warning)\s+OCR\b", visible)
+        or re.search(r"\b(?:[^\W\d_]\s+){5,}[^\W\d_]\b", visible)
+        or re.search(r"(?i)\b([^\W\d_]{3,})(?:\s+\1){2,}\b", visible)
+    )

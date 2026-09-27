@@ -26,7 +26,8 @@ def test_component_setup_renders_only_the_two_fixed_capabilities(qtbot) -> None:
     }
     assert dialog.cards[ComponentCapability.TRANSLATION].status_label.text() == "Preparado"
     assert dialog.cards[ComponentCapability.REVIEW].status_label.text() == "Equipo insuficiente"
-    assert not dialog.findChildren(QScrollArea)
+    assert dialog.findChildren(QScrollArea) == [dialog.content_scroll]
+    assert dialog.content_scroll.horizontalScrollBar().maximum() == 0
     assert "qwen" not in dialog.windowTitle().casefold()
 
 
@@ -124,7 +125,7 @@ def test_injected_states_are_replaced_without_accepting_unknown_capabilities(qtb
     )
 
     assert dialog.cards[ComponentCapability.TRANSLATION].status_label.text() == "Preparado"
-    assert dialog.cards[ComponentCapability.REVIEW].status_label.text() == "Equipo insuficiente"
+    assert dialog.cards[ComponentCapability.REVIEW].status_label.text() == "Pendiente de comprobar"
     assert set(dialog.readiness) == {
         ComponentCapability.TRANSLATION,
         ComponentCapability.REVIEW,
@@ -153,7 +154,7 @@ def test_catalog_injection_uses_the_pure_evaluator_without_network_or_download(q
 
     assert dialog.cards[ComponentCapability.REVIEW].status_label.text() == "Descargable"
     assert dialog.cards[ComponentCapability.TRANSLATION].status_label.text() == (
-        "Equipo insuficiente"
+        "Pendiente de comprobar"
     )
 
 
@@ -216,7 +217,30 @@ def test_prepared_component_readiness_propagates_verified_manifest_identity(
     snapshot = window._local_ai_policy.translation  # noqa: SLF001
     assert snapshot is not None
     assert snapshot.policy_version == TRANSLATION_COMPONENT_MANIFEST.policy_version
-    assert snapshot.model == TRANSLATION_COMPONENT_MANIFEST.model_name
-    assert snapshot.digest == TRANSLATION_COMPONENT_MANIFEST.ollama_digest
+    assert snapshot.model == "parsezen/hymt-gguf:Q4_K_M"
+    assert snapshot.digest == TRANSLATION_COMPONENT_MANIFEST.upstream_sha256
     assert snapshot.context_window == TRANSLATION_COMPONENT_MANIFEST.context_window
     assert window._local_ai_policy.review is None  # noqa: SLF001
+
+
+def test_runtime_failure_is_not_reported_as_insufficient_hardware(qtbot) -> None:
+    dialog = ComponentSetupDialog(
+        states={
+            ComponentCapability.TRANSLATION: ComponentReadiness(
+                ComponentCapability.TRANSLATION,
+                ReadinessStatus.INSUFFICIENT,
+                ("ollama_unavailable",),
+            ),
+            ComponentCapability.REVIEW: ComponentReadiness(
+                ComponentCapability.REVIEW, ReadinessStatus.INSUFFICIENT, ("ram_insufficient",)
+            ),
+        }
+    )
+    qtbot.addWidget(dialog)
+    assert (
+        dialog.cards[ComponentCapability.TRANSLATION].status_label.text()
+        == "Pendiente de comprobar"
+    )
+    assert "memoria libre" in dialog.cards[ComponentCapability.REVIEW].detail_label.text()
+    assert dialog.cards[ComponentCapability.REVIEW].status_label.text() == "Equipo insuficiente"
+    assert all(b.isHidden() for b in dialog.download_buttons.values())

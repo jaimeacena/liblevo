@@ -1,0 +1,38 @@
+{
+  "ruff_check": {
+    "exit_code": 0,
+    "duration_seconds": 0.17,
+    "summary": "All checks passed!"
+  },
+  "ruff_format": {
+    "exit_code": 0,
+    "duration_seconds": 0.14,
+    "summary": "280 files already formatted"
+  },
+  "mypy": {
+    "exit_code": 0,
+    "duration_seconds": 38.94,
+    "summary": "Success: no issues found in 139 source files"
+  },
+  "pip_check": {
+    "exit_code": 0,
+    "duration_seconds": 0.7,
+    "summary": "No broken requirements found."
+  },
+  "git_diff_check": {
+    "exit_code": 0,
+    "duration_seconds": 0.12,
+    "summary": "warning: in the working copy of '.github/workflows/ci.yml', CRLF will be replaced by LF the next time Git touches it"
+  },
+  "pytest": {
+    "exit_code": 0,
+    "passed": 2461,
+    "skipped": 3,
+    "duration_seconds": 149.28,
+    "source": "full suite terminal result after helper change"
+  },
+  "package_exe_sha256": "826e466cf7eb352f6baf496eb68ca0130e8dbd69cb81aabedc28efd33f90cbba",
+  "package_smoke": "PASS",
+  "product_direct": "PASS",
+  "helper_direct": 0
+}

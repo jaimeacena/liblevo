@@ -979,7 +979,8 @@ def apply_parsezen_theme(
             font-size: 16pt;
             font-weight: 650;
         }}
-        QLabel#reviewHelp, QLabel#qualitySummary,
+        QLabel#internalPageSubtitle, QLabel#configurationSaveStatus,
+        QLabel#confirmationHelp, QLabel#reviewHelp, QLabel#qualitySummary,
         QLabel#reviewProgressLabel, QLabel#reviewCategoryLabel {{
             color: {COLORS.text_secondary};
         }}
@@ -1388,8 +1389,9 @@ def apply_parsezen_theme(
         }}
         QFrame#reviewPane QPlainTextEdit {{
             background-color: {COLORS.surface_raised};
+            font-size: 11pt;
         }}
-        QDialog#modelManagerDialog, QDialog#glossaryDialog,
+        QDialog#epubConfirmationDialog, QDialog#modelManagerDialog, QDialog#glossaryDialog,
         QDialog#diagnosticsDialog {{
             background-color: {COLORS.canvas};
         }}

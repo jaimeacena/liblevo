@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from PyInstaller.utils.hooks import (
@@ -9,19 +10,29 @@ from PyInstaller.utils.hooks import (
 
 
 root = Path.cwd()
-notices = root / "distribution" / "windows" / "THIRD-PARTY-NOTICES.txt"
+notices = Path(
+    os.environ.get(
+        "PARSEZEN_NOTICES_PATH",
+        str(root / "distribution" / "windows" / "THIRD-PARTY-NOTICES.txt"),
+    )
+)
 if not notices.is_file():
     raise FileNotFoundError(
         "Genera THIRD-PARTY-NOTICES.txt con distribution/windows/generate_notices.py."
     )
 datas = [
-    (str(root / "assets"), "assets"),
+    (str(root / "assets" / "branding" / "generated"), "assets/branding/generated"),
+    (str(root / "assets" / "fonts"), "assets/fonts"),
     (str(root / "LICENSE"), "."),
     (str(notices), "."),
 ]
 datas.extend(collect_data_files("parsezen", includes=["licenses/*.txt"]))
 binaries = []
 hiddenimports = []
+
+# The local GGUF binding loads its Vulkan libraries dynamically at runtime.
+binaries.extend(collect_dynamic_libs("llama_cpp"))
+datas.extend(copy_metadata("llama-cpp-python"))
 
 
 def include_runtime_submodule(name):
@@ -89,6 +100,17 @@ def is_redundant_torch_license(entry):
 
 
 package_datas = [entry for entry in analysis.datas if not is_redundant_torch_license(entry)]
+
+
+def is_foreign_poppler_icu(entry):
+    # PATH may contain a separate PDF tool's ICU DLLs. Bundling them at the
+    # package root shadows Qt's own dependencies and prevents QtGui importing.
+    destination = entry[0].replace("\\", "/").casefold()
+    source = entry[1].replace("\\", "/").casefold()
+    return destination in {"icuuc.dll", "icudt78.dll"} and "/poppler/" in source
+
+
+package_binaries = [entry for entry in analysis.binaries if not is_foreign_poppler_icu(entry)]
 pyz = PYZ(analysis.pure)
 exe = EXE(
     pyz,
@@ -102,7 +124,7 @@ exe = EXE(
 )
 bundle = COLLECT(
     exe,
-    analysis.binaries,
+    package_binaries,
     package_datas,
     strip=False,
     upx=True,

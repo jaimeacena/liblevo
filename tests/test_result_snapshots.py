@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 from dataclasses import replace
 from pathlib import Path, PurePosixPath
 
@@ -125,6 +126,7 @@ def test_round_trips_a_sensitive_pending_result_encrypted(tmp_path: Path) -> Non
         ),
         review_markdown="# Propuesta\n\nTexto corregido.\n",
         review_required=True,
+        preserved_review_chunks=2,
         preserve_epub_package_on_unchanged_review=True,
         final_integrity_report=FinalIntegrityReport(
             "EPUB",
@@ -181,6 +183,42 @@ def test_missing_snapshot_is_not_an_error(tmp_path: Path) -> None:
     )
 
     assert ResultSnapshotStore(state, artifacts).load("missing") is None
+
+
+def test_shared_text_is_read_once_per_recovery_without_a_cross_recovery_cache(
+    tmp_path: Path, monkeypatch
+) -> None:
+    source = tmp_path / "source.md"
+    source.write_text("Same text", encoding="utf-8")
+    job = DocumentJob.create(DocumentSource.inspect(source), JobConfiguration(), order=0)
+    state = StateStore(tmp_path / "state.db")
+    state.upsert_job(job)
+    artifacts = ArtifactStore(
+        tmp_path / "artifacts", protect=lambda value: value, unprotect=lambda value: value
+    )
+    snapshots = ResultSnapshotStore(state, artifacts)
+    result = ProcessResult(
+        tmp_path / "result.md",
+        review_markdown="Same text",
+        revision_draft=build_revision_draft(
+            "Same text", "Same text", kinds=frozenset({RevisionKind.CONTENT})
+        ),
+        review_required=True,
+    )
+    snapshots.save(job.id, result)
+    reads: Counter[str] = Counter()
+    original_read = artifacts.read_text
+
+    def read_text(job_id: str, artifact_id: str, **kwargs) -> str:
+        reads[artifact_id] += 1
+        return original_read(job_id, artifact_id, **kwargs)
+
+    monkeypatch.setattr(artifacts, "read_text", read_text)
+    assert snapshots.load(job.id) == result
+    assert len(reads) == 2  # manifest and one shared text
+    assert set(reads.values()) == {1}
+    assert snapshots.load(job.id) == result
+    assert set(reads.values()) == {2}
 
 
 def test_v2_snapshot_rejects_a_different_source_identity(tmp_path: Path) -> None:

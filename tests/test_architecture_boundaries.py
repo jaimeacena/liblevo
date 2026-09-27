@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import ast
+import subprocess
+import sys
 from pathlib import Path
 
 _PACKAGE_ROOT = Path(__file__).parents[1] / "src" / "parsezen"
@@ -111,6 +113,23 @@ def test_pdf_checkpoint_codec_does_not_depend_on_extraction_or_ocr() -> None:
     assert "parsezen.pdf_layout" in imported
 
 
+def test_extracted_pdf_rules_do_not_depend_on_the_pdf_orchestrator_or_ocr_engine() -> None:
+    for name in ("pdf_tables.py", "pdf_text_reconciliation.py"):
+        imported = _imports(_PACKAGE_ROOT / name)
+        assert "parsezen.pdf_conversion" not in imported
+        assert "parsezen.ocr_conversion" not in imported
+        assert "httpx" not in imported
+
+
+def test_table_and_review_patch_rules_do_not_own_model_requests() -> None:
+    for name in ("table_translation.py", "translation_review_patches.py"):
+        imported = _imports(_PACKAGE_ROOT / name)
+        assert "parsezen.improvement" not in imported
+        assert "parsezen.local_ai_transport" not in imported
+        assert "parsezen.local_ai_adapters" not in imported
+        assert "httpx" not in imported
+
+
 def test_markdown_safety_does_not_own_network_or_model_selection() -> None:
     imported = _imports(_PACKAGE_ROOT / "ai_markdown_safety.py")
 
@@ -124,6 +143,22 @@ def test_pipeline_contracts_do_not_depend_on_the_orchestrator_or_output() -> Non
 
     assert "parsezen.processing" not in imported
     assert "parsezen.output" not in imported
+
+
+def test_importing_pipeline_contracts_does_not_load_processing_engines() -> None:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; from parsezen.pipeline.contracts import ProcessRequest; "
+            "assert not {'parsezen.improvement', 'parsezen.pdf_conversion', "
+            "'parsezen.epub_builder', 'pdfplumber', 'PIL'} & sys.modules.keys()",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_pipeline_preparation_does_not_depend_on_transform_or_publish() -> None:

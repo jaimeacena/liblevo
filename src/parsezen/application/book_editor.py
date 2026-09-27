@@ -17,6 +17,7 @@ from zipfile import ZipFile
 from lxml import etree, html
 
 from parsezen.application.artifact_repository import ArtifactRepository
+from parsezen.cover_images import validate_cover_image
 from parsezen.document_model import ConvertedResource
 from parsezen.domain.books import BookDocument, BookMetadata, BookResource, BookSection
 from parsezen.epub_builder import (
@@ -41,15 +42,6 @@ _CSS_REMOTE_URL = re.compile(
     r"url\(\s*(['\"]?)(?:https?|ftp|javascript|data):.*?\1\s*\)",
     re.IGNORECASE,
 )
-_COVER_MEDIA_TYPES = {
-    ".gif": "image/gif",
-    ".jpeg": "image/jpeg",
-    ".jpg": "image/jpeg",
-    ".png": "image/png",
-    ".svg": "image/svg+xml",
-    ".webp": "image/webp",
-}
-_MAX_COVER_BYTES = 20 * 1024 * 1024
 _NAVIGATION_HINT_ATTRIBUTE = "data-parsezen-navigation"
 _NAVIGATION_LEVEL_ATTRIBUTE = "data-parsezen-navigation-level"
 SectionTuple = tuple[BookSection, ...]
@@ -110,11 +102,7 @@ class BookEditor:
         """Store a validated local image and designate it as the book cover."""
 
         suffix = PurePosixPath(filename).suffix.casefold()
-        media_type = _COVER_MEDIA_TYPES.get(suffix)
-        if media_type is None:
-            raise ValueError("La portada debe ser PNG, JPG, WEBP, GIF o SVG.")
-        if not payload or len(payload) > _MAX_COVER_BYTES:
-            raise ValueError("La imagen de portada está vacía o supera los 20 MB.")
+        media_type = validate_cover_image(filename, payload)
         record = self.artifacts.put(
             job_id=self.job_id,
             payload=payload,
@@ -651,6 +639,23 @@ def publish_book(
     return built.content
 
 
+def preview_book_navigation(
+    book: BookDocument, artifacts: ArtifactRepository, *, job_id: str
+) -> tuple[EpubNavigationNode, ...]:
+    """Project the same navigation rules used by publication without writing a book."""
+    filenames = {
+        section_id: chapter_filename(index) for index, section_id in enumerate(book.spine, 1)
+    }
+    rendered = {
+        section.id: _ensure_navigation_heading_ids(
+            artifacts.read_text(job_id, section.xhtml_artifact_id)
+        )
+        for root in book.sections
+        for section in root.walk()
+    }
+    return _navigation(book.sections, filenames, rendered)
+
+
 def _navigation(
     sections: tuple[BookSection, ...],
     filenames: dict[str, str],
@@ -684,7 +689,7 @@ def _section_navigation_is_excluded(xhtml: str) -> bool:
             etree.QName(element).localname.casefold() if isinstance(element.tag, str) else ""
         )
         if re.fullmatch(r"h[1-6]", local_name) is not None:
-            return element.attrib.get(_NAVIGATION_HINT_ATTRIBUTE) == "exclude"
+            return bool(element.attrib.get(_NAVIGATION_HINT_ATTRIBUTE) == "exclude")
     return False
 
 

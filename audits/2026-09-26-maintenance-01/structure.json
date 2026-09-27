@@ -1,0 +1,681 @@
+{
+  "source_module_count": 139,
+  "source_lines": 75082,
+  "test_file_count": 127,
+  "test_function_count": 2004,
+  "top_modules_by_lines": [
+    {
+      "module": "parsezen.pdf_conversion",
+      "path": "src/parsezen/pdf_conversion.py",
+      "lines": 7588,
+      "functions": 232,
+      "classes": 9,
+      "branches": 831,
+      "broad_excepts": 1,
+      "internal_imports": 11,
+      "incoming_imports": 15
+    },
+    {
+      "module": "parsezen.improvement",
+      "path": "src/parsezen/improvement.py",
+      "lines": 6549,
+      "functions": 110,
+      "classes": 6,
+      "branches": 584,
+      "broad_excepts": 0,
+      "internal_imports": 17,
+      "incoming_imports": 5
+    },
+    {
+      "module": "parsezen.translation_quality",
+      "path": "src/parsezen/translation_quality.py",
+      "lines": 4262,
+      "functions": 122,
+      "classes": 8,
+      "branches": 372,
+      "broad_excepts": 0,
+      "internal_imports": 0,
+      "incoming_imports": 21
+    },
+    {
+      "module": "parsezen.presentation.main_window",
+      "path": "src/parsezen/presentation/main_window.py",
+      "lines": 3036,
+      "functions": 119,
+      "classes": 2,
+      "branches": 319,
+      "broad_excepts": 0,
+      "internal_imports": 58,
+      "incoming_imports": 1
+    },
+    {
+      "module": "parsezen.epub_conversion",
+      "path": "src/parsezen/epub_conversion.py",
+      "lines": 2927,
+      "functions": 110,
+      "classes": 10,
+      "branches": 355,
+      "broad_excepts": 0,
+      "internal_imports": 5,
+      "incoming_imports": 6
+    },
+    {
+      "module": "parsezen.epub_builder",
+      "path": "src/parsezen/epub_builder.py",
+      "lines": 2701,
+      "functions": 103,
+      "classes": 9,
+      "branches": 283,
+      "broad_excepts": 0,
+      "internal_imports": 5,
+      "incoming_imports": 10
+    },
+    {
+      "module": "parsezen.processing",
+      "path": "src/parsezen/processing.py",
+      "lines": 2125,
+      "functions": 51,
+      "classes": 5,
+      "branches": 156,
+      "broad_excepts": 1,
+      "internal_imports": 35,
+      "incoming_imports": 5
+    },
+    {
+      "module": "parsezen.ai_markdown_safety",
+      "path": "src/parsezen/ai_markdown_safety.py",
+      "lines": 1819,
+      "functions": 63,
+      "classes": 0,
+      "branches": 206,
+      "broad_excepts": 0,
+      "internal_imports": 4,
+      "incoming_imports": 3
+    },
+    {
+      "module": "parsezen.presentation.design_system",
+      "path": "src/parsezen/presentation/design_system.py",
+      "lines": 1709,
+      "functions": 23,
+      "classes": 11,
+      "branches": 43,
+      "broad_excepts": 0,
+      "internal_imports": 1,
+      "incoming_imports": 11
+    },
+    {
+      "module": "parsezen.presentation.book_editor_dialog",
+      "path": "src/parsezen/presentation/book_editor_dialog.py",
+      "lines": 1671,
+      "functions": 70,
+      "classes": 2,
+      "branches": 109,
+      "broad_excepts": 0,
+      "internal_imports": 9,
+      "incoming_imports": 1
+    },
+    {
+      "module": "parsezen.presentation.job_table",
+      "path": "src/parsezen/presentation/job_table.py",
+      "lines": 1504,
+      "functions": 65,
+      "classes": 6,
+      "branches": 139,
+      "broad_excepts": 0,
+      "internal_imports": 7,
+      "incoming_imports": 1
+    },
+    {
+      "module": "parsezen.application.book_editor",
+      "path": "src/parsezen/application/book_editor.py",
+      "lines": 1358,
+      "functions": 63,
+      "classes": 2,
+      "branches": 128,
+      "broad_excepts": 0,
+      "internal_imports": 7,
+      "incoming_imports": 3
+    },
+    {
+      "module": "parsezen.presentation.workspace",
+      "path": "src/parsezen/presentation/workspace.py",
+      "lines": 1249,
+      "functions": 55,
+      "classes": 5,
+      "branches": 53,
+      "broad_excepts": 0,
+      "internal_imports": 12,
+      "incoming_imports": 2
+    },
+    {
+      "module": "parsezen.infrastructure.state_store",
+      "path": "src/parsezen/infrastructure/state_store.py",
+      "lines": 1245,
+      "functions": 49,
+      "classes": 4,
+      "branches": 74,
+      "broad_excepts": 1,
+      "internal_imports": 6,
+      "incoming_imports": 2
+    },
+    {
+      "module": "parsezen.presentation.phase_review_dialog",
+      "path": "src/parsezen/presentation/phase_review_dialog.py",
+      "lines": 1232,
+      "functions": 48,
+      "classes": 4,
+      "branches": 103,
+      "broad_excepts": 0,
+      "internal_imports": 5,
+      "incoming_imports": 1
+    },
+    {
+      "module": "parsezen.offline_translation",
+      "path": "src/parsezen/offline_translation.py",
+      "lines": 1199,
+      "functions": 54,
+      "classes": 2,
+      "branches": 134,
+      "broad_excepts": 5,
+      "internal_imports": 5,
+      "incoming_imports": 3
+    },
+    {
+      "module": "parsezen.local_models",
+      "path": "src/parsezen/local_models.py",
+      "lines": 1083,
+      "functions": 42,
+      "classes": 13,
+      "branches": 111,
+      "broad_excepts": 0,
+      "internal_imports": 2,
+      "incoming_imports": 15
+    },
+    {
+      "module": "parsezen.pipeline.transform",
+      "path": "src/parsezen/pipeline/transform.py",
+      "lines": 1061,
+      "functions": 26,
+      "classes": 2,
+      "branches": 74,
+      "broad_excepts": 0,
+      "internal_imports": 17,
+      "incoming_imports": 3
+    },
+    {
+      "module": "parsezen.pdf_text_reconciliation",
+      "path": "src/parsezen/pdf_text_reconciliation.py",
+      "lines": 947,
+      "functions": 39,
+      "classes": 0,
+      "branches": 97,
+      "broad_excepts": 0,
+      "internal_imports": 1,
+      "incoming_imports": 2
+    },
+    {
+      "module": "parsezen.infrastructure.result_snapshots",
+      "path": "src/parsezen/infrastructure/result_snapshots.py",
+      "lines": 940,
+      "functions": 33,
+      "classes": 3,
+      "branches": 44,
+      "broad_excepts": 1,
+      "internal_imports": 13,
+      "incoming_imports": 1
+    },
+    {
+      "module": "parsezen.presentation.job_configuration_dialog",
+      "path": "src/parsezen/presentation/job_configuration_dialog.py",
+      "lines": 934,
+      "functions": 61,
+      "classes": 7,
+      "branches": 39,
+      "broad_excepts": 1,
+      "internal_imports": 10,
+      "incoming_imports": 2
+    },
+    {
+      "module": "parsezen.pdf_tables",
+      "path": "src/parsezen/pdf_tables.py",
+      "lines": 919,
+      "functions": 26,
+      "classes": 0,
+      "branches": 108,
+      "broad_excepts": 0,
+      "internal_imports": 3,
+      "incoming_imports": 1
+    },
+    {
+      "module": "parsezen.presentation.activity_view",
+      "path": "src/parsezen/presentation/activity_view.py",
+      "lines": 827,
+      "functions": 31,
+      "classes": 1,
+      "branches": 61,
+      "broad_excepts": 0,
+      "internal_imports": 6,
+      "incoming_imports": 1
+    },
+    {
+      "module": "parsezen.ocr_conversion",
+      "path": "src/parsezen/ocr_conversion.py",
+      "lines": 814,
+      "functions": 30,
+      "classes": 0,
+      "branches": 109,
+      "broad_excepts": 5,
+      "internal_imports": 4,
+      "incoming_imports": 2
+    },
+    {
+      "module": "parsezen.semantic_blocks",
+      "path": "src/parsezen/semantic_blocks.py",
+      "lines": 790,
+      "functions": 31,
+      "classes": 4,
+      "branches": 97,
+      "broad_excepts": 0,
+      "internal_imports": 2,
+      "incoming_imports": 7
+    }
+  ],
+  "top_modules_by_incoming_imports": [
+    {
+      "module": "parsezen.errors",
+      "path": "src/parsezen/errors.py",
+      "lines": 53,
+      "functions": 0,
+      "classes": 13,
+      "branches": 0,
+      "broad_excepts": 0,
+      "internal_imports": 0,
+      "incoming_imports": 48
+    },
+    {
+      "module": "parsezen.domain.jobs",
+      "path": "src/parsezen/domain/jobs.py",
+      "lines": 548,
+      "functions": 30,
+      "classes": 19,
+      "branches": 41,
+      "broad_excepts": 0,
+      "internal_imports": 2,
+      "incoming_imports": 41
+    },
+    {
+      "module": "parsezen.cancellation",
+      "path": "src/parsezen/cancellation.py",
+      "lines": 33,
+      "functions": 5,
+      "classes": 1,
+      "branches": 2,
+      "broad_excepts": 0,
+      "internal_imports": 1,
+      "incoming_imports": 26
+    },
+    {
+      "module": "parsezen.pipeline.contracts",
+      "path": "src/parsezen/pipeline/contracts.py",
+      "lines": 239,
+      "functions": 3,
+      "classes": 8,
+      "branches": 1,
+      "broad_excepts": 0,
+      "internal_imports": 14,
+      "incoming_imports": 24
+    },
+    {
+      "module": "parsezen.domain.stages",
+      "path": "src/parsezen/domain/stages.py",
+      "lines": 221,
+      "functions": 7,
+      "classes": 5,
+      "branches": 18,
+      "broad_excepts": 0,
+      "internal_imports": 0,
+      "incoming_imports": 23
+    },
+    {
+      "module": "parsezen.translation_quality",
+      "path": "src/parsezen/translation_quality.py",
+      "lines": 4262,
+      "functions": 122,
+      "classes": 8,
+      "branches": 372,
+      "broad_excepts": 0,
+      "internal_imports": 0,
+      "incoming_imports": 21
+    },
+    {
+      "module": "parsezen.settings",
+      "path": "src/parsezen/settings.py",
+      "lines": 323,
+      "functions": 11,
+      "classes": 1,
+      "branches": 28,
+      "broad_excepts": 0,
+      "internal_imports": 3,
+      "incoming_imports": 18
+    },
+    {
+      "module": "parsezen.document_model",
+      "path": "src/parsezen/document_model.py",
+      "lines": 47,
+      "functions": 2,
+      "classes": 2,
+      "branches": 2,
+      "broad_excepts": 0,
+      "internal_imports": 0,
+      "incoming_imports": 17
+    },
+    {
+      "module": "parsezen.revision",
+      "path": "src/parsezen/revision.py",
+      "lines": 724,
+      "functions": 27,
+      "classes": 6,
+      "branches": 87,
+      "broad_excepts": 0,
+      "internal_imports": 3,
+      "incoming_imports": 17
+    },
+    {
+      "module": "parsezen.local_models",
+      "path": "src/parsezen/local_models.py",
+      "lines": 1083,
+      "functions": 42,
+      "classes": 13,
+      "branches": 111,
+      "broad_excepts": 0,
+      "internal_imports": 2,
+      "incoming_imports": 15
+    },
+    {
+      "module": "parsezen.pdf_conversion",
+      "path": "src/parsezen/pdf_conversion.py",
+      "lines": 7588,
+      "functions": 232,
+      "classes": 9,
+      "branches": 831,
+      "broad_excepts": 1,
+      "internal_imports": 11,
+      "incoming_imports": 15
+    },
+    {
+      "module": "parsezen.domain.reviews",
+      "path": "src/parsezen/domain/reviews.py",
+      "lines": 220,
+      "functions": 13,
+      "classes": 6,
+      "branches": 12,
+      "broad_excepts": 0,
+      "internal_imports": 1,
+      "incoming_imports": 13
+    },
+    {
+      "module": "parsezen.presentation.design_system",
+      "path": "src/parsezen/presentation/design_system.py",
+      "lines": 1709,
+      "functions": 23,
+      "classes": 11,
+      "branches": 43,
+      "broad_excepts": 0,
+      "internal_imports": 1,
+      "incoming_imports": 11
+    },
+    {
+      "module": "parsezen.domain.process_lifecycle",
+      "path": "src/parsezen/domain/process_lifecycle.py",
+      "lines": 105,
+      "functions": 4,
+      "classes": 2,
+      "branches": 2,
+      "broad_excepts": 0,
+      "internal_imports": 2,
+      "incoming_imports": 10
+    },
+    {
+      "module": "parsezen.epub_builder",
+      "path": "src/parsezen/epub_builder.py",
+      "lines": 2701,
+      "functions": 103,
+      "classes": 9,
+      "branches": 283,
+      "broad_excepts": 0,
+      "internal_imports": 5,
+      "incoming_imports": 10
+    },
+    {
+      "module": "parsezen.application.artifact_repository",
+      "path": "src/parsezen/application/artifact_repository.py",
+      "lines": 38,
+      "functions": 5,
+      "classes": 2,
+      "branches": 0,
+      "broad_excepts": 0,
+      "internal_imports": 0,
+      "incoming_imports": 9
+    },
+    {
+      "module": "parsezen.domain.source_identity",
+      "path": "src/parsezen/domain/source_identity.py",
+      "lines": 53,
+      "functions": 4,
+      "classes": 1,
+      "branches": 3,
+      "broad_excepts": 0,
+      "internal_imports": 0,
+      "incoming_imports": 9
+    },
+    {
+      "module": "parsezen.domain.attempt_activity",
+      "path": "src/parsezen/domain/attempt_activity.py",
+      "lines": 268,
+      "functions": 20,
+      "classes": 6,
+      "branches": 17,
+      "broad_excepts": 0,
+      "internal_imports": 0,
+      "incoming_imports": 8
+    },
+    {
+      "module": "parsezen.domain.execution_plan",
+      "path": "src/parsezen/domain/execution_plan.py",
+      "lines": 144,
+      "functions": 8,
+      "classes": 2,
+      "branches": 7,
+      "broad_excepts": 0,
+      "internal_imports": 1,
+      "incoming_imports": 8
+    },
+    {
+      "module": "parsezen.final_integrity",
+      "path": "src/parsezen/final_integrity.py",
+      "lines": 468,
+      "functions": 20,
+      "classes": 5,
+      "branches": 24,
+      "broad_excepts": 1,
+      "internal_imports": 3,
+      "incoming_imports": 8
+    }
+  ],
+  "top_symbols_by_lines": [
+    {
+      "module": "parsezen.presentation.main_window",
+      "name": "ParsezenMainWindow",
+      "kind": "ClassDef",
+      "lines": 2750
+    },
+    {
+      "module": "parsezen.presentation.book_editor_dialog",
+      "name": "BookEditorDialog",
+      "kind": "ClassDef",
+      "lines": 1404
+    },
+    {
+      "module": "parsezen.presentation.workspace",
+      "name": "ParsezenWorkspace",
+      "kind": "ClassDef",
+      "lines": 968
+    },
+    {
+      "module": "parsezen.presentation.design_system",
+      "name": "apply_parsezen_theme",
+      "kind": "FunctionDef",
+      "lines": 808
+    },
+    {
+      "module": "parsezen.presentation.phase_review_dialog",
+      "name": "PhaseReviewDialog",
+      "kind": "ClassDef",
+      "lines": 727
+    },
+    {
+      "module": "parsezen.pdf_conversion",
+      "name": "_render_document",
+      "kind": "FunctionDef",
+      "lines": 574
+    },
+    {
+      "module": "parsezen.presentation.job_configuration_dialog",
+      "name": "JobConfigurationDialog",
+      "kind": "ClassDef",
+      "lines": 562
+    },
+    {
+      "module": "parsezen.improvement",
+      "name": "_improve_part",
+      "kind": "FunctionDef",
+      "lines": 550
+    },
+    {
+      "module": "parsezen.infrastructure.state_store",
+      "name": "StateStore",
+      "kind": "ClassDef",
+      "lines": 548
+    },
+    {
+      "module": "parsezen.improvement",
+      "name": "improve_markdown",
+      "kind": "FunctionDef",
+      "lines": 536
+    },
+    {
+      "module": "parsezen.presentation.activity_view",
+      "name": "ActivityView",
+      "kind": "ClassDef",
+      "lines": 521
+    },
+    {
+      "module": "parsezen.presentation.job_table",
+      "name": "JobCellDelegate",
+      "kind": "ClassDef",
+      "lines": 502
+    },
+    {
+      "module": "parsezen.translation_quality",
+      "name": "repair_untranslated_source_text",
+      "kind": "FunctionDef",
+      "lines": 436
+    },
+    {
+      "module": "parsezen.presentation.book_editor_dialog",
+      "name": "__init__",
+      "kind": "FunctionDef",
+      "lines": 419
+    },
+    {
+      "module": "parsezen.pipeline.transform",
+      "name": "transform_prepared_document",
+      "kind": "FunctionDef",
+      "lines": 385
+    },
+    {
+      "module": "parsezen.presentation.local_ai_workflow",
+      "name": "LocalAIWorkflow",
+      "kind": "ClassDef",
+      "lines": 379
+    },
+    {
+      "module": "parsezen.presentation.job_table",
+      "name": "JobTableView",
+      "kind": "ClassDef",
+      "lines": 378
+    },
+    {
+      "module": "parsezen.application.job_execution",
+      "name": "JobExecutionController",
+      "kind": "ClassDef",
+      "lines": 349
+    },
+    {
+      "module": "parsezen.improvement",
+      "name": "review_translation_markdown",
+      "kind": "FunctionDef",
+      "lines": 333
+    },
+    {
+      "module": "parsezen.presentation.job_table",
+      "name": "JobTableModel",
+      "kind": "ClassDef",
+      "lines": 296
+    }
+  ],
+  "docs_by_lines": [
+    {
+      "path": "docs/architecture.md",
+      "lines": 2041
+    },
+    {
+      "path": "docs/work-plan-history.md",
+      "lines": 887
+    },
+    {
+      "path": "docs/acceptance-checklist.md",
+      "lines": 720
+    },
+    {
+      "path": "docs/user-guide.md",
+      "lines": 650
+    },
+    {
+      "path": "docs/ui-design-system.md",
+      "lines": 404
+    },
+    {
+      "path": "docs/work-plan.md",
+      "lines": 375
+    },
+    {
+      "path": "docs/local-ai-model-policy.md",
+      "lines": 372
+    },
+    {
+      "path": "docs/agent-operating-model.md",
+      "lines": 274
+    },
+    {
+      "path": "docs/evaluation.md",
+      "lines": 212
+    },
+    {
+      "path": "docs/local-ai-setup.md",
+      "lines": 179
+    },
+    {
+      "path": "docs/dependency-security.md",
+      "lines": 89
+    },
+    {
+      "path": "docs/releasing.md",
+      "lines": 64
+    },
+    {
+      "path": "docs/development.md",
+      "lines": 48
+    }
+  ]
+}

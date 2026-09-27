@@ -5,7 +5,7 @@ la frontera activa y qué condición permite avanzar. No sustituye la arquitectu
 aceptación. Se actualiza cuando cambia un estado, un gate o el orden de trabajo; no después de cada
 edición menor.
 
-Última actualización: **2 de septiembre de 2026**. Baseline histórica de esta iniciativa: `main` en
+Última actualización: **27 de septiembre de 2026**. Baseline histórica de esta iniciativa: `main` en
 `865ef2a`. El estado ejecutable se obtiene siempre del checkout y su diff actual, no de esta línea.
 
 ## Norte
@@ -30,7 +30,11 @@ Los estados se usan con el significado de `agent-operating-model.md`:
 
 ## Estado del sistema
 
-| Área | Estado | Evidencia actual | Límite conocido |
+Las etiquetas de corpus de esta tabla son veredictos históricos anteriores a V1. Su evidencia
+requiere revalidación; no constituyen aprobación actual. La implementación se conserva y los
+contratos automáticos se comprueban por separado.
+
+| Área | Estado registrado antes de V1 | Evidencia histórica | Límite conocido |
 |---|---|---|---|
 | contratos, cola, recuperación y publicación | IMPLEMENTADO | suite automatizada, fallos inyectados e integridad final | cualquier cambio transversal exige suite completa |
 | extracción PDF/OCR y formato | VERIFICADO EN CORPUS | corpus privado diverso, canarios y reanudación determinista | un PDF nuevo puede introducir otra geometría; no existe «verde universal» |
@@ -59,237 +63,305 @@ Los estados se usan con el significado de `agent-operating-model.md`:
 7. **No insistir con parches por consenso en los modelos instalados.** Ni Qwen 4B ni LFM produjeron
    un segundo flujo estructurado capaz de coincidir con Qwen 3.5; se obtuvieron 0/13 candidatos.
 
-## Traducción: evidencia cerrada y mantenimiento seguro
+El detalle de T1–T4, V1–V1.9, M1–M6 y S1/E1 se conserva en
+[el historial de decisiones y evaluaciones](work-plan-history.md). No debe importarse como
+aprobación del candidato actual. Las decisiones anteriores siguen vigentes.
 
-Objetivo del incremento: entender por qué el piloto residual consume revisión y producir una mejora
-general que reduzca dudas o aumente propuestas correctas sin tocar bloques limpios.
+## Ahora: estabilización para publicación y evaluación humana pendiente
 
-### Pasos T1 y T2 — CERRADOS: evidencia y cuello de botella
+### Motor integrado sin Ollama — IMPLEMENTADO; validación lingüística pendiente
 
-El 31 de agosto de 2026 se validaron los hashes, las decisiones y la cadena de revisiones de los 12
-casos que llegaron a tener propuesta. El informe privado, reproducible y sin texto documental ni
-notas humanas conserva 19 eventos: las 19 propuestas superaron las guardas mecánicas, pero solo una
-fue aprobada. La aceptación fue 1/12 en la primera ronda y 0/7 en rondas posteriores; el estado final
-es una aprobación, seis correcciones aún rechazadas y cinco casos sin decisión concluyente.
+Necesidad confirmada por Jaime: convertir un PDF largo a EPUB traducido al español para leerlo en
+Kindle, con traducción y formato cómodos; no quiere depender de Ollama. Los nuevos trabajos de la
+app usan el mismo Hy-MT2 GGUF con el motor integrado Vulkan `llama-cpp-python`. El GGUF se guarda en
+la carpeta de modelos de Parsezen y se valida por tamaño y SHA-256. El revisor LFM tiene el mismo
+recorrido directo opcional; Argos permanece disponible. Las identidades directas son distintas de
+las de Ollama y quedan fijadas en cada trabajo. El catálogo puede incorporar en el futuro otro LLM
+con un perfil y una selección activa después de probar su calidad; no se habilita un proveedor
+remoto ni un selector técnico en la interfaz. Los trabajos antiguos de Ollama siguen siendo legibles.
 
-La conclusión demostrada es que **la generación de propuestas es el cuello de botella observado**.
-Las guardas protegen estructura, cifras, idioma y residuos, pero no demuestran calidad semántica. Las
-decisiones actuales no proporcionan verdad humana directa suficiente para separar, caso por caso,
-fallo de detector y fallo de selección de contexto; esos estados permanecen **NO DEMOSTRADOS** en vez
-de forzar una etiqueta. Dos modelos locales clasificaron las 13 notas en una taxonomía cerrada, pero
-solo coincidieron de forma completa en una: esas categorías son orientativas y no se usarán como
-gate ni como explicación causal.
+La prueba con un PDF sintético produjo EPUB íntegro con red HTTP bloqueada, y la pantalla de IA
+local mostró la traducción preparada sin Ollama. La prueba de revisión directa usó una sola frase
+sintética. La comprobación auxiliar sin argumentos se orienta ahora a la traducción directa y pasó
+con un intervalo sintético de dos páginas. Estas comprobaciones acreditan ejecución e integridad básica, no una traducción buena de
+un libro largo. Faltan evaluación humana de lenguaje y formato, lectura en Kindle, recuperación de
+un trabajo largo, uso interactivo del paquete y comprobación del instalador final. El arbitraje visual opcional
+para PDF ambiguo no está integrado en el motor directo: los casos dudosos permanecen para revisión.
+Evidencias y límites: `audits/2026-09-26-direct-runtime-01/RESULTADO-SIN-OLLAMA.md`.
 
-### Paso T3 — RECHAZADO: descarte barato de parches por consenso
+### Paquete local con motor integrado — IMPLEMENTADO; uso final pendiente
 
-Se probará una sola hipótesis nueva: sustituir la reescritura completa del bloque por parches mínimos
-`old → new` propuestos de forma independiente por dos modelos locales. Un candidato solo sobrevive al
-piloto si ambos producen exactamente el mismo parche, `old` aparece una sola vez, el cambio queda
-acotado a la instrucción humana y vuelven a pasar todas las guardas. El desacuerdo se convierte en
-«sin propuesta», nunca en una elección automática.
+El 27 de septiembre se corrigió el script local de construcción: comprueba Python 3.12 y el motor
+Vulkan fijado antes de crear salidas, construye un candidato separado y solo lo promueve después de
+`--package-smoke`. Conserva el paquete anterior en una carpeta identificada y no instala Inno Setup.
+La caché de PyInstaller de futuras ejecuciones queda aislada en la carpeta temporal del candidato.
+El paquete local nuevo superó el smoke en Windows 11; contiene las DLL de `llama_cpp` y el anterior
+permanece recuperable. La prueba focal del control previo, el análisis del script y el ensayo de
+limpieza de temporales sintéticos también pasaron. Evidencia sin contenido documental:
+`audits/2026-09-27-local-improvements-01/package-evidence.json`.
 
-El descarte se ejecuta solo sobre evidencia ya revisada y controles limpios; no cambia el producto ni
-solicita nueva atención humana. Se medirá:
+Esto no acredita todavía una traducción completa desde el ejecutable, una instalación limpia, la
+lectura en Kindle ni la calidad editorial. El workflow remoto sigue con su configuración previa y no
+se ejecutó; el alcance de esta intervención es el paquete local.
 
-- consenso exacto y tasa de abstención;
-- extensión y número de parches;
-- conservación de estructura, cifras, enlaces y valores protegidos;
-- modificación nula de controles limpios;
-- casos donde la nota no puede expresarse como parche inequívoco.
+### Reanudación de traducción directa — IMPLEMENTADO; interrupción brusca pendiente
 
-El descarte terminó con 0/13 parches por consenso y cero modificaciones del único control limpio.
-Qwen 3.5 produjo nueve respuestas estructuradas de catorce, pero Qwen 4B solo una y LFM ninguna; no
-existió una pareja capaz de sostener el contrato dual. El resultado no demuestra que los parches sean
-intrínsecamente imposibles, pero sí rechaza implementarlos con los modelos instalados. No se relaja el
-consenso, no se prueba otra plantilla y no se abre T4.
+Un ensayo aislado con PDF sintético de 20 páginas canceló la traducción en el fragmento 5 de 40:
+quedaron 24 archivos intermedios y ningún EPUB prematuro. La reapertura del mismo trabajo reutilizó
+4 fragmentos, publicó un EPUB válido con navegación y las 18 cifras de control, y conservó intacto el
+PDF. HTTP estuvo bloqueado durante ambas fases. La primera ejecución del guion falló antes de
+procesar porque no había creado su carpeta de salida; se registró y corrigió en una carpeta nueva.
+`audits/2026-09-27-local-improvements-01/resume-attempts.json` conserva ambos intentos. El tiempo
+medido durante la reanudación incluye suspensión de Windows y no sirve para comparar rendimiento.
+Este ensayo demuestra cancelación cooperativa y reanudación de ese caso sintético; falta interrumpir
+un proceso de forma brusca y comprobar un libro representativo.
 
-### Paso T4 — NO ABIERTO: gate antes de volver a pedir revisión
+### S6 — IMPLEMENTADO; entrada coherente de documentos Markdown
 
-Solo se crea una nueva tanda humana si:
+Intención: evitar que la primera acción de una persona falle al añadir un archivo anunciado como
+compatible y conservar los documentos válidos de un arrastre mixto. El 23 de septiembre se reprodujo
+`ValueError: Unsupported document format: .markdown` en `DocumentFormat.from_path`, mientras el
+selector y el conversor ya admitían esa extensión.
 
-- todas las guardas duras pasan;
-- ningún control limpio cambia de forma material;
-- las propuestas son distintas por una causa técnica nueva, no por otra redacción del prompt;
-- la evaluación ciega interna muestra una posibilidad razonable de alcanzar los gates de la política;
-- la tanda es pequeña, diversa, deduplicada y cómoda desde móvil.
+Cambio: `.md` y `.markdown` comparten el formato de origen Markdown. La entrada por arrastre y
+selector omite carpetas y formatos incompatibles, incorpora los archivos válidos y explica en la cola
+cuántos elementos se omitieron. El aviso se retira al añadir archivos válidos. No se modificaron
+transformación, IA, OCR, persistencia ni publicación.
 
-No hubo ninguna propuesta por consenso exacto. El experimento queda cerrado sin trasladar su coste al
-usuario.
+Verificación: prueba focal del caso, matriz de diseño y límites de arquitectura (78 pruebas),
+suite general final tras los últimos ajustes (2.449 superadas, 3 omitidas), Ruff, formato, mypy en
+137 módulos, `pip check`, auditoría de dependencias con las excepciones documentadas, versión
+sincronizada y render local del aviso en 1100 × 720 y 320 × 520.
+Las omisiones son EPUBCheck externo (2) y Ollama real optativo (1).
 
-La aprobación de producción sigue exigiendo la muestra completa definida en
-`local-ai-model-policy.md`: precisión mínima del 98 %, cero falsos positivos críticos, modificación de
-bloques limpios como máximo del 1 % y recall mínimo del 80 % sobre errores sembrados.
+Límites y decisión: la captura Qt acredita composición, no aceptación humana. Conservar el cambio
+local; reabrirlo si un archivo anunciado como compatible no entra, un arrastre mixto pierde un
+documento válido o el aviso tapa acciones. V1.10 y la evaluación humana continúan pendientes.
 
-### Salida de traducción — MANTENIMIENTO SEGURO
+### S5 — IMPLEMENTADO; correcciones de la revisión UX/UI del 22 de septiembre
 
-La fase pasa de frontera activa a mantenimiento bajo este contrato:
+Intención: aplicar V01–V11 del informe visual autorizado, conservando marca, procesamiento local,
+contenido y trabajos previos. Se contrastó el checkout antes de editar y se conservaron copias de
+los archivos de presentación para separar esta intervención de los cambios locales anteriores.
 
-- Hy-MT2 conserva sus puertas duras y referencias humanas;
-- las señales residuales se clasifican con precisión suficiente o quedan presentadas como revisión
-  explícita, sin sobreafirmar cobertura;
-- cualquier corrector automático cumple los gates o permanece desactivado;
-- un holdout nuevo confirma que las reglas son generales;
-- el coste de llamadas y revisión no crece de forma desproporcionada.
+Cambios: tema de la confirmación EPUB; formularios y actividad desplazables con acciones estables;
+Generar EPUB, destino e idiomas legibles; confirmación de guardado ligada a persistencia; navegación
+contextual; selección explícita y decisiones confirmadas; títulos largos y cola compacta; editor con
+capítulos compactos, índice real y OCR ampliable; nueva versión con identidad independiente y rollback;
+intervalo PDF comprobado en segundo plano; bienvenida y resumen comprensibles. La prueba adicional
+a 320 × 520 reprodujo tarjetas comprimidas en Configuración e IA local: también se corrigieron con
+desplazamiento vertical condicionado a la altura.
 
-Hy-MT2 continúa como traductor base; las puertas duras y las referencias humanas se conservan. Las
-señales semánticas no demostrables se presentan como revisión explícita y ningún corrector automático
-queda activado. Los tres holdouts del piloto confirman que perseguir otra ronda de generación tendría
-peor retorno que validar el recorrido integral. Traducción se reabre solo con un mecanismo o modelo
-nuevo, no con otra variante de prompt.
+Evidencia: contratos de contraste tras cambiar el tema con la página abierta, lectura hasta el final
+de detalles largos, botones separados, etiquetas completas o elipsis deliberada, guardado fallido,
+selección sin confirmar, conservación de variantes de idioma, índice equivalente al publicado y
+nueva versión que preserva el archivo anterior. La matriz de renders Qt cubre ambos temas, cinco
+tamaños desde 320 × 520 hasta 1280 × 760 y escalas 100 %/150 %. El lector real de intervalos comprobó
+53 páginas y conservó 4–9; el bucle de interfaz siguió atendiendo eventos durante la consulta.
 
-## Ahora: validar el sistema completo
+Validación del candidato final: **2.447 pruebas superadas, 3 omitidas, 143,12 s** en
+`pytest-candidato-final.txt`, incluidas 28 regresiones nuevas. Otras **85 pruebas** de interfaz y
+edición se repitieron al 150 % y pasaron en 28,99 s. Las omisiones son EPUBCheck externo (2) y Ollama
+real optativo (1). Ruff, formato, mypy sobre 137 módulos y diff correctos. La pasada instrumentada
+anterior al último pulido del encabezado del índice registró 88,95 % de cobertura y 2.447 pruebas
+superadas; el candidato final se volvió a ejecutar completo sin instrumentación.
+La evidencia está en `Documents/Codex/2026-09-22/correcciones-ux-ui-parsezen`; el informe local
+vincula cada corrección con sus comprobaciones y límites.
 
-### S1 — CERRADO: regresión estructural sobre holdouts no usados
+Límites: renders y pruebas Qt no equivalen a aceptación humana ni a VERIFICADO EN CORPUS. El control
+nativo de Windows devolvió `foreground window did not report a process id` dos veces; no se cuenta
+como recorrido real repetido. No se repite aquí traducción/Ollama ni se construye el instalador.
+El resaltado visual se limita a corrección/estructura de hasta 4.000 caracteres por versión;
+los fragmentos largos mantienen su texto completo. La vista previa de extremos del PDF era opcional
+en V10 y queda fuera de esta corrección. Sigue pendiente la prueba con una persona nueva y V1.10.
 
-El 31 de agosto de 2026 se ejecutaron dos libros con índices y jerarquías distintas que no se usaron
-para diseñar estas correcciones: Tafti 2 (221 páginas) y Ancient Astrology, volumen II (704 páginas).
-La comparación descubrió dos incoherencias generales y no específicas de un título:
+Decisión: conservar las once correcciones, sin publicar paquete ni enviar cambios a GitHub. Reabrir
+ante recorte o superposición reproducible, aviso de guardado incorrecto, discrepancia del índice,
+pérdida del resultado previo o bloqueo de interfaz al contar páginas.
 
-- el editor eliminaba antes de tiempo la evidencia privada de página/outline y podía volver a partir
-  de forma distinta un documento ya planificado;
-- el EPUB directo conservaba los archivos correctos, pero aplanaba en su navegación la relación
-  superior `Parte → Capítulo` que el editor sí conocía.
+### S4 — IMPLEMENTADO; recorrido real de una muestra el 22 de septiembre
 
-Ambas rutas conservan ahora la evidencia únicamente hasta terminar la planificación y construyen la
-misma jerarquía mediante niveles de índice demostrados o roles explícitos conservadores. La repetición
-final produjo 57 capítulos en ambas rutas, 289 destinos con la misma profundidad, cero capítulos por
-debajo de 1 000 bytes, cero saltos de encabezado, cero incidencias PDF bloqueantes y dos EPUB con
-integridad verificada. Las secuencias de planificación fueron idénticas y no hubo capítulos añadidos,
-eliminados o divididos al pasar por el editor. Los marcadores privados no aparecen en el XHTML.
+Intención: ejecutar la aplicación como usuario con un PDF de Descargas, traducir y revisar con
+IA local, confirmar y abrir el EPUB. Se utilizaron las páginas 4–9 de un PDF de 53 páginas elegido
+para esta petición, mediante el selector de intervalo de la app. Los perfiles de prueba están
+aislados de la cola personal; el original conserva su SHA-256. Esto no revalida el corpus histórico.
 
-El informe privado agregado queda en
-`local-benchmarks/epub-structure-corpus-v1/structure-holdout-20260831-final-sanitized.json`. El gate
-estructural queda cerrado para esta muestra, no como afirmación de perfección universal.
+Fallos reproducidos y correcciones:
 
-### E1 — ACTIVO: recorrido integral sobre los seis libros clave
+- Ollama cerrado se confundía con hardware insuficiente y no ofrecía una salida clara. La vista
+  separa disponibilidad, verificación y recursos, permite iniciar la IA y muestra progreso.
+- Elegir idioma no llevaba a preparar la IA. Tras prepararla, el editor mantenía una identidad
+  antigua; cerrar podía perder las opciones. Ahora refresca la identidad y conserva un borrador
+  durable no procesable hasta que la verificación permite continuar.
+- Una respuesta cortada de revisión detenía todo el trabajo. Se conserva el fragmento anterior,
+  se registra un aviso durable y no se cachea un éxito falso; cancelación y desconexión no se ocultan.
+- El presupuesto de LFM cortaba su razonamiento antes de una salida corta. En la comparación local
+  de cinco candidatos, 1.238 tokens agotaron el límite; 4.096 permitieron finalizar en 3.935 con cinco
+  directivas válidas. La reserva es exclusiva de revisión y está limitada por el contexto; el
+  traductor y los prompts no cambian.
+- La cola mostraba 100 % al empezar el último fragmento. Mantiene actividad indeterminada hasta
+  terminar realmente la fase.
+- Una imagen alta provocaba una página vacía en Calibre. El máximo del 85 % de altura visible
+  conserva su proporción y evita ese salto, comprobado con un único avance desde el primer capítulo.
 
-El descarte representativo del 1 de septiembre ejecutó 97 páginas de los seis libros, con traducción
-EN→ES en cuatro casos. Los seis EPUB superaron integridad de contenedor, conservación de recursos,
-ausencia de marcadores privados y jerarquía sin saltos; tampoco hubo incidencias PDF bloqueantes ni
-fallos de OCR obligatorio. Esta es evidencia técnica del recorrido acotado, no aprobación editorial
-de libros completos.
+Evidencia real: el primer intento falló a los 199,94 s en revisión. El reintento recuperable acabó
+en 45,23 s conservando dos respuestas incompletas y mostrando su aviso. Tras corregir la reserva,
+una cola nueva repitió las mismas opciones y llegó a publicación en 76,05 s: revisión de contenido
+de 1.792 tokens y estructura de 3.935, ambas completas y sin fragmentos de revisión preservados.
+Los tiempos posteriores reutilizan extracción/OCR y traducción; no son una comparación de velocidad.
+Se confirmaron los avisos, se navegó el editor, se guardó/reabrió el borrador y se publicó desde la UI.
+El EPUB se abrió desde «Abrir resultado» en Calibre. La copia de comprobación de la hoja de estilo
+solo cambia CSS; texto, índice y recursos son idénticos al EPUB publicado desde la UI.
 
-Los 46 bloques traducidos produjeron nueve señales `SOURCE_TEXT`. La revisión humana privada quedó
-completa y ligada por hashes al lote exacto: cinco propuestas se aceptaron y cuatro requieren una
-corrección editorial. Las seis señales de *36 Faces* compartían prácticamente la misma forma
-mecánica —residuo dentro de énfasis—, pero cuatro fueron aceptables y dos no. Por tanto, cursiva,
-longitud o coincidencia léxica no ofrecen una regla general con precisión suficiente. El sistema sí
-acotó los cuatro bloques problemáticos, pero el candidato previo a revisión no supera todavía el gate
-editorial y no se convertirá ninguna respuesta humana en una sustitución específica por libro.
+Verificación final, incluido el ajuste CSS: **2.419 pruebas superadas, 3 omitidas, 89,10 % de
+cobertura, 233,51 s**;
+las omisiones son EPUBCheck externo (2) y la integración Ollama optativa, complementada aquí por
+el recorrido real. El ajuste de imagen supera 91 pruebas vecinas y la comparación visual en Calibre.
+La ejecución completa está registrada en `pytest-final-css.txt`, junto al informe local.
+Ruff, formato, mypy, dependencias y diff comprobados. La evidencia y los perfiles están fuera del
+checkout en `Documents/Codex/2026-09-22/recorrido-real-parsezen`.
 
-El informe reproducible sin texto queda en
-`local-benchmarks/end-to-end-pilots/e1-representative-20260901-sanitized.json`. Las decisiones y los
-fragmentos permanecen en el corpus privado; los casos aceptados son controles y las correcciones son
-evidencia diagnóstica, no lógica ejecutable.
+Límites: prueba de una muestra, no VERIFICADO EN CORPUS ni garantía del 100 %. La revisión bilingüe
+se abstuvo por falta de alineación y la UI mostró 0 de 6 bloques revisados semánticamente; la
+revisión monolingüe fue focal. La traducción contiene redacciones mejorables y la jerarquía es
+conservadora: dos capítulos principales y encabezados interiores, sin promoción automática de
+todos los días al mismo nivel. Las imágenes conservan su orientación original. V1.10 y el instalador
+siguen pendientes. Reabrir ante errores de recuperación, revisión descartada sin aviso, truncación
+recurrente, navegación insuficiente en una nueva muestra o páginas vacías en otros lectores.
 
-El primer centinela completo, *36 Faces*, procesó 317 páginas, 297 bloques traducidos, 46 imágenes y
-42 capítulos con integridad final, cero incidencias PDF bloqueantes y cero fallos de OCR obligatorio.
-La línea base produjo 55 avisos de texto fuente y uno de fidelidad. Dos correcciones humanas del lote
-representativo compartían un patrón general inequívoco —una serie `planeta in signo + romano` copiada
-en inglés— que no aparecía sin traducir en ninguno de los cinco controles aprobados. La normalización
-local de ese patrón, incluidos los casos donde el romano había quedado fuera del énfasis, cambió solo
-esos dos casos, mantuvo sus guardas y redujo en el libro completo los residuos de 55 a 42 sin alterar
-capítulos ni integridad. El mecanismo queda **IMPLEMENTADO** y verificado en esta muestra privada; no
-es una tabla de sustituciones por título ni una corrección general de naturalidad.
+Decisión: conservar las correcciones y el caso como evidencia de uso; no cambiar modelos ni reglas
+editoriales generales a partir de este único libro. No se ha publicado una versión ni subido a GitHub.
 
-El centinela aún conservaba 43 avisos y exigía revisión amplia. Además, el límite de veinte extractos
-dejaba inicialmente oculta la única incidencia de fidelidad tras avisos de menor prioridad. El informe
-mantiene ahora el mismo límite privado, pero prioriza idioma, alineación y fidelidad antes de residuos
-o longitud; el total y los segmentos alineados siguen siendo exhaustivos.
+### S3 — IMPLEMENTADO y comprobado automáticamente el 22 de septiembre
 
-La muestra privada posterior de diez casos quedó **COMPLETA** y ligada a su paquete exacto: cinco
-aprobados y cinco con corrección. Las notas separaron un título completamente sin traducir, dos
-rótulos/elecciones terminológicas, un romano mal extraído y una falsa alarma sobre un índice ya
-español. No se convirtieron en respuestas por libro. Se implementaron cinco mecanismos generales:
-consenso I/II/III para glifos astrológicos dañados; localización de rótulos de colocación; memoria
-`exaltation`→`exaltación` activable también por decanos/zodiaco; análisis de índices XHTML por celda; y
-respaldo Argos, ya instalado y sin descarga, exclusivamente para un título que el reintento de IA deja
-intacto.
+Intención: aplicar los cinco fallos reproducidos de la segunda auditoría y comprobar la hipótesis
+OCR autorizada por la persona. No se añaden capacidades ni se publica un paquete.
 
-La cadena de decisiones, fuentes y propuestas pasó sus hashes 10/10. En la muestra, los nuevos patrones
-de rótulo coincidieron con tres correcciones y cero aprobaciones; la falsa alarma del índice pasó a cero
-incidencias y una prueba real Hy-MT→Argos resolvió el título residual con cero avisos. La extracción
-nativa completa de *36 Faces* encontró 74 reparaciones sobre 42 páginas, todas confinadas al patrón
-astrológico demostrado; se inspeccionaron visualmente los dos fallos que originaron la regla, no las 74
-líneas.
+- El editor conserva el XHTML original sin editar; zoom y metadatos no lo reescriben. Los elementos
+  no representables se mantienen en capítulos de solo lectura, con aviso y guarda de escritura.
+- Guardar, publicar y pasar de confirmación a editor requieren persistencia durable antes de
+  cerrar la página. Un fallo conserva las ediciones disponibles; cerrar la aplicación respeta el
+  editor activo. Renombrar una sección guarda previamente su texto pendiente.
+- La finalización persiste estado completado y ruta antes de limpiar material recuperable. Si falla,
+  restaura el estado anterior. El cierre comprueba escrituras pendientes aun con trabajos terminados.
+- Comparación con extremos iguales recortados y alineación acotada, tanto de párrafos como de
+  palabras. Los casos ambiguos conservan las guardas; una sustitución entre párrafos repetidos ya no
+  se convierte en dos operaciones imposibles de aceptar.
+- OCR forzado usa primero imagen y reserva PDF para resultados vacíos o fallidos. La ruta normal
+  mantiene su orden. Los checkpoints v5 reintentan vacíos anteriores y conservan positivos v4.
 
-El 2 de septiembre se repitió el centinela completo con esos mecanismos. Las 317 páginas volvieron a
-producir 297 bloques traducidos, 46 imágenes y 42 capítulos; el EPUB terminó con integridad, cero
-incidencias PDF bloqueantes y cero fallos de OCR obligatorio. Los cinco identificadores que la persona
-había marcado para corrección dejaron de aparecer y la incidencia de fidelidad bajó de una a cero, pero
-la ausencia del identificador no demostró por sí sola que el defecto hubiese desaparecido: la reparación
-de extracción cambió el hash de `SCORPIO IE` a `SCORPIO II`, mientras el mismo encabezado seguía en
-inglés bajo dos identificadores nuevos. Los avisos totales bajaron de 43 a 41 y todos los restantes eran
-`SOURCE_TEXT`. Por tanto, el candidato quedó **VERIFICADO EN ESTE CENTINELA** como mejora segura, pero
-no como traducción editorialmente cerrada.
+Las pruebas focales cubren Qt real, SQLite ocupada, reintentos, errores de escritura, recuperación,
+EPUB final sin cambios, texto pendiente al renombrar, cancelación y respaldo OCR. La comparación de
+8.000 párrafos / 264.000 caracteres pasa de 6,566 s observados a mediana 0,039 s en cinco ejecuciones;
+50.000 párrafos / 1.650.000 caracteres: mediana 0,254 s. La propuesta aceptada coincide con el texto
+esperado. No es una garantía temporal universal.
 
-La primera auditoría residual aisló cinco bloques con rótulos astrológicos donde el modelo había
-traducido el signo pero no el planeta ni `in`. La normalización admite ahora esas mezclas parciales.
-Coincidió con los cinco bloques y con cero controles aceptados; en el EPUB completo redujo de 26 a cero
-las colocaciones parciales visibles y los avisos bajaron de 41 a 25, sin cambiar 317 páginas, 297
-bloques, 42 capítulos, 46 imágenes, integridad, OCR obligatorio ni incidencias PDF bloqueantes. El
-mecanismo queda **VERIFICADO EN ESTE CENTINELA**.
+Control OCR sintético con modelos locales: una pasada PDF más imagen, 49,232 s y 5,211 GiB RSS;
+con imagen primero, 28,840 s y 4,541 GiB. SHA-256 de salida idéntico y cifra 125 conservada. El
+trabajador aislado real también produce esa misma huella en 29,113 s. La comparación es una página,
+con procesos nuevos y muestreo de memoria; hubo comprobaciones breves concurrentes. Demuestra el
+ahorro de una llamada en esa ruta, no fidelidad general ni una mejora aprobada en corpus.
 
-La auditoría posterior de las veinte formas privadas expuestas separó trece errores probables —doce
-defectos distintos porque el encabezado aparece duplicado— y siete falsos positivos o contenidos que
-deben conservarse. El encabezado inglés y los residuos de tablas no admiten la misma regla mecánica.
-Una ampliación del respaldo de títulos no produjo ninguna mejora medible en el EPUB y se descartó; no
-se reescriben celdas ya traducidas sin evidencia semántica. El siguiente gate es una muestra humana
-mínima de diez casos que cubra el encabezado, celdas realmente residuales, terminología de tablas y dos
-controles bibliográficos/editoriales. Solo si distingue otra causa general separable se abre un
-incremento automático; en caso contrario se calibra el informe y se continúa con los otros cinco
-libros sin convertir respuestas en lógica por título.
+Verificación final de este checkout: **2.408 pruebas superadas, 3 omitidas, 89,09 % de cobertura,
+214,54 s**. Las omisiones son las dos comprobaciones EPUBCheck externas y la integración optativa
+con Ollama real. Ruff y formato (275 archivos), mypy (137 módulos), `pip check`, sincronización de
+versión, enlaces documentales, diff y smoke de arranque/cierre desde código superados. El editor
+protegido se renderizó a 640 y 960 px y se inspeccionó la vista compacta. Las 28 regresiones añadidas
+no equivalen a aceptación editorial ni a pruebas del instalador.
 
-La muestra quedó materializada como la tanda privada 2 del centinela: siete propuestas corregidas y
-tres controles sin cambio, todos ligados por hashes a su fuente y candidato. Cuatro formas inicialmente
-consideradas se excluyeron porque el recorte privado no permitía validar de manera completa estructura
-o idioma; no se pide una decisión que después no pueda aplicarse con seguridad. La primera revisión
-humana terminó con cinco aprobaciones y cinco correcciones solicitadas. Las decisiones, fuentes,
-candidatos y propuestas pasaron sus hashes 10/10. La ronda correctiva de cinco casos incorpora las
-indicaciones sobre mayúsculas editoriales, saltos visuales, puntuación y una celda incompleta. La
-segunda revisión terminó con 5/5 aprobaciones y su linaje y hashes volvieron a coincidir. El lote queda
-**COMPLETO** con diez referencias aprobadas: siete cumplen las puertas de publicación automáticas y
-tres permanecen solo como diagnóstico —dos eliminan saltos visuales de tabla que la guarda estructural
-anterior trataba como semánticos y una es una bibliografía breve cuyo idioma no puede decidirse de
-forma fiable—. Ninguna respuesta se convirtió en una sustitución por libro.
+Decisión: conservar los cambios locales y sus regresiones. La revisión humana V1.10 y las
+comprobaciones del instalador exacto siguen pendientes. Reabrir ante contenido perdido
+al editar, guardado fallido sin recuperación, estado final no durable, comparación lenta o diferencia
+OCR no explicada. Evidencia de esta ejecución: informe de correcciones y registros fuera del checkout,
+en `Documents/Codex/2026-09-22/auditoria-parsezen-segunda`.
 
-Las dos observaciones de tabla sí revelaron una causa general de extracción. Una celda PDF une ahora
-solo continuaciones visuales inequívocas —inicio en minúscula, puntuación abierta o palabra funcional
-de continuación— y conserva frases cerradas, listas y rótulos separados. En el intervalo real de 24
-páginas que originó la hipótesis, las tres continuaciones objetivo quedaron unidas y permanecieron 50
-saltos internos estructurales. `decan` se añadió además a la memoria astrológica acotada: en una
-regeneración completa, los residuos exactos `DECAN` bajaron de 94 a uno y `DECANO` aumentó de 526 a
-835. Ambos mecanismos quedan **IMPLEMENTADOS** y verificados en ese alcance, no como aprobación de la
-traducción completa.
+### S2 — IMPLEMENTADO y comprobado automáticamente el 22 de septiembre
 
-La misma regeneración completa produjo 45 avisos `SOURCE_TEXT`, frente a 25 del mejor candidato
-anterior, concentrados en celdas largas de las páginas 273–294. El EPUB conservó 317 páginas, 297
-bloques, 42 capítulos, 46 imágenes, integridad final y cero fallos de OCR obligatorio, pero la pasada
-fresca reintrodujo prosa inglesa: no se acepta como nueva base. Un fallback transaccional que dividía
-la celda por oraciones redujo una muestra de 22 bloques a cuatro avisos y otro intervalo de 29 bloques
-a tres, pero la repetición completa terminó de nuevo con 45. El mecanismo se retiró y queda
-**RECHAZADO**: una muestra acotada sirvió para proponerlo, pero el libro completo decidió en contra.
+Petición del 22 de septiembre: aplicar las correcciones de la auditoría antes de publicar.
+Se conserva el nombre Parsezen, el checkout y los cambios anteriores; no se publica ni se cambia
+el modelo base.
 
-También se rechazó ampliar Argos a rótulos o tablas. El par EN→ES instalado dejó sin traducir varios
-rótulos breves y llegó a corromper uno; una frase de prosa aislada correcta no compensa esa precisión
-insuficiente. Argos permanece como motor completo elegido por la persona y como respaldo ya instalado
-para un único título residual bajo guardas. No se repetirá esta línea sin un mecanismo nuevo.
+- Una instancia de escritorio por perfil y smoke aislado para impedir sobrescrituras de cola.
+- Contención SQLite acotada y reintentos espaciados, conservando orden y atomicidad de escrituras.
+- Solicitudes Ollama cancelables durante cabeceras o respuestas incompletas, límites antes de
+  decodificar y liberación del modelo acotada.
+- Comparación directa de textos idénticos sin alineación cuadrática.
+- Portadas verificadas antes de almacenar, lecturas acotadas y límite físico previo de EPUB.
+- Cargadores vulnerables no usados de Accelerate desactivados, con excepción versionada comprobable.
+- README resumido y evidencias anteriores separadas de este plan, conservando sus decisiones.
 
-**Criterio de parada para este centinela:** se conserva el candidato `es-13` como mejor evidencia
-editorial conocida, se conservan `es-14`/`es-15` como controles negativos privados y no se generan más
-variantes de *36 Faces*. El siguiente incremento es ejecutar otro libro completo de los cinco
-restantes y comprobar si los mecanismos generales transfieren; solo un patrón repetido en más de un
-libro reabrirá traducción tabular.
+La prueba OCR con una página sintética, modelos ya locales y red de modelos desactivada conservó
+el texto esperado y la cifra 125 en 30,237 s. Esto comprueba compatibilidad de la protección,
+no fidelidad general ni mejora de velocidad del OCR.
 
-Cuando traducción y estructura hayan cerrado sus gates independientes:
+Evidencia final de este checkout local, Python 3.12.10 y Qt 6.11.1:
 
-1. congelar versiones, opciones y hashes de entrada;
-2. ejecutar primero intervalos representativos y después los libros completos;
-3. comparar extracción, traducción, estructura y EPUB por separado;
-4. revisar únicamente las excepciones que queden;
-5. confirmar lectura real en más de un lector EPUB;
-6. registrar tiempos, memoria, reintentos y atención humana agregada;
-7. conservar los libros como holdouts finales, no como fuente de nuevas reglas específicas.
+- **2.380 pruebas superadas, 3 omitidas**, 89,02 % de cobertura, 198,04 s. Las omisiones son dos
+  comprobaciones externas EPUBCheck y una prueba optativa con Ollama real. Ollama no estaba
+  disponible durante la comprobación; la cancelación sí se verificó con conexiones loopback reales.
+- Ruff (274 archivos), mypy (137 módulos), `pip check`, versión y diff sin errores.
+- Ambos locks superan la auditoría con las dos excepciones justificadas en la política; la de
+  Accelerate comprueba versión exacta y rechazo de sus seis alias antes de exceptuar el aviso.
+- Comparación idéntica de 4.000 párrafos: mediana 0,009704 s (cinco ejecuciones, 128.000 caracteres).
+  Bloqueo SQLite: intento 0,099788 s y posterior guardado correcto tras liberar la base.
+- Reapertura sintética con 0/10/50 revisiones: 0,039/0,356/1,651 s desde construcción hasta primera
+  proyección de ventana, imports ya cargados, 144.000 caracteres por revisión, artefactos DPAPI y
+  recuperación completa. No equivale a arranque frío del ejecutable ni a libros con muchas imágenes.
+- OCR real sintético y smoke de arranque desde código superados; no se ha construido un instalador.
+
+Decisión: conservar estas correcciones locales y sus regresiones. Las pruebas no autorizan por sí
+solas a publicar ni cambian decisiones editoriales o de traducción.
+
+La revisión humana V1.10 sigue abierta. Quedan fuera de esta implementación el cambio de marca,
+la aprobación editorial del corpus y la prueba del instalador exacto en un perfil limpio.
+No llamar al candidato VERIFICADO EN CORPUS ni listo para publicar por pasar pruebas automáticas.
+
+Reabrir S2 ante una regresión reproducible de sus contratos, un nuevo cargador OCR o una versión
+upstream que permita retirar de forma conjunta la mitigación y su excepción temporal.
+
+
+### V1.10 — IMPLEMENTADO y pendiente de revisión visual humana
+
+Tras cerrar V1.9, la persona autoriza continuar. Se amplía la cobertura a contenido visual, antes
+excluido, sin volver a ajustar prosa ni solicitar las mismas revisiones. Hipótesis de evaluación:
+conservar la imagen con sus rótulos y las asociaciones de filas/columnas exige inspección humana
+adicional a las guardas de integridad.
+
+Selección fijada tras inspeccionar originales y antes de convertir: PDF 218 de *Transurfing del Ser*
+(ilustración con rótulos) y PDF 276 de *36 Faces* (tabla; folio impreso 280). Ambos documentos ya son
+conocidos; las referencias del banco anterior no se importan. Plan privado
+`tmp/evaluation-visual-01/comparison`, PDF→Markdown con imágenes activadas, sin traducción ni EPUB.
+Las dos ejecuciones por caso usan la misma versión y se agrupan solo si coinciden todos los recursos.
+No hay modificación de código ni aprobación semántica anticipada. Reabrir después de la revisión
+si falta contenido, se altera una asociación o la vista no permite evaluar el resultado.
+
+La primera conversión (tabla PDF 276) falló tras dos timeouts OCR de una página sin resultado y
+unos 368 segundos. El fallo final registrado es `PermissionError` al salir del contexto de fuente
+temporal de `ocr_executor._worker_source_path`, referencia diagnóstica `b6d3e9f3`. El timeout y el
+error de cierre son observaciones; un bloqueo de archivo por un descendiente sigue siendo hipótesis.
+Se detuvo únicamente el árbol de procesos de esta evaluación para evitar repetir el fallo en las
+ejecuciones restantes. Resultado contabilizado: un intento fallido y tres incompletos, no descartados
+del informe. No se preparó una revisión humana ni se considera evaluada la ilustración.
+
+Evidencia privada `tmp/evaluation-visual-01/interrupcion.json` e informe
+`tmp/evaluation-visual-01/informe-interrupcion.json`. Huellas de ambos originales comprobadas intactas.
+El diagnóstico reproduce que la tabla dispone de 321 letras seleccionables, calidad nativa 0,965,
+una matriz explícita de 23×2 y el mismo volumen al leerla con PDFium; no requiere una segunda lectura
+OCR completa. La selección conserva OCR para tablas raster inferidas, texto escaso, calidad baja o
+glifos sospechosos. El cierre del proceso privado termina primero el árbol descendiente en Windows y
+la limpieza del alias temporal reintenta bloqueos transitorios sin sustituir el error original.
+
+La tanda se repite sin cambiar muestra en `tmp/evaluation-visual-fix-01/comparison`: cuatro unidades
+completas, integridad verificada y originales intactos. La tabla tarda 1,844–2,875 s frente a los
+368,282 s fallidos del primer intento. La ilustración tarda 29,156–59,797 s y alcanza 5,35–5,38 GiB
+RSS en el árbol observado; ese coste queda como señal para el siguiente incremento, no como prueba de
+regresión ni como aprobación visual. Revisión privada `500492b0-1aa2-47b9-9c86-8a678c5f92aa` preparada.
+Las 336 pruebas focales, Ruff completo y la suite completa (2350 correctas, 4 omitidas por condiciones
+de entorno) pasan. Falta la valoración humana de las dos páginas antes de cerrar V1.10; las referencias
+anteriores conservan su alcance.
+Una reproducción real con deadline de un segundo conserva el error de tiempo máximo, deja cero
+directorios temporales nuevos y no mantiene procesos OCR; acredita el cierre en este Windows, no todos
+los fallos posibles del motor ni otros sistemas operativos.
 
 ### U1 — SIGUIENTE: pulido de experiencia
 

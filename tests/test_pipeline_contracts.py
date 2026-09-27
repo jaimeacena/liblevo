@@ -21,7 +21,7 @@ def test_processing_facade_reexports_the_pipeline_contracts() -> None:
     assert ProcessTelemetry is PipelineTelemetry
 
 
-def test_flat_process_contracts_expose_grouped_migration_adapters() -> None:
+def test_process_contracts_keep_the_views_used_by_batch_validation() -> None:
     request = ProcessRequest(
         Path("source.pdf"),
         True,
@@ -42,9 +42,9 @@ def test_flat_process_contracts_expose_grouped_migration_adapters() -> None:
 
     assert request.source.path == request.source_path
     assert request.source.content_sha256 == "a" * 64
-    assert request.translation.target_language == "es"
-    assert request.review.content
+    assert request.target_language == "es"
+    assert request.review_content
     assert request.publication.output_format is OutputFormat.EPUB
-    assert result.review.markdown == "local review text"
-    assert result.publication.final_path == result.final_path
-    assert result.quality.problematic_pdf_pages == (4,)
+    assert result.review_markdown == "local review text"
+    assert result.final_path == Path("output/book.epub")
+    assert result.problematic_pdf_pages == (4,)

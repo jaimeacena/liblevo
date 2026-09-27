@@ -59,6 +59,7 @@ class QueuePersistenceCoordinator:
         self._observed_jobs: tuple[DocumentJob, ...] | None = None
         self._pending_events: list[JobEvent] = []
         self._last_saved_at = 0.0
+        self._last_attempt_at = float("-inf")
         self._retry_pending = False
         self._unavailable = False
 
@@ -99,9 +100,13 @@ class QueuePersistenceCoordinator:
         now = self._clock()
         changed = jobs != self._last_jobs
         due = now - self._last_saved_at >= self._interval_seconds
-        if not (force or self._retry_pending or changed and due):
+        retry_due = now - self._last_attempt_at >= self._interval_seconds
+        if not force and self._retry_pending and not retry_due:
+            return QueuePersistenceResult(QueuePersistenceStatus.FAILED)
+        if not (force or self._retry_pending and retry_due or changed and due):
             return QueuePersistenceResult(QueuePersistenceStatus.SKIPPED)
 
+        self._last_attempt_at = now
         try:
             self._repository.replace_jobs(jobs, events=tuple(self._pending_events))
         except (OSError, RuntimeError):

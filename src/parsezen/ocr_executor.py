@@ -43,6 +43,8 @@ _AUTH_ENVIRONMENT_VARIABLE = "PARSEZEN_OCR_AUTH"
 _STARTUP_TIMEOUT_SECONDS = 30.0
 _CANCEL_GRACE_SECONDS = 3.0
 _PROCESS_EXIT_TIMEOUT_SECONDS = 3.0
+_SOURCE_CLEANUP_ATTEMPTS = 5
+_SOURCE_CLEANUP_RETRY_SECONDS = 0.1
 _POLL_SECONDS = 0.05
 _MIN_EXECUTION_TIMEOUT_SECONDS = 180.0
 _EXECUTION_TIMEOUT_SECONDS_PER_PAGE = 180.0
@@ -178,8 +180,9 @@ def _worker_source_path(source_path: Path) -> Iterator[Path]:
         yield resolved_source
         return
 
-    with tempfile.TemporaryDirectory(prefix="parsezen-ocr-parent-") as directory:
-        temporary_path = Path(directory) / "parsezen.pdf"
+    directory = Path(tempfile.mkdtemp(prefix="parsezen-ocr-parent-"))
+    temporary_path = directory / "parsezen.pdf"
+    try:
         try:
             os.link(resolved_source, temporary_path)
         except OSError:
@@ -188,6 +191,29 @@ def _worker_source_path(source_path: Path) -> Iterator[Path]:
             except OSError as exc:
                 raise ConversionError("No se pudo preparar el PDF para el OCR local.") from exc
         yield temporary_path
+    finally:
+        _cleanup_worker_source_directory(directory)
+
+
+def _cleanup_worker_source_directory(directory: Path) -> None:
+    """Retry transient Windows handle release without masking the OCR result."""
+
+    for attempt in range(_SOURCE_CLEANUP_ATTEMPTS):
+        try:
+            shutil.rmtree(directory)
+        except FileNotFoundError:
+            return
+        except PermissionError:
+            if attempt + 1 < _SOURCE_CLEANUP_ATTEMPTS:
+                time.sleep(_SOURCE_CLEANUP_RETRY_SECONDS)
+                continue
+            LOGGER.warning("ocr_worker_source_cleanup_deferred")
+            return
+        except OSError:
+            LOGGER.warning("ocr_worker_source_cleanup_failed")
+            return
+        else:
+            return
 
 
 def _validated_pages(page_numbers: set[int]) -> set[int]:

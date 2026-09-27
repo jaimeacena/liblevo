@@ -8,6 +8,7 @@ from defusedxml import ElementTree
 from parsezen.application.book_editor import (
     BookEditor,
     create_book_from_markdown,
+    preview_book_navigation,
     publish_book,
 )
 from parsezen.document_model import ConvertedResource
@@ -28,6 +29,37 @@ def make_book(store: ArtifactStore):
         store,
         job_id="job",
     )
+
+
+def test_preview_navigation_matches_published_nested_index(tmp_path):
+    store = ArtifactStore(tmp_path / "artifacts", protect=reversible, unprotect=reversible)
+    book = create_book_from_markdown(
+        "# Capítulo\n\nTexto.\n\n## Sección\n\nTexto.\n\n### Detalle\n\nMás texto.",
+        (),
+        EpubBookMetadata("Libro", "es"),
+        store,
+        job_id="job",
+    )
+    preview = preview_book_navigation(book, store, job_id="job")
+
+    def walk(nodes):
+        result = []
+        for node in nodes:
+            result.append(
+                (
+                    node.title,
+                    "text/" + node.filename + ("#" + node.fragment if node.fragment else ""),
+                )
+            )
+            result.extend(walk(node.children))
+        return result
+
+    with ZipFile(BytesIO(publish_book(book, store, job_id="job"))) as archive:
+        nav = ElementTree.fromstring(archive.read("EPUB/nav.xhtml"))
+    actual = [
+        (node.text, node.attrib["href"]) for node in nav.iter("{http://www.w3.org/1999/xhtml}a")
+    ]
+    assert walk(preview) == actual
 
 
 def test_book_editor_preserves_content_when_divisions_change(tmp_path: Path) -> None:
@@ -260,9 +292,14 @@ def test_book_editor_can_replace_and_remove_the_cover(tmp_path: Path) -> None:
     store = ArtifactStore(tmp_path / "artifacts", protect=reversible, unprotect=reversible)
     book = make_book(store)
 
+    from PIL import Image
+
+    image = BytesIO()
+    Image.new("RGB", (2, 2), "white").save(image, format="WEBP")
+    payload = image.getvalue()
     replaced = BookEditor(book, store, job_id="job").replace_cover(
         "selected.webp",
-        b"webp-cover",
+        payload,
     )
 
     assert replaced.cover_resource_id is not None
@@ -271,7 +308,7 @@ def test_book_editor_can_replace_and_remove_the_cover(tmp_path: Path) -> None:
     )
     assert cover.href == "images/cover.webp"
     assert cover.media_type == "image/webp"
-    assert store.read("job", cover.payload_artifact_id) == b"webp-cover"
+    assert store.read("job", cover.payload_artifact_id) == payload
     assert BookEditor(replaced, store, job_id="job").remove_cover().cover_resource_id is None
 
     with pytest.raises(ValueError, match="PNG"):

@@ -8,7 +8,7 @@ import os
 import re
 import shutil
 from collections.abc import Callable, Iterable, Iterator, Mapping
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
@@ -221,8 +221,32 @@ def _convert_pdf_pages_in_process(
                 on_page_result(page_number, markdown)
 
         first_conversion_error: Exception | None = None
-        with _ascii_pdf_path(source_path) as conversion_path:
-            for first_page, last_page in _page_ranges(page_numbers):
+        forced_pages = set(force_full_page_numbers or ()) & page_numbers
+        if forced_pages:
+            # A forced page's image result supersedes its PDF result. Try that
+            # route first; load the PDF pipeline only for empty/failed image pages.
+            try:
+                recovered = _recover_pages_from_images(
+                    converter,
+                    source_path,
+                    forced_pages,
+                    cancellation,
+                    on_page_finished=report_page,
+                )
+            except ProcessingCancelledError:
+                raise
+            except Exception as exc:
+                first_conversion_error = exc
+            else:
+                markdown_pages.update({page: text for page, text in recovered.items() if text})
+                for page, text in markdown_pages.items():
+                    report_result(page, text)
+
+        native_pages = page_numbers - markdown_pages.keys()
+        with (
+            _ascii_pdf_path(source_path) if native_pages else nullcontext(source_path)
+        ) as conversion_path:
+            for first_page, last_page in _page_ranges(native_pages):
                 check_cancelled(cancellation)
                 try:
                     result = converter.convert(
@@ -252,14 +276,13 @@ def _convert_pdf_pages_in_process(
                     cleaned = _clean_ocr_markdown(markdown)
                     if cleaned:
                         markdown_pages[page_number] = cleaned
-                    if cleaned and page_number not in (force_full_page_numbers or set()):
+                    if cleaned:
                         report_result(page_number, cleaned)
                         report_page(page_number)
                 del result
                 gc.collect()
 
-        forced_pages = set(force_full_page_numbers or ()) & page_numbers
-        recovery_pages = (page_numbers - markdown_pages.keys()) | forced_pages
+        recovery_pages = page_numbers - markdown_pages.keys() - forced_pages
         if recovery_pages:
             # Docling conversion results retain page images and model tensors. The
             # final native batch is no longer needed once its Markdown is exported;
@@ -307,6 +330,9 @@ def _convert_pdf_pages_in_process(
 @lru_cache(maxsize=1)
 def _document_converter() -> Any:
     """Build and retain one expensive local Docling pipeline per app process."""
+    from parsezen.ocr_dependency_guard import protect_accelerate_loaders
+
+    protect_accelerate_loaders()
     from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import (

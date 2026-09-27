@@ -19,7 +19,9 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QLabel,
+    QLayout,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -32,7 +34,7 @@ from parsezen.component_readiness import (
     evaluate_component_catalog,
 )
 from parsezen.local_ai_policy import ComponentCapability, ComponentVerification
-from parsezen.local_models import HardwareComponent, LocalHardware
+from parsezen.local_models import HardwareComponent, LocalHardware, OllamaStatus
 from parsezen.presentation.design_system import BREAKPOINTS, SPACING
 
 _VISIBLE_COMPONENTS: Final[tuple[ComponentCapability, ...]] = (
@@ -133,10 +135,10 @@ class ComponentReadinessCard(QFrame):
         self.detail_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(self.detail_label, 2, 0)
 
-        self.download_button = QPushButton("Descargar componente", self)
+        self.download_button = QPushButton("Preparar componente", self)
         self.download_button.setObjectName("componentDownloadButton")
         self.download_button.setAccessibleName(
-            f"Descargar componente de {_COMPONENT_TITLES[component]}"
+            f"Preparar componente de {_COMPONENT_TITLES[component]}"
         )
         self.download_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.download_button.clicked.connect(self._handle_download_click)
@@ -189,12 +191,34 @@ class ComponentReadinessCard(QFrame):
         if readiness.component is not self.component:
             raise ValueError("El estado no corresponde a esta capacidad.")
         status = readiness.status
-        self.status_label.setText(_STATUS_TITLES[status])
+        title = _STATUS_TITLES[status]
+        detail = _STATUS_DESCRIPTIONS[status]
+        if status is ReadinessStatus.INSUFFICIENT and readiness.reasons:
+            reasons = set(readiness.reasons)
+            if "ram_insufficient" in reasons:
+                detail = (
+                    "No hay suficiente memoria libre. "
+                    "Cierra otras aplicaciones y comprueba de nuevo."
+                )
+            elif "disk_insufficient" in reasons:
+                detail = "No hay suficiente espacio libre para preparar el componente."
+            elif "vram_insufficient" in reasons:
+                detail = "No hay suficiente memoria gráfica libre."
+            else:
+                title = "Pendiente de comprobar"
+                detail = "No se ha podido verificar el componente local. Comprueba la IA local."
+                if "ollama_version_too_old" in reasons:
+                    detail = "Actualiza Ollama para poder usar este componente."
+                elif "ollama_digest_mismatch" in reasons:
+                    detail = "El componente instalado no coincide con la versión verificada."
+                elif "direct_digest_mismatch" in reasons:
+                    detail = "El archivo del modelo no coincide con la versión verificada."
+                elif "runtime_unavailable" in reasons:
+                    detail = "Falta el motor local. Repara la instalación de Parsezen."
+        self.status_label.setText(title)
         self.status_label.setProperty("status", status.value)
-        self.status_label.setAccessibleName(
-            f"{_COMPONENT_TITLES[self.component]}: {_STATUS_TITLES[status]}"
-        )
-        self.detail_label.setText(_STATUS_DESCRIPTIONS[status])
+        self.status_label.setAccessibleName(f"{_COMPONENT_TITLES[self.component]}: {title}")
+        self.detail_label.setText(detail)
         downloadable = status is ReadinessStatus.DOWNLOADABLE
         self.download_button.setVisible(downloadable or self._busy)
         self.download_button.setEnabled(downloadable or self._busy)
@@ -211,7 +235,7 @@ class ComponentReadinessCard(QFrame):
         if busy:
             self.status_label.setText(message or "Preparando…")
             self.status_label.setProperty("status", "busy")
-            self.download_button.setText("Cancelar descarga")
+            self.download_button.setText("Cancelar preparación")
             self.download_button.setAccessibleName(
                 f"Cancelar descarga de {_COMPONENT_TITLES[self.component]}"
             )
@@ -255,6 +279,7 @@ class ComponentSetupDialog(QDialog):
     download_requested = Signal(object)
     cancel_requested = Signal(object)
     refresh_requested = Signal()
+    runtime_setup_requested = Signal()
 
     def __init__(
         self,
@@ -265,6 +290,7 @@ class ComponentSetupDialog(QDialog):
         hardware: LocalHardware | None = None,
         verifications: _VerificationInput | None = None,
         local_only_configured: bool = False,
+        direct_mode: bool = False,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -274,6 +300,7 @@ class ComponentSetupDialog(QDialog):
         if injected is not None and catalog is not None:
             raise ValueError("Inyecta un catálogo o estados explícitos, no ambos.")
         self.setObjectName("componentSetupDialog")
+        self._direct_mode = direct_mode
         self.setWindowTitle("Componentes de IA local — Parsezen")
         self.setWindowModality(Qt.WindowModality.WindowModal)
         self.setMinimumSize(0, 420)
@@ -312,6 +339,9 @@ class ComponentSetupDialog(QDialog):
         self._readiness = normalized
         for component, card in self.cards.items():
             card.set_readiness(normalized[component])
+        self.ready_hint.setVisible(
+            all(state.status is ReadinessStatus.PREPARED for state in normalized.values())
+        )
 
     def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802
         super().resizeEvent(event)
@@ -321,13 +351,6 @@ class ComponentSetupDialog(QDialog):
         elif self.width() > BREAKPOINTS.compact and self._compact:
             self._compact = False
             self._apply_compact_layout(False)
-        margins = self.root_layout.contentsMargins()
-        self.content_host.setFixedWidth(
-            min(
-                720,
-                max(1, event.size().width() - margins.left() - margins.right()),
-            )
-        )
 
     def _build_ui(self) -> None:
         root = QVBoxLayout(self)
@@ -342,6 +365,7 @@ class ComponentSetupDialog(QDialog):
             QSizePolicy.Policy.Fixed,
         )
         content = QVBoxLayout(self.content_host)
+        content.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         content.setContentsMargins(0, 0, 0, 0)
         content.setSpacing(SPACING.md)
 
@@ -352,13 +376,24 @@ class ComponentSetupDialog(QDialog):
         content.addWidget(title)
         help_label = QLabel(
             "Se comprueban automáticamente al abrir esta vista. "
-            "La preparación y el uso permanecen en este equipo.",
+            "Tus libros permanecen en este equipo; los modelos públicos pueden descargarse.",
             self.content_host,
         )
         help_label.setObjectName("componentSetupHelp")
         help_label.setWordWrap(True)
         help_label.setMinimumWidth(0)
         content.addWidget(help_label)
+
+        self.runtime_label = QLabel(self.content_host)
+        self.runtime_label.setWordWrap(True)
+        self.runtime_label.setMinimumWidth(0)
+        content.addWidget(self.runtime_label)
+        self.runtime_button = QPushButton(self.content_host)
+        self.runtime_button.setObjectName("componentRuntimeButton")
+        self.runtime_button.clicked.connect(self.runtime_setup_requested)
+        content.addWidget(self.runtime_button, 0, Qt.AlignmentFlag.AlignLeft)
+        self.runtime_label.hide()
+        self.runtime_button.hide()
 
         self.cards_host = QWidget(self.content_host)
         self.cards_layout = QGridLayout(self.cards_host)
@@ -382,18 +417,59 @@ class ComponentSetupDialog(QDialog):
         content.addWidget(self.cards_host)
 
         self.refresh_button = QPushButton("Comprobar de nuevo", self.content_host)
+        self.ready_hint = QLabel(
+            "La IA está preparada. Usa la flecha de arriba para volver "
+            "y continuar con tu documento.",
+            self.content_host,
+        )
+        self.ready_hint.setWordWrap(True)
+        self.ready_hint.setMinimumWidth(0)
+        content.addWidget(self.ready_hint)
         self.refresh_button.setObjectName("componentRefreshButton")
         self.refresh_button.setAccessibleName("Actualizar estados de los componentes de IA")
         self.refresh_button.setFlat(True)
         self.refresh_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.refresh_button.clicked.connect(self.refresh_requested)
         content.addWidget(self.refresh_button, 0, Qt.AlignmentFlag.AlignRight)
-        root.addWidget(
-            self.content_host,
-            0,
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter,
-        )
-        root.addStretch(1)
+        self.content_scroll = QScrollArea(self)
+        self.content_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.content_scroll.setWidgetResizable(True)
+        self.content_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.content_scroll.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        self.content_scroll.setWidget(self.content_host)
+        root.addWidget(self.content_scroll, 1)
+
+    def set_runtime_status(
+        self, status: OllamaStatus | None, *, busy: bool = False, message: str | None = None
+    ) -> None:
+        """Show the recoverable runtime prerequisite separately from model verification."""
+        if self._direct_mode:
+            detail = (
+                "El motor local no está disponible. Repara la instalación de Parsezen."
+                if status is OllamaStatus.UNAVAILABLE
+                else ""
+            )
+            self.runtime_label.setText(message or ("Comprobando la IA local…" if busy else detail))
+            self.runtime_label.setVisible(bool(message or busy or detail))
+            self.runtime_button.hide()
+            self.refresh_button.setEnabled(not busy)
+            return
+        actions = {
+            OllamaStatus.STOPPED: ("Ollama está cerrado.", "Iniciar IA local"),
+            OllamaStatus.NOT_INSTALLED: ("Falta Ollama para usar la IA local.", "Instalar Ollama"),
+            OllamaStatus.LOCAL_ONLY_REQUIRED: (
+                "Ollama necesita prepararse para trabajar solo en este equipo.",
+                "Preparar IA local",
+            ),
+            OllamaStatus.UNAVAILABLE: ("No se pudo comprobar Ollama.", "Comprobar de nuevo"),
+        }
+        detail, action = actions.get(status, ("", "")) if status is not None else ("", "")
+        self.runtime_label.setText(message or ("Comprobando la IA local…" if busy else detail))
+        self.runtime_label.setVisible(bool(message or busy or detail))
+        self.runtime_button.setText(action)
+        self.runtime_button.setVisible(bool(action))
+        self.runtime_button.setEnabled(not busy)
+        self.refresh_button.setEnabled(not busy)
 
     def set_download_busy(self, component: ComponentCapability, busy: bool) -> None:
         """Set the visible operation state for one fixed capability."""

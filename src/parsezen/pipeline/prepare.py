@@ -35,7 +35,8 @@ from parsezen.work_checkpoints import WorkCheckpoints, checkpoint_key
 from parsezen.workflow import OutputFormat
 
 _PDF_OCR_CHECKPOINT_PREFIX = "\x1eParsezen PDF OCR "
-_PDF_OCR_CHECKPOINT_HEADER = f"{_PDF_OCR_CHECKPOINT_PREFIX}v4\x1f"
+_PDF_OCR_CHECKPOINT_HEADER = f"{_PDF_OCR_CHECKPOINT_PREFIX}v5\x1f"
+_PDF_OCR_PREVIOUS_HEADER = f"{_PDF_OCR_CHECKPOINT_PREFIX}v4\x1f"
 _MAX_INFERRED_TERMINOLOGY_OCCURRENCES = 64
 _MIN_ASTROLOGY_DOMAIN_SIGNALS = 3
 _ASTROLOGY_DOMAIN_SIGNALS = (
@@ -115,9 +116,13 @@ def decode_pdf_ocr_checkpoint(payload: str | None) -> str | None:
         return None
     if payload.startswith(_PDF_OCR_CHECKPOINT_HEADER):
         return payload[len(_PDF_OCR_CHECKPOINT_HEADER) :]
+    if payload.startswith(_PDF_OCR_PREVIOUS_HEADER):
+        # Positive v4 results use the same engines. Empty forced-image results
+        # must retry: v5 can retain useful PDF text instead of overriding it with empty text.
+        return payload[len(_PDF_OCR_PREVIOUS_HEADER) :] or None
     if payload.startswith(_PDF_OCR_CHECKPOINT_PREFIX):
         return None
-    return payload
+    return payload or None
 
 
 def combined_translation_glossary(

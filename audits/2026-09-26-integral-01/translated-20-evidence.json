@@ -1,0 +1,14 @@
+{
+  "case": "SYN-TR-20",
+  "result": "PASS",
+  "elapsed_seconds": 76.238,
+  "input_pages": 20,
+  "input_sha256_unchanged": true,
+  "output_bytes": 11756,
+  "archive_corrupt_member": null,
+  "has_navigation": true,
+  "missing_reference_values": [],
+  "reported_chapters": 10,
+  "reported_translation_issues": 0,
+  "semantic_fidelity_human_reviewed": false
+}

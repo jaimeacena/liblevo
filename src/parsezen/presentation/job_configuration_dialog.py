@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QPoint, Qt, Signal, Slot
+from PySide6.QtCore import QObject, QPoint, QRunnable, Qt, QThreadPool, Signal, Slot
 from PySide6.QtGui import QKeyEvent, QMouseEvent, QResizeEvent
 from PySide6.QtWidgets import (
     QBoxLayout,
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QPushButton,
     QRadioButton,
+    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QTableWidget,
@@ -30,8 +31,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from parsezen.application.configuration_rules import configuration_issues
+from parsezen.application.configuration_rules import ConfigurationSection, configuration_issues
 from parsezen.domain.jobs import (
+    AIProfileConfiguration,
     DocumentFormat,
     DocumentJob,
     JobConfiguration,
@@ -46,6 +48,7 @@ from parsezen.domain.stages import StageKind
 from parsezen.errors import RequestValidationError
 from parsezen.glossary import MAX_GLOSSARY_ENTRIES, GlossaryEntry, validate_glossary
 from parsezen.local_models import OllamaStatus
+from parsezen.pdf_conversion import PdfPageRange, resolve_pdf_page_range
 from parsezen.presentation.components import Switch
 from parsezen.presentation.design_system import BREAKPOINTS, SPACING
 from parsezen.translation_quality import TARGET_LANGUAGE_CODES
@@ -157,6 +160,29 @@ class _OptionRow(QWidget):
         self.setAccessibleDescription(f"Valor actual: {self.value.text()}")
 
 
+class _PageCountSignals(QObject):
+    finished = Signal(object)
+
+
+class _PageCountWorker(QRunnable):
+    def __init__(self, path: Path) -> None:
+        super().__init__()
+        self.path = path
+        self.signals = _PageCountSignals()
+
+    def run(self) -> None:
+        count: int | None
+        try:
+            before = self.path.stat()
+            count = resolve_pdf_page_range(self.path, PdfPageRange(1, 2_147_483_647)).last_page
+            after = self.path.stat()
+            if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+                count = None
+        except Exception:
+            count = None
+        self.signals.finished.emit(count)
+
+
 class _PageRangeDialog(QDialog):
     """Ask for an inclusive PDF interval away from the flat settings page."""
 
@@ -164,24 +190,36 @@ class _PageRangeDialog(QDialog):
         self,
         page_range: PageRangeConfiguration | None,
         *,
+        source_path: Path | None = None,
+        total_pages: int | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Intervalo de páginas")
         self.setModal(True)
         self.setObjectName("configurationRangeDialog")
-        self.setMinimumWidth(340)
+        self.setMinimumWidth(280)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(SPACING.lg, SPACING.lg, SPACING.lg, SPACING.lg)
         root.setSpacing(SPACING.md)
-        prompt = QLabel("Indica la primera y la última página.", self)
+        prompt = QLabel(
+            "Cuenta las páginas del archivo desde 1, incluida la portada. "
+            "La numeración impresa puede ser distinta.",
+            self,
+        )
+        prompt.setWordWrap(True)
         root.addWidget(prompt)
+        self.page_count_label = QLabel("Comprobando las páginas del PDF…", self)
+        self.page_count_label.setWordWrap(True)
+        root.addWidget(self.page_count_label)
 
         range_layout = QGridLayout()
         range_layout.setHorizontalSpacing(SPACING.md)
         self.first_page = QSpinBox(self)
         self.last_page = QSpinBox(self)
+        self.first_page.setAccessibleName("Primera página del archivo")
+        self.last_page.setAccessibleName("Última página del archivo")
         for spin in (self.first_page, self.last_page):
             spin.setRange(1, 2_147_483_647)
         first = page_range.first_page if page_range is not None else 1
@@ -201,9 +239,33 @@ class _PageRangeDialog(QDialog):
             parent=self,
         )
         buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Aplicar")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
+        self.apply_button = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        if total_pages is not None:
+            self._set_page_count(total_pages)
+        elif source_path is not None:
+            self.apply_button.setEnabled(False)
+            self._page_worker = _PageCountWorker(source_path)
+            self._page_worker.signals.finished.connect(self._set_page_count)
+            QThreadPool.globalInstance().start(self._page_worker)
+        else:
+            self.page_count_label.setText("Indica la primera y la última página del archivo.")
+
+    @Slot(object)
+    def _set_page_count(self, value: object) -> None:
+        if not isinstance(value, int) or value < 1:
+            self.page_count_label.setText(
+                "No se pudo comprobar el PDF. Cierra este cuadro y vuelve a intentarlo."
+            )
+            self.apply_button.setEnabled(False)
+            return
+        self.page_count_label.setText(f"Este PDF tiene {value} páginas.")
+        self.first_page.setMaximum(value)
+        self.last_page.setMaximum(value)
+        self.apply_button.setEnabled(True)
 
     def page_range(self) -> PageRangeConfiguration:
         return PageRangeConfiguration(self.first_page.value(), self.last_page.value())
@@ -370,8 +432,9 @@ class JobConfigurationDialog(QDialog):
         self.content.setObjectName("configurationFlatList")
         self.content.setMaximumWidth(760)
         self.content.setMinimumWidth(0)
-        self.content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.options_layout = QVBoxLayout(self.content)
+        self.options_layout.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         self.options_layout.setContentsMargins(0, 0, 0, 0)
         self.options_layout.setSpacing(SPACING.xs)
 
@@ -407,8 +470,9 @@ class JobConfigurationDialog(QDialog):
         review_layout.setSpacing(SPACING.sm)
         self.review_label = QLabel("Revisión adicional con IA", self.review_row)
         self.review_label.setObjectName("configurationOptionLabel")
-        review_layout.addWidget(self.review_label)
-        review_layout.addStretch(1)
+        self.review_label.setWordWrap(True)
+        self.review_label.setMinimumWidth(0)
+        review_layout.addWidget(self.review_label, 1)
         self.plan_reviewed = Switch(self.review_row)
         self.plan_reviewed.setAccessibleName("Revisión adicional con IA")
         review_layout.addWidget(self.plan_reviewed)
@@ -431,6 +495,11 @@ class JobConfigurationDialog(QDialog):
         self.validation_label.hide()
         self.options_layout.addWidget(self.validation_label)
 
+        self.save_status = QLabel("Las opciones se guardan automáticamente.", self.content)
+        self.save_status.setObjectName("configurationSaveStatus")
+        self.save_status.setWordWrap(True)
+        self.options_layout.addWidget(self.save_status)
+
         self.apply_compatible_button = QPushButton(
             f"Aplicar a {compatible_count} compatibles",
             self.content,
@@ -441,12 +510,13 @@ class JobConfigurationDialog(QDialog):
         self.apply_compatible_button.setVisible(compatible_count > 0)
         self.options_layout.addWidget(self.apply_compatible_button)
 
-        root.addWidget(
-            self.content,
-            0,
-            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter,
-        )
-        root.addStretch(1)
+        self.content_scroll = QScrollArea(self)
+        self.content_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.content_scroll.setWidgetResizable(True)
+        self.content_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.content_scroll.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        self.content_scroll.setWidget(self.content)
+        root.addWidget(self.content_scroll, 1)
 
         self.output_markdown.toggled.connect(self._set_markdown_output_when_checked)
         self.output_epub.toggled.connect(self._set_epub_output_when_checked)
@@ -460,7 +530,7 @@ class JobConfigurationDialog(QDialog):
         self._refresh()
         self._focus_stage(stage)
 
-    def configuration(self) -> JobConfiguration:
+    def configuration(self, *, allow_unprepared: bool = False) -> JobConfiguration:
         translating = self._translation_language is not None
         glossary = validate_glossary(self._glossary_entries()) if translating else ()
         previous = self._job.configuration.output
@@ -514,17 +584,31 @@ class JobConfigurationDialog(QDialog):
         )
         issues = configuration_issues(self._job.source, configuration)
         if issues:
+            if allow_unprepared and all(
+                issue.section is ConfigurationSection.AI for issue in issues
+            ):
+                return replace(
+                    configuration, output=replace(configuration.output, configured=False)
+                )
             raise ValueError(issues[0].message)
         return configuration
 
     def persist_if_valid(self, *, open_models: bool = False) -> bool:
         """Persist the visible choices when valid, leaving incomplete AI intent visible."""
 
+        self.save_status.setText("Cambios pendientes de guardar.")
         try:
             self.configuration()
         except (RequestValidationError, ValueError) as exc:
             self.validation_label.setText(str(exc))
             self.validation_label.show()
+            try:
+                draft = self.configuration(allow_unprepared=True)
+            except (RequestValidationError, ValueError):
+                pass
+            else:
+                if not draft.output.configured:
+                    self.configuration_changed.emit()
             if open_models and self._ai_needed() and self._ai_setup_required():
                 self.component_setup_requested.emit()
             return False
@@ -540,6 +624,16 @@ class JobConfigurationDialog(QDialog):
         """Keep later immediate updates based on the last committed configuration."""
 
         self._job = job
+        self.save_status.setText("Cambios guardados. Puedes volver a la cola.")
+
+    def mark_save_failed(self) -> None:
+        self.save_status.setText(
+            "No se han guardado los cambios. Revisa el aviso y vuelve a intentarlo."
+        )
+
+    def update_ai_profile(self, profile: AIProfileConfiguration) -> None:
+        """Refresh verified identities without replacing the person's pending choices."""
+        self._job = replace(self._job, configuration=replace(self._job.configuration, ai=profile))
 
     @property
     def review_enabled(self) -> bool:
@@ -571,9 +665,6 @@ class JobConfigurationDialog(QDialog):
         super().keyPressEvent(event)
 
     def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802
-        margins = self._root_layout.contentsMargins()
-        available_width = max(0, event.size().width() - margins.left() - margins.right())
-        self.content.setFixedWidth(min(760, available_width))
         self.set_compact_mode(event.size().width() <= BREAKPOINTS.compact)
         super().resizeEvent(event)
 
@@ -731,7 +822,7 @@ class JobConfigurationDialog(QDialog):
 
     def _set_translation_language(self, language: str | None) -> None:
         self._translation_language = language
-        self._changed()
+        self._changed(open_models=language is not None)
 
     def _set_translation_method(self, method: TranslationMethod) -> None:
         self._translation_method = method
@@ -746,7 +837,7 @@ class JobConfigurationDialog(QDialog):
         self._changed()
 
     def _choose_page_interval(self) -> None:
-        dialog = _PageRangeDialog(self._page_range, parent=self)
+        dialog = _PageRangeDialog(self._page_range, source_path=self._job.source.path, parent=self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self._set_page_range(dialog.page_range())
 
@@ -814,7 +905,17 @@ class JobConfigurationDialog(QDialog):
         )
 
     def _ai_setup_required(self) -> bool:
-        if self._default_ai_model is None:
+        ai = self._job.configuration.ai
+        if (
+            self._translation_language is not None
+            and self._translation_method is TranslationMethod.LOCAL_AI
+            and ai.effective_translation_model is None
+            and self._default_ai_model is None
+        ) or (
+            self._review_enabled
+            and ai.effective_review_model is None
+            and self._default_ai_model is None
+        ):
             return True
         return self._ollama_status in {
             OllamaStatus.MISSING_MODEL,

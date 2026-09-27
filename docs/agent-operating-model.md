@@ -216,6 +216,11 @@ ejecución completa solo al superar los descartes anteriores
 
 ## Protocolo de experimentos y aprendizaje
 
+Para evaluaciones nuevas rige [`evaluation.md`](evaluation.md): un banco abierto y muestras nuevas
+con selección congelada. El banco anterior necesita revalidación humana y no se carga como verdad.
+La revisión compleja o dudosa permanece humana. Los conjuntos enumerados a continuación describen
+funciones de la evidencia, no obligan a crear catálogos o infraestructuras separados.
+
 Un experimento privado separa siempre:
 
 1. **desarrollo**: casos que permiten entender y construir la hipótesis;

@@ -1169,7 +1169,9 @@ def test_epub_translation_applies_selected_title_author_and_custom_cover(
     source = tmp_path / "customized.epub"
     _write_epub3(source)
     cover = tmp_path / "new-cover.png"
-    cover.write_bytes(b"new-local-cover")
+    from PIL import Image
+
+    Image.new("RGB", (3, 2), "white").save(cover)
 
     def translate(markdown: str, _language: str, **kwargs) -> str:
         on_engine_ready = kwargs.get("on_engine_ready")
@@ -1202,7 +1204,7 @@ def test_epub_translation_applies_selected_title_author_and_custom_cover(
         assert "<dc:title>Edición personalizada</dc:title>" in package
         assert "<dc:creator>Autora local</dc:creator>" in package
         assert 'properties="cover-image"' in package
-        assert archive.read("EPUB/images/cover/cover.png") == b"new-local-cover"
+        assert archive.read("EPUB/images/cover/cover.png") == cover.read_bytes()
         assert "EPUB/images/EPUB/cover.jpg" not in archive.namelist()
 
 

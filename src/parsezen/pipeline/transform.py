@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import inspect
 import logging
 import re
 from collections.abc import Callable
@@ -43,6 +42,7 @@ from parsezen.revision import (
     RevisionDraft,
     RevisionKind,
     build_revision_draft,
+    contains_conversion_damage,
     split_markdown_blocks,
 )
 from parsezen.semantic_blocks import (
@@ -88,6 +88,7 @@ class _ImprovementArguments(TypedDict, total=False):
     plain_text: bool
     on_translation_preserved: Callable[[int, int], None]
     focused_source_repair: bool
+    on_review_preserved: Callable[[], None]
 
 
 class _OfflineTranslationArguments(TypedDict, total=False):
@@ -134,6 +135,12 @@ def transform_prepared_document(
     transformed_markdown = markdown
     translation_source: str | None = None
     preserved_translation_chunks: list[int] = []
+    preserved_review_chunks = 0
+
+    def record_review_preserved() -> None:
+        nonlocal preserved_review_chunks
+        preserved_review_chunks += 1
+
     translation_repair_attempted = 0
     translation_repair_accepted = 0
     translation_settings = settings_for_translation(settings) if settings is not None else None
@@ -194,14 +201,12 @@ def transform_prepared_document(
         }:
             translation_source = transformed_markdown
         improvement_arguments: _ImprovementArguments = {"on_progress": on_progress}
-        checkpoint_parameters = inspect.signature(improve_markdown).parameters
-        if "on_translation_preserved" in checkpoint_parameters:
-            improvement_arguments["on_translation_preserved"] = lambda current, _total: (
-                preserved_translation_chunks.append(current)
-            )
+        improvement_arguments["on_translation_preserved"] = lambda current, _total: (
+            preserved_translation_chunks.append(current)
+        )
         if cancellation is not None:
             improvement_arguments["cancellation"] = cancellation
-        if work_checkpoints is not None and "load_checkpoint" in checkpoint_parameters:
+        if work_checkpoints is not None:
             improvement_arguments["load_checkpoint"] = work_checkpoints.load
             improvement_arguments["save_checkpoint"] = work_checkpoints.save
         protected = (
@@ -274,8 +279,7 @@ def transform_prepared_document(
         }
         if cancellation is not None:
             translation_arguments["cancellation"] = cancellation
-        translation_parameters = inspect.signature(translate_markdown_offline).parameters
-        if work_checkpoints is not None and "load_checkpoint" in translation_parameters:
+        if work_checkpoints is not None:
             translation_arguments["load_checkpoint"] = work_checkpoints.load
             translation_arguments["save_checkpoint"] = work_checkpoints.save
         protected = protect_glossary(transformed_markdown, translation_glossary)
@@ -363,6 +367,7 @@ def transform_prepared_document(
                     work_checkpoints,
                     semantic_document=analyze_markdown(transformed_markdown),
                     pdf_quality_report=pdf_quality_report,
+                    on_review_preserved=record_review_preserved,
                 )
         elif pdf_quality_report is not None:
             transformed_markdown = improve_selected_content(
@@ -374,6 +379,7 @@ def transform_prepared_document(
                 work_checkpoints,
                 semantic_document=analyze_markdown(transformed_markdown),
                 pdf_quality_report=pdf_quality_report,
+                on_review_preserved=record_review_preserved,
             )
         elif not selected_translation_cleanup:
             transformed_markdown = improve_with_checkpoints(
@@ -384,6 +390,7 @@ def transform_prepared_document(
                 on_progress,
                 cancellation,
                 work_checkpoints,
+                on_review_preserved=record_review_preserved,
             )
         if transformed_markdown != revision_source:
             revision_kinds.add(RevisionKind.CONTENT)
@@ -401,6 +408,7 @@ def transform_prepared_document(
             on_progress,
             cancellation,
             work_checkpoints,
+            on_review_preserved=record_review_preserved,
         )
         revision_kinds.add(RevisionKind.STRUCTURE)
     transformed_markdown = reconcile_generated_html_tables(
@@ -467,6 +475,7 @@ def transform_prepared_document(
             bool(preserved_translation_chunks),
         )
         or generated_epub
+        or bool(preserved_review_chunks)
     )
     public_markdown = (
         strip_pdf_public_markers(published_markdown)
@@ -489,6 +498,7 @@ def transform_prepared_document(
         published_markdown=published_markdown,
         review_required=review_required,
         public_markdown=public_markdown,
+        preserved_review_chunks=preserved_review_chunks,
     )
 
 
@@ -502,6 +512,7 @@ def improve_with_checkpoints(
     checkpoints: WorkCheckpoints | None,
     *,
     plain_text: bool | None = None,
+    on_review_preserved: Callable[[], None] | None = None,
 ) -> str:
     """Apply one ordered review pass with the same resumable chunk contract."""
 
@@ -512,6 +523,8 @@ def improve_with_checkpoints(
     }
     if cancellation is not None:
         arguments["cancellation"] = cancellation
+    if on_review_preserved is not None:
+        arguments["on_review_preserved"] = on_review_preserved
     if checkpoints is not None:
         arguments["load_checkpoint"] = checkpoints.load
         arguments["save_checkpoint"] = checkpoints.save
@@ -635,6 +648,7 @@ def improve_selected_content(
     *,
     semantic_document: SemanticDocument,
     pdf_quality_report: PdfQualityReport | None,
+    on_review_preserved: Callable[[], None] | None = None,
 ) -> str:
     """Run a second correction only where extraction quality supplied evidence."""
 
@@ -678,6 +692,7 @@ def improve_selected_content(
             None,
             cancellation,
             checkpoints,
+            on_review_preserved=on_review_preserved,
         )
         if improved == source_group:
             continue
@@ -784,16 +799,6 @@ def resolve_review_positions(
         resolved.append(matches[0])
     ordered = tuple(sorted(set(resolved)))
     return ordered if len(ordered) == len(resolved) else None
-
-
-def contains_conversion_damage(markdown: str) -> bool:
-    visible = re.sub(r"<!--[\s\S]*?-->", "", markdown)
-    return bool(
-        "\ufffd" in visible
-        or re.search(r"(?i)\b(?:aviso|warning)\s+OCR\b", visible)
-        or re.search(r"\b(?:[^\W\d_]\s+){5,}[^\W\d_]\b", visible)
-        or re.search(r"(?i)\b([^\W\d_]{3,})(?:\s+\1){2,}\b", visible)
-    )
 
 
 def translation_quality_report(

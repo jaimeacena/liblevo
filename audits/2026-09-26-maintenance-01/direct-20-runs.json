@@ -1,0 +1,30 @@
+[
+  {
+    "run": 1,
+    "elapsed_seconds": 76.77,
+    "source_unchanged": true,
+    "epub_zip_valid": true,
+    "has_navigation": true,
+    "missing_synthetic_numbers": [],
+    "epub_bytes": 10848,
+    "chapters_reported": 9,
+    "translation_issues_reported": 0,
+    "local_ai_requests": 39,
+    "local_ai_wall_ms": 63097,
+    "semantic_quality_human_checked": false
+  },
+  {
+    "run": 2,
+    "elapsed_seconds": 69.375,
+    "source_unchanged": true,
+    "epub_zip_valid": true,
+    "has_navigation": true,
+    "missing_synthetic_numbers": [],
+    "epub_bytes": 10848,
+    "chapters_reported": 9,
+    "translation_issues_reported": 0,
+    "local_ai_requests": 39,
+    "local_ai_wall_ms": 58626,
+    "semantic_quality_human_checked": false
+  }
+]

@@ -32,7 +32,6 @@ from parsezen.errors import ConversionError, ImprovementError, LocalModelUnavail
 from parsezen.ocr_conversion import convert_pdf_pages_with_ocr
 from parsezen.pdf_checkpoints import (
     _MAX_PDF_TABLE_CELL_CHARACTERS,
-    _MAX_PDF_TABLE_COLUMNS,
     _MAX_PDF_TABLE_ROWS,
     _deserialize_page_checkpoint,
     _serialize_page_checkpoint,
@@ -45,21 +44,235 @@ from parsezen.pdf_layout import (
     _PdfLink,
     _PdfPage,
     _PdfTable,
-    _RasterHorizontalRule,
     _TableRendering,
+)
+from parsezen.pdf_layout import _RasterHorizontalRule as _RasterHorizontalRule
+from parsezen.pdf_tables import (
+    _LETTER_PATTERN as _LETTER_PATTERN,
+)
+from parsezen.pdf_tables import (
+    _OPEN_RASTER_TABLE_MAX_AREA_RATIO as _OPEN_RASTER_TABLE_MAX_AREA_RATIO,
+)
+from parsezen.pdf_tables import (
+    _OPEN_RASTER_TABLE_MIN_AREA_RATIO as _OPEN_RASTER_TABLE_MIN_AREA_RATIO,
+)
+from parsezen.pdf_tables import (
+    _OPEN_RASTER_TABLE_MIN_SIDE_BY_SIDE_LINES as _OPEN_RASTER_TABLE_MIN_SIDE_BY_SIDE_LINES,
+)
+from parsezen.pdf_tables import (
+    _OPEN_RASTER_TABLE_MIN_SIDE_BY_SIDE_RATIO as _OPEN_RASTER_TABLE_MIN_SIDE_BY_SIDE_RATIO,
+)
+from parsezen.pdf_tables import (
+    _TABLE_CAPTION_LINE_PATTERN as _TABLE_CAPTION_LINE_PATTERN,
+)
+from parsezen.pdf_tables import (
+    _TABLE_CELL_CONTINUATION_WORDS as _TABLE_CELL_CONTINUATION_WORDS,
+)
+from parsezen.pdf_tables import (
+    _TABLE_CELL_LIST_PREFIX_PATTERN as _TABLE_CELL_LIST_PREFIX_PATTERN,
+)
+from parsezen.pdf_tables import (
+    _append_pdf_table as _append_pdf_table,
+)
+from parsezen.pdf_tables import (
+    _complete_sparse_table_rules as _complete_sparse_table_rules,
+)
+from parsezen.pdf_tables import (
+    _extract_tables as _extract_tables,
+)
+from parsezen.pdf_tables import (
+    _header_gutter_table_boundaries as _header_gutter_table_boundaries,
+)
+from parsezen.pdf_tables import (
+    _html_table as _html_table,
+)
+from parsezen.pdf_tables import (
+    _long_dark_horizontal_span as _long_dark_horizontal_span,
+)
+from parsezen.pdf_tables import (
+    _markdown_table as _markdown_table,
+)
+from parsezen.pdf_tables import (
+    _normalize_table_cell as _normalize_table_cell,
+)
+from parsezen.pdf_tables import (
+    _open_raster_table_boundaries as _open_raster_table_boundaries,
+)
+from parsezen.pdf_tables import (
+    _open_table_horizontal_boundaries as _open_table_horizontal_boundaries,
+)
+from parsezen.pdf_tables import (
+    _raster_cell_has_short_horizontal_mark as _raster_cell_has_short_horizontal_mark,
+)
+from parsezen.pdf_tables import (
+    _raster_horizontal_rules as _raster_horizontal_rules,
+)
+from parsezen.pdf_tables import (
+    _raw_table_line_is_label as _raw_table_line_is_label,
+)
+from parsezen.pdf_tables import (
+    _render_table_cell as _render_table_cell,
+)
+from parsezen.pdf_tables import (
+    _repair_consensus_degree_markers as _repair_consensus_degree_markers,
+)
+from parsezen.pdf_tables import (
+    _restore_visual_matrix_placeholders as _restore_visual_matrix_placeholders,
+)
+from parsezen.pdf_tables import (
+    _side_by_side_line_indexes as _side_by_side_line_indexes,
+)
+from parsezen.pdf_tables import (
+    _significant_character_counts as _significant_character_counts,
+)
+from parsezen.pdf_tables import (
+    _spatial_table_boundaries as _spatial_table_boundaries,
+)
+from parsezen.pdf_tables import (
+    _spatial_table_rule_groups as _spatial_table_rule_groups,
+)
+from parsezen.pdf_tables import (
+    _structured_table_text as _structured_table_text,
+)
+from parsezen.pdf_tables import (
+    _table_cell_line_is_soft_wrap as _table_cell_line_is_soft_wrap,
+)
+from parsezen.pdf_tables import (
+    _table_has_exact_character_coverage as _table_has_exact_character_coverage,
+)
+from parsezen.pdf_tables import (
+    _table_has_sparse_continuation_rows as _table_has_sparse_continuation_rows,
+)
+from parsezen.pdf_tables import (
+    _table_rendering as _table_rendering,
+)
+from parsezen.pdf_text_reconciliation import (
+    _DEGREE_SHAPED_NATIVE_ZERO_PATTERN as _DEGREE_SHAPED_NATIVE_ZERO_PATTERN,
+)
+from parsezen.pdf_text_reconciliation import (
+    _INVALID_ZODIAC_DEGREE_ZERO_PATTERN as _INVALID_ZODIAC_DEGREE_ZERO_PATTERN,
+)
+from parsezen.pdf_text_reconciliation import (
+    _LITERAL_URL_PATTERN as _LITERAL_URL_PATTERN,
+)
+from parsezen.pdf_text_reconciliation import (
+    _NUMERIC_GLYPH_EXPANSIONS as _NUMERIC_GLYPH_EXPANSIONS,
+)
+from parsezen.pdf_text_reconciliation import (
+    _PARTIAL_SPACED_WORD_PATTERN as _PARTIAL_SPACED_WORD_PATTERN,
+)
+from parsezen.pdf_text_reconciliation import (
+    _SPACED_WORD_PATTERN as _SPACED_WORD_PATTERN,
+)
+from parsezen.pdf_text_reconciliation import (
+    _SUSPICIOUS_NUMERIC_GLYPH_PATTERN as _SUSPICIOUS_NUMERIC_GLYPH_PATTERN,
+)
+from parsezen.pdf_text_reconciliation import (
+    _VISUAL_ATOM_PATTERN as _VISUAL_ATOM_PATTERN,
+)
+from parsezen.pdf_text_reconciliation import (
+    _WHITESPACE_PATTERN as _WHITESPACE_PATTERN,
+)
+from parsezen.pdf_text_reconciliation import (
+    _ZODIAC_SIGN_NAMES as _ZODIAC_SIGN_NAMES,
+)
+from parsezen.pdf_text_reconciliation import (
+    _ZODIAC_SIGN_PATTERN as _ZODIAC_SIGN_PATTERN,
+)
+from parsezen.pdf_text_reconciliation import (
+    _aligned_visual_candidate as _aligned_visual_candidate,
+)
+from parsezen.pdf_text_reconciliation import (
+    _apply_page_text_replacements as _apply_page_text_replacements,
+)
+from parsezen.pdf_text_reconciliation import (
+    _best_matching_text_line as _best_matching_text_line,
+)
+from parsezen.pdf_text_reconciliation import (
+    _hard_hyphen_wraps_word as _hard_hyphen_wraps_word,
+)
+from parsezen.pdf_text_reconciliation import (
+    _heading_letter_count as _heading_letter_count,
+)
+from parsezen.pdf_text_reconciliation import (
+    _is_bold_font as _is_bold_font,
+)
+from parsezen.pdf_text_reconciliation import (
+    _is_uppercase_text as _is_uppercase_text,
+)
+from parsezen.pdf_text_reconciliation import (
+    _levenshtein_distance as _levenshtein_distance,
+)
+from parsezen.pdf_text_reconciliation import (
+    _line_inside_table as _line_inside_table,
+)
+from parsezen.pdf_text_reconciliation import (
+    _looks_like_broken_numeric_token as _looks_like_broken_numeric_token,
+)
+from parsezen.pdf_text_reconciliation import (
+    _normalize_text as _normalize_text,
+)
+from parsezen.pdf_text_reconciliation import (
+    _numeric_glyph_candidates as _numeric_glyph_candidates,
+)
+from parsezen.pdf_text_reconciliation import (
+    _ordered_toc_folio_candidates as _ordered_toc_folio_candidates,
+)
+from parsezen.pdf_text_reconciliation import (
+    _reconcile_suspicious_numbers_from_ocr as _reconcile_suspicious_numbers_from_ocr,
+)
+from parsezen.pdf_text_reconciliation import (
+    _reconcile_suspicious_toc_numbers as _reconcile_suspicious_toc_numbers,
+)
+from parsezen.pdf_text_reconciliation import (
+    _reconcile_toc_numbers_with_native_priority as _reconcile_toc_numbers_with_native_priority,
+)
+from parsezen.pdf_text_reconciliation import (
+    _reconcile_toc_spacing_from_ocr as _reconcile_toc_spacing_from_ocr,
+)
+from parsezen.pdf_text_reconciliation import (
+    _repair_native_degree_markers as _repair_native_degree_markers,
+)
+from parsezen.pdf_text_reconciliation import (
+    _repair_ocr_spacing_from_native as _repair_ocr_spacing_from_native,
+)
+from parsezen.pdf_text_reconciliation import (
+    _repair_suspicious_glyph_encoding as _repair_suspicious_glyph_encoding,
+)
+from parsezen.pdf_text_reconciliation import (
+    _single_visual_atom_replacement as _single_visual_atom_replacement,
+)
+from parsezen.pdf_text_reconciliation import (
+    _spacing_insensitive_line_key as _spacing_insensitive_line_key,
+)
+from parsezen.pdf_text_reconciliation import (
+    _spacing_insensitive_text_with_offsets as _spacing_insensitive_text_with_offsets,
+)
+from parsezen.pdf_text_reconciliation import (
+    _suspicious_numeric_glyph_matches as _suspicious_numeric_glyph_matches,
+)
+from parsezen.pdf_text_reconciliation import (
+    _toc_lines_share_row as _toc_lines_share_row,
+)
+from parsezen.pdf_text_reconciliation import (
+    _visible_ocr_lines as _visible_ocr_lines,
+)
+from parsezen.pdf_text_reconciliation import (
+    _visual_atoms as _visual_atoms,
+)
+from parsezen.pdf_text_reconciliation import (
+    _visual_line_key as _visual_line_key,
 )
 from parsezen.translation_quality import markdown_table_shapes
 from parsezen.visual_ocr import VisualTextArbiter
 
 LOGGER = logging.getLogger(__name__)
 
-_WHITESPACE_PATTERN = re.compile(r"[\t \u00a0]+")
 _PAGE_NUMBER_PATTERN = re.compile(r"(?:\d+|[ivxlcdm]+)", re.IGNORECASE)
 _RUNNING_FOOTER_PATTERN = re.compile(
     r"(?:\d+\s+[^\d]{2,40}|[^\d]{2,40}\s+\d+)",
     re.IGNORECASE,
 )
-_LETTER_PATTERN = re.compile(r"[^\W\d_]", re.UNICODE)
 _BULLET_PATTERN = re.compile(r"^[•●◦▪‣⁃]\s*")
 _ORDERED_LIST_PATTERN = re.compile(
     r"^(?P<number>[1-9]|1\d|20)(?P<marker>[.)])[ \t]+(?P<text>\S.*)$"
@@ -90,95 +303,8 @@ _SECTION_HEADING_PATTERN = re.compile(
     + r")(?:\b|[.:—-])",
     re.IGNORECASE,
 )
-_SPACED_WORD_PATTERN = re.compile(
-    r"(?<!\w)(?:[^\W\d_]\s+){4,}[^\W\d_](?!\w)",
-    re.UNICODE,
-)
-_PARTIAL_SPACED_WORD_PATTERN = re.compile(
-    r"(?<!\w)[^\W\d_]{2,3}(?:\s+[^\W\d_]){3,}(?!\w)",
-    re.UNICODE,
-)
-_DEGREE_SHAPED_NATIVE_ZERO_PATTERN = re.compile(r"(?<!\d)(?P<degree>[0-2]?\d)0(?=$|[\s.,;:!?)\]])")
-_ZODIAC_SIGN_NAMES = frozenset(
-    {
-        "Acuario",
-        "Acquario",
-        "Aquarius",
-        "Aquário",
-        "Aries",
-        "Ariete",
-        "Áries",
-        "Balance",
-        "Balança",
-        "Bélier",
-        "Cancer",
-        "Cancro",
-        "Cáncer",
-        "Capricorn",
-        "Capricorne",
-        "Capricornio",
-        "Capricórnio",
-        "Capricorno",
-        "Escorpio",
-        "Escorpião",
-        "Fische",
-        "Gemelli",
-        "Gémeaux",
-        "Géminis",
-        "Gemini",
-        "Geminis",
-        "Gêmeos",
-        "Jungfrau",
-        "Krebs",
-        "Leão",
-        "Leo",
-        "Leone",
-        "Libra",
-        "Lion",
-        "Löwe",
-        "Peixes",
-        "Pesci",
-        "Pisces",
-        "Piscis",
-        "Poissons",
-        "Sagittaire",
-        "Sagitario",
-        "Sagitário",
-        "Sagittario",
-        "Sagittarius",
-        "Schütze",
-        "Scorpio",
-        "Scorpion",
-        "Scorpione",
-        "Skorpion",
-        "Steinbock",
-        "Stier",
-        "Taureau",
-        "Taurus",
-        "Toro",
-        "Touro",
-        "Tauro",
-        "Verseau",
-        "Vierge",
-        "Virgem",
-        "Virgo",
-        "Waage",
-        "Wassermann",
-        "Widder",
-        "Zwillinge",
-    }
-)
-_ZODIAC_SIGN_PATTERN = (
-    "(?:"
-    + "|".join(re.escape(name) for name in sorted(_ZODIAC_SIGN_NAMES, key=len, reverse=True))
-    + ")"
-)
 _INVALID_ZODIAC_DEGREE_PATTERN = re.compile(
     rf"(?<!\d)(?P<degree>[3-9]\d)(?P<marker>°|0)(?=\s+{_ZODIAC_SIGN_PATTERN}\b)",
-    re.IGNORECASE,
-)
-_INVALID_ZODIAC_DEGREE_ZERO_PATTERN = re.compile(
-    rf"(?<!\d)(?P<degree>[3-9]\d)0(?=\s+{_ZODIAC_SIGN_PATTERN}\b)",
     re.IGNORECASE,
 )
 _ADJACENT_LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(<([^>]+)>\)\s+\[([^\]]+)\]\(<\2>\)")
@@ -191,6 +317,8 @@ _GRAPHIC_WARNING_LETTER_LIMIT = 40
 _MIN_USABLE_NATIVE_LETTERS = 10
 _LOW_NATIVE_QUALITY_THRESHOLD = 0.48
 _VERY_LOW_NATIVE_QUALITY_THRESHOLD = 0.28
+_RELIABLE_NATIVE_TABLE_LETTERS = 80
+_RELIABLE_NATIVE_TABLE_QUALITY = 0.80
 _MIN_OCR_REPLACEMENT_QUALITY = 0.50
 _MIN_OCR_IMAGE_AREA_RATIO = 0.05
 _FULL_PAGE_IMAGE_AREA_RATIO = 0.85
@@ -256,11 +384,6 @@ _TOC_DOTTED_FOLIO_PATTERN = re.compile(
     r"(?P<folio>(?:\d[ \t]*){1,3}|[ivxlcdm]{1,8})\s*$",
     re.IGNORECASE,
 )
-_MARKDOWN_LINK_DESTINATION_SPLIT_PATTERN = re.compile(r"(\]\(<[^>]*>\))")
-_TABLE_CAPTION_LINE_PATTERN = re.compile(
-    r"^(?:table|tabla|cuadro)\s+(?:\d+|[ivxlcdm]+)\s*[.\-:]",
-    re.IGNORECASE,
-)
 _NUMBERED_FIGURE_CAPTION_PATTERN = re.compile(
     r"^(?:figures?|figuras?)\s*[0-9iIlLoO]{1,4}"
     r"(?:\s*(?:[,&+]|\b(?:and|y)\b|[-–—])\s*[0-9iIlLoO]{1,4})*"
@@ -295,10 +418,6 @@ _MIN_VECTOR_CURVES = 2
 _MAX_CLUSTERED_VECTOR_CURVES = 500
 _VECTOR_CLUSTER_GAP = 12.0
 _OPEN_RASTER_TABLE_RULE_WIDTH_RATIO = 0.58
-_OPEN_RASTER_TABLE_MIN_AREA_RATIO = 0.08
-_OPEN_RASTER_TABLE_MAX_AREA_RATIO = 0.75
-_OPEN_RASTER_TABLE_MIN_SIDE_BY_SIDE_LINES = 8
-_OPEN_RASTER_TABLE_MIN_SIDE_BY_SIDE_RATIO = 0.40
 _MARKDOWN_TABLE_PATTERN = re.compile(r"^\s*\|?.*\|.*\n\s*\|?\s*:?-{3,}", re.MULTILINE)
 _PDF_WARNING_PAGE_PATTERN = re.compile(
     r"^>\s*\*\*Aviso(?: OCR| de conversión) \(página (\d+)\):\*\*",
@@ -313,13 +432,6 @@ _PDF_OUTLINE_MARKER_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _PDF_EXTRACTION_SHARD_SIZE = 32
-_SUSPICIOUS_NUMERIC_GLYPH_PATTERN = re.compile(
-    r"(?<!\w)(?:"
-    r"(?=[\d$^]{2,6}(?!\w))(?=[\d$^]*[$^])[\d$^]{2,6}"
-    r"|(?=[\dA-Za-z]{2,7}(?!\w))(?=[\dA-Za-z]*\d)(?=[\dA-Za-z]*[A-Za-z])"
-    r"[\dA-Za-z]{2,7}"
-    r")(?!\w)"
-)
 _SPACED_NUMERIC_YEAR_GLYPH_PATTERN = re.compile(r"^\s*[iIlLoO](?:\s+[iIlLoO]){3}\s*$")
 _PUBLICATION_YEAR_PATTERN = re.compile(r"(?<!\d)(?:18|19|20|21)\d{2}(?!\d)")
 _PUBLICATION_YEAR_CONTEXT_PATTERN = re.compile(
@@ -327,34 +439,12 @@ _PUBLICATION_YEAR_CONTEXT_PATTERN = re.compile(
     r"copyright|©)[^0-9]{0,64}(?P<year>(?:18|19|20|21)\d{2})",
     re.IGNORECASE,
 )
-_NUMERIC_GLYPH_EXPANSIONS: dict[str, tuple[str, ...]] = {
-    "I": ("1",),
-    "i": ("1",),
-    "l": ("1",),
-    "O": ("0",),
-    "o": ("0",),
-    "H": ("11",),
-    "h": ("11",),
-    "n": ("11",),
-    "S": ("5", "8"),
-    "s": ("5", "8"),
-    "B": ("8",),
-    "b": ("8",),
-}
-_VISUAL_ATOM_PATTERN = re.compile(
-    r"[\d$^][\d$^A-Za-z]{1,6}(?=(?:[.)](?:\s|$)|\s|$))"
-    r"|[\d$^\ufffd°]+(?:[.,][\d$^\ufffd°]+)*"
-    r"|(?:[^\W\d_]|\ufffd)+(?:[’'\-](?:[^\W\d_]|\ufffd)+)*"
-    r"|[^\w\s]",
-    re.UNICODE,
-)
 _MAX_VISUAL_ARBITRATION_REGIONS = 8
 _MAX_VISUAL_ARBITRATION_REGIONS_PER_PAGE = 2
 _MIN_VISUAL_TEXT_FALLBACK_PRIORITY = 100
 _SYSTEMIC_SECONDARY_NATIVE_REPAIR_THRESHOLD = 8
 _MAX_HIDDEN_TEXT_AUDIT_PAGES = 6
 _MAX_VISUAL_CROP_BYTES = 4 * 1024 * 1024
-_LITERAL_URL_PATTERN = re.compile(r"(?:https?://|www\.)\S+", re.IGNORECASE)
 
 
 def strip_pdf_page_markers(markdown: str) -> str:
@@ -1182,14 +1272,14 @@ def _extract_embedded_images(
                     and page_number == len(pdf.pages)
                     and _page_letter_count(model) < _MIN_USABLE_NATIVE_LETTERS
                 )
+                x0, top, x1, bottom = (float(value) for value in page.bbox)
+                page_bbox = (x0, top, x1, bottom)
                 disagreement_boxes = _unresolved_text_visual_boxes(
                     model,
                     ocr_markdown,
-                    tuple(float(value) for value in page.bbox),
+                    page_bbox,
                 )
-                preserve_unresolved_page_visual = disagreement_boxes == (
-                    tuple(float(value) for value in page.bbox),
-                )
+                preserve_unresolved_page_visual = disagreement_boxes == (page_bbox,)
                 candidates = list(
                     _exportable_image_boxes(
                         page,
@@ -1621,164 +1711,6 @@ def _is_nearly_blank_image(content: bytes) -> bool:
     return deviation < 10.0 and dark_ratio < 0.002
 
 
-def _has_table_candidate(page: Any) -> bool:
-    return bool(_extract_tables(page))
-
-
-def _extract_tables(page: Any) -> tuple[_PdfTable, ...]:
-    """Extract bounded tables and choose the least lossy portable representation."""
-
-    if len(page.lines) + len(page.rects) < 4:
-        return ()
-    try:
-        tables = page.find_tables()
-    except (PdfminerException, TypeError, ValueError):
-        return ()
-    extracted: list[_PdfTable] = []
-    for table in tables:
-        data = table.extract() or []
-        rows = tuple(tuple(_normalize_table_cell(cell) for cell in row) for row in data)
-        column_count = max((len(row) for row in rows), default=0)
-        populated_cells = sum(bool(cell) for row in rows for cell in row)
-        if (
-            len(rows) < 2
-            or len(rows) > _MAX_PDF_TABLE_ROWS
-            or column_count < 2
-            or column_count > _MAX_PDF_TABLE_COLUMNS
-            or populated_cells < 4
-            or any(len(cell) > _MAX_PDF_TABLE_CELL_CHARACTERS for row in rows for cell in row)
-        ):
-            continue
-        try:
-            bbox = tuple(float(value) for value in table.bbox)
-        except (TypeError, ValueError):
-            continue
-        if (
-            len(bbox) != 4
-            or not all(math.isfinite(value) for value in bbox)
-            or bbox[0] < 0
-            or bbox[1] < 0
-            or bbox[0] >= bbox[2]
-            or bbox[1] >= bbox[3]
-            or bbox[2] > float(page.width)
-            or bbox[3] > float(page.height)
-        ):
-            continue
-        normalized_rows = tuple(row + ("",) * (column_count - len(row)) for row in rows)
-        rendering = _table_rendering(normalized_rows, column_count)
-        extracted.append(
-            _PdfTable(
-                (bbox[0], bbox[1], bbox[2], bbox[3]),
-                normalized_rows,
-                rendering,
-            )
-        )
-    return tuple(extracted)
-
-
-def _normalize_table_cell(value: object) -> str:
-    if value is None:
-        return ""
-    normalized = str(value).replace("\r", "").replace("\u00ad\n", "").replace("\u00ad", "")
-    return re.sub(r"[ \t]+", " ", normalized).strip()
-
-
-def _render_table_cell(value: str) -> str:
-    source_lines = value.split("\n")
-    normalized_lines: list[str] = []
-    for line in source_lines:
-        if not normalized_lines:
-            normalized_lines.append(line)
-        elif normalized_lines[-1].endswith("-") and _hard_hyphen_wraps_word(
-            normalized_lines[-1], line
-        ):
-            normalized_lines[-1] = f"{normalized_lines[-1][:-1]}{line.lstrip()}"
-        elif _table_cell_line_is_soft_wrap(normalized_lines[-1], line):
-            normalized_lines[-1] = f"{normalized_lines[-1].rstrip()} {line.lstrip()}"
-        else:
-            normalized_lines.append(line)
-    return "\n".join(normalized_lines)
-
-
-_TABLE_CELL_CONTINUATION_WORDS = frozenset(
-    {
-        "a",
-        "an",
-        "and",
-        "at",
-        "by",
-        "con",
-        "de",
-        "del",
-        "el",
-        "en",
-        "for",
-        "from",
-        "in",
-        "la",
-        "of",
-        "on",
-        "or",
-        "para",
-        "por",
-        "the",
-        "to",
-        "with",
-        "y",
-    }
-)
-_TABLE_CELL_LIST_PREFIX_PATTERN = re.compile(r"^(?:[-*•‣▪◦]|\(?\d{1,3}[.)]|[A-ZÁÉÍÓÚÑ][.)])\s+")
-
-
-def _table_cell_line_is_soft_wrap(previous: str, current: str) -> bool:
-    """Join a visual PDF wrap without collapsing explicit items or sentences."""
-
-    left = previous.rstrip()
-    right = current.lstrip()
-    if (
-        not left
-        or not right
-        or left[-1] in ".!?;:"
-        or _TABLE_CELL_LIST_PREFIX_PATTERN.match(right) is not None
-    ):
-        return False
-    first_letter = next((character for character in right if character.isalpha()), "")
-    if first_letter.islower() or left[-1] in ",([{—–":
-        return True
-    last_word = re.search(r"([^\W\d_]+)[’']?$", left, re.UNICODE)
-    return bool(last_word and last_word.group(1).casefold() in _TABLE_CELL_CONTINUATION_WORDS)
-
-
-def _table_rendering(
-    rows: tuple[tuple[str, ...], ...],
-    column_count: int,
-) -> _TableRendering:
-    longest = max((len(cell) for row in rows for cell in row), default=0)
-    multiline = any("\n" in cell for row in rows for cell in row)
-    if (
-        len(rows) > 80
-        or column_count > 16
-        or longest > 2_000
-        or _table_has_sparse_continuation_rows(rows, column_count)
-    ):
-        return _TableRendering.STRUCTURED_TEXT
-    if column_count <= 8 and longest <= 220 and not multiline:
-        return _TableRendering.MARKDOWN
-    return _TableRendering.HTML
-
-
-def _table_has_sparse_continuation_rows(
-    rows: tuple[tuple[str, ...], ...],
-    column_count: int,
-) -> bool:
-    """Flag grids whose apparent rows probably split a smaller set of visual records."""
-
-    if column_count < 4 or len(rows) < 5:
-        return False
-    sparse_rows = sum(0 < sum(bool(cell) for cell in row) <= column_count - 2 for row in rows[1:])
-    return sparse_rows >= 2
-
-
 def _deduplicated_page(page: Any) -> Any:
     characters = list(page.chars)
     retained = _deduplicate_characters(characters)
@@ -1995,6 +1927,7 @@ def _build_line(
             or text
         )
     text = _repair_artificial_spacing_runs(text)
+    text = _repair_split_initial_pair(text, chars)
     weighted_characters = sum(max(len(str(char.get("text", ""))), 1) for char in raw_chars)
     bold_characters = sum(
         max(len(str(char.get("text", ""))), 1)
@@ -2042,6 +1975,40 @@ def _build_line(
     )
 
 
+def _repair_split_initial_pair(text: str, chars: tuple[_PdfCharacter, ...]) -> str:
+    """Rejoin an initial letter pair only with reduced type and a distinct word gap."""
+    tokens = text.split(" ", 2)
+    if (
+        len(tokens) != 3
+        or len(tokens[0]) != 1
+        or not tokens[0].isupper()
+        or len(tokens[1]) != 1
+        or not tokens[1].islower()
+        or not tokens[2][:1].isalpha()
+    ):
+        return text
+    visible = [char for char in chars if not char.text.isspace()]
+    if len(visible) < 3:
+        return text
+    first, second, following = visible[:3]
+    size = first.size
+    gap = second.x0 - first.x1
+    word_gap = following.x0 - second.x1
+    if (
+        (first.text, second.text, following.text) != (tokens[0], tokens[1], tokens[2][0])
+        or not all(char.upright for char in (first, second, following))
+        or size <= 0
+        or not size * 0.7 <= second.size <= size * 0.85
+        or abs(following.size - size) > size * 0.1
+        or max(abs(second.bottom - first.bottom), abs(following.bottom - first.bottom))
+        > size * 0.15
+        or not 0 <= gap <= size * 0.25
+        or word_gap < max(gap * 2, size * 0.3)
+    ):
+        return text
+    return tokens[0] + tokens[1] + " " + tokens[2]
+
+
 def _looks_artificially_spaced(text: str) -> bool:
     tokens = text.split()
     singleton_run = 0
@@ -2070,58 +2037,6 @@ def _repair_artificial_spacing_runs(text: str) -> str:
         lambda match: re.sub(r"\s+", "", match.group()),
         text,
     )
-
-
-def _repair_native_degree_markers(pages: list[_PdfPage]) -> tuple[list[_PdfPage], int]:
-    """Restore a superscript degree glyph misencoded as zero from native geometry."""
-
-    accepted = 0
-    repaired_pages: list[_PdfPage] = []
-    for page in pages:
-        repaired_lines: list[_PdfLine] = []
-        for line in page.lines:
-            candidates = tuple(
-                sorted(
-                    (
-                        *_DEGREE_SHAPED_NATIVE_ZERO_PATTERN.finditer(line.text),
-                        *_INVALID_ZODIAC_DEGREE_ZERO_PATTERN.finditer(line.text),
-                    ),
-                    key=lambda match: match.start(),
-                )
-            )
-            zero_characters = tuple(character for character in line.chars if character.text == "0")
-            visible_sizes = tuple(
-                character.size
-                for character in line.chars
-                if character.text.strip() and character.size > 0
-            )
-            if not candidates or not visible_sizes:
-                repaired_lines.append(line)
-                continue
-            typical_size = median(visible_sizes)
-            superscript_zeroes = tuple(
-                character
-                for character in zero_characters
-                if character.size <= typical_size * 0.80
-                and line.bottom - character.bottom >= max(1.0, typical_size * 0.18)
-            )
-            if not (len(candidates) == len(zero_characters) == len(superscript_zeroes)):
-                repaired_lines.append(line)
-                continue
-            repaired_text = _DEGREE_SHAPED_NATIVE_ZERO_PATTERN.sub(
-                lambda match: f"{match.group('degree')}°",
-                line.text,
-            )
-            repaired_text = _INVALID_ZODIAC_DEGREE_ZERO_PATTERN.sub(
-                lambda match: f"{match.group('degree')}°",
-                repaired_text,
-            )
-            repaired_lines.append(replace(line, text=repaired_text, chars=()))
-            accepted += len(candidates)
-        repaired_pages.append(replace(page, lines=tuple(repaired_lines)))
-    if accepted:
-        LOGGER.info("pdf_native_degree_geometry_completed accepted=%d", accepted)
-    return repaired_pages, accepted
 
 
 def _repair_overlapping_native_symbols(pages: list[_PdfPage]) -> tuple[list[_PdfPage], int]:
@@ -2241,11 +2156,6 @@ def _repair_repeated_native_spacing(pages: list[_PdfPage]) -> tuple[list[_PdfPag
     repaired = [_apply_page_text_replacements(page, replacements) for page in pages]
     LOGGER.info("pdf_repeated_spacing_consensus_completed accepted=%d", len(replacements))
     return repaired, len(replacements)
-
-
-def _spacing_insensitive_line_key(text: str) -> str:
-    normalized = unicodedata.normalize("NFKC", text).casefold()
-    return re.sub(r"\s+", "", normalized)
 
 
 def _reconstruct_character_text(
@@ -2601,164 +2511,6 @@ def _continuing_column_index(
     return candidates[0] if len(candidates) == 1 else None
 
 
-def _reconcile_suspicious_toc_numbers(
-    lines: list[_PdfLine],
-    ocr_markdown: str | None,
-) -> list[_PdfLine]:
-    """Decode broken numeric glyphs only with independent or sequential evidence.
-
-    The selectable layer remains authoritative for every letter and for layout. A suspicious
-    token changes only when local OCR or neighbouring clean folios leave one numeric reading.
-    """
-
-    ocr_numbers = set(re.findall(r"(?<!\d)\d{1,6}(?!\d)", ocr_markdown or ""))
-    native_folios = tuple(
-        (line, int(compact))
-        for line in lines
-        for compact in (re.sub(r"\s+", "", line.text),)
-        if re.fullmatch(r"\d{1,6}", compact)
-    )
-    has_trailing_native_folios = any(
-        re.search(r"(?<!\w)\d{1,4}\s*$", line.text) is not None for line in lines
-    )
-    if not ocr_numbers and not native_folios and not has_trailing_native_folios:
-        return lines
-
-    ocr_lines = tuple(line for line in (ocr_markdown or "").splitlines() if line.strip())
-
-    def lexical_key(value: str) -> str:
-        words = re.findall(r"[^\W\d_]{2,}", value.casefold(), re.UNICODE)
-        return " ".join(words)
-
-    def line_ocr_numbers(source_line: str) -> set[str]:
-        source_key = lexical_key(source_line)
-        if not source_key:
-            return ocr_numbers
-        ranked = sorted(
-            (
-                SequenceMatcher(None, source_key, lexical_key(candidate), autojunk=False).ratio(),
-                candidate,
-            )
-            for candidate in ocr_lines
-            if lexical_key(candidate)
-        )
-        if not ranked or ranked[-1][0] < 0.72:
-            return ocr_numbers
-        best_score = ranked[-1][0]
-        best_lines = [candidate for score, candidate in ranked if score >= best_score - 0.02]
-        return set(re.findall(r"(?<!\d)\d{1,6}(?!\d)", "\n".join(best_lines))) or ocr_numbers
-
-    def ocr_evidence_text(source_line: _PdfLine) -> str:
-        """Attach a detached folio to its visual label before matching OCR text."""
-
-        if lexical_key(source_line.text):
-            return source_line.text
-        row_labels = [
-            candidate
-            for candidate in lines
-            if candidate is not source_line
-            and candidate.x0 < source_line.x0
-            and _heading_letter_count(candidate.text) >= 2
-            and _toc_lines_share_row(candidate, source_line)
-        ]
-        if not row_labels:
-            return source_line.text
-        label = min(
-            row_labels,
-            key=lambda candidate: (
-                abs((candidate.top + candidate.bottom) - (source_line.top + source_line.bottom)),
-                -candidate.x1,
-            ),
-        )
-        return f"{label.text} {source_line.text}"
-
-    def native_sequence_numbers(source_line: _PdfLine) -> set[str]:
-        """Constrain one detached broken folio by its neighbours in the same column."""
-
-        token = re.sub(r"\s+", "", source_line.text)
-        if _SUSPICIOUS_NUMERIC_GLYPH_PATTERN.fullmatch(token) is None:
-            return set()
-        column_tolerance = source_line.page_width * 0.08
-        preceding = [
-            (line, value)
-            for line, value in native_folios
-            if line.top < source_line.top - 0.5
-            and abs(line.x0 - source_line.x0) <= column_tolerance
-        ]
-        following = [
-            (line, value)
-            for line, value in native_folios
-            if line.top > source_line.top + 0.5
-            and abs(line.x0 - source_line.x0) <= column_tolerance
-        ]
-        if not preceding or not following:
-            return set()
-        lower = max(preceding, key=lambda item: item[0].top)[1]
-        upper = min(following, key=lambda item: item[0].top)[1]
-        if lower > upper:
-            return set()
-        return {
-            candidate
-            for candidate in _numeric_glyph_candidates(token)
-            if lower <= int(candidate) <= upper
-        }
-
-    def reconcile_token(match: re.Match[str], confirmed_numbers: set[str]) -> str:
-        token = match.group(0)
-        candidates = _numeric_glyph_candidates(token)
-        if not candidates:
-            return token
-        # A trailing dollar sign can be a real currency marker.  Without a following ordinal
-        # separator or another digit it remains visible and is reported for review.
-        if "$" in token and match.end() == len(match.string):
-            return token
-        confirmed = candidates & confirmed_numbers
-        return next(iter(confirmed)) if len(confirmed) == 1 else token
-
-    reconciled: list[_PdfLine] = []
-    for line_index, line in enumerate(lines):
-        native_sequence = native_sequence_numbers(line)
-        ocr_confirmed_numbers = line_ocr_numbers(ocr_evidence_text(line))
-        native_ocr_consensus = native_sequence & ocr_confirmed_numbers
-        confirmed_numbers = native_ocr_consensus or native_sequence or ocr_confirmed_numbers
-
-        def reconcile_with_order(
-            match: re.Match[str],
-            confirmed: set[str] = confirmed_numbers,
-            current_line_index: int = line_index,
-        ) -> str:
-            independently_confirmed = reconcile_token(match, confirmed)
-            if independently_confirmed != match.group(0):
-                return independently_confirmed
-            ordered = _ordered_toc_folio_candidates(lines, current_line_index, match)
-            return reconcile_token(match, ordered)
-
-        text = _SUSPICIOUS_NUMERIC_GLYPH_PATTERN.sub(reconcile_with_order, line.text)
-        reconciled.append(replace(line, text=text) if text != line.text else line)
-    return reconciled
-
-
-def _reconcile_toc_numbers_with_native_priority(
-    lines: list[_PdfLine],
-    ocr_markdown: str | None,
-) -> list[_PdfLine]:
-    """Prefer a unique native folio sequence over conflicting whole-page OCR."""
-
-    native_reconciled = _reconcile_suspicious_toc_numbers(lines, None)
-    if not ocr_markdown:
-        return native_reconciled
-    ocr_reconciled = _reconcile_suspicious_toc_numbers(lines, ocr_markdown)
-    return [
-        native_candidate if native_candidate.text != source.text else ocr_candidate
-        for source, native_candidate, ocr_candidate in zip(
-            lines,
-            native_reconciled,
-            ocr_reconciled,
-            strict=True,
-        )
-    ]
-
-
 def _reconcile_spaced_numeric_year(
     lines: list[_PdfLine],
     ocr_markdown: str | None,
@@ -2792,82 +2544,6 @@ def _publication_year_evidence(
         for source in sources
         for match in _PUBLICATION_YEAR_CONTEXT_PATTERN.finditer(source)
     }
-
-
-def _numeric_glyph_candidates(token: str) -> set[str]:
-    """Expand common broken-font number shapes without selecting one by itself."""
-
-    candidates = {""}
-    has_uncertain_shape = False
-    for character in token:
-        replacements: tuple[str, ...]
-        if character.isdigit():
-            replacements = (character,)
-        elif character in _NUMERIC_GLYPH_EXPANSIONS:
-            replacements = _NUMERIC_GLYPH_EXPANSIONS[character]
-            has_uncertain_shape = True
-        elif character in "$^" or character.isalpha():
-            replacements = tuple("0123456789")
-            has_uncertain_shape = True
-        else:
-            return set()
-        candidates = {
-            f"{prefix}{replacement}" for prefix in candidates for replacement in replacements
-        }
-        if len(candidates) > 1_000:
-            return set()
-    return {
-        candidate
-        for candidate in candidates
-        if has_uncertain_shape
-        and candidate.isdecimal()
-        and 1 <= len(candidate) <= 4
-        and not candidate.startswith("0")
-        and 1 <= int(candidate) <= 9_999
-    }
-
-
-def _ordered_toc_folio_candidates(
-    lines: list[_PdfLine],
-    line_index: int,
-    match: re.Match[str],
-) -> set[str]:
-    """Use neighbouring clean TOC folios to select a broken trailing number."""
-
-    if match.end() != len(match.string):
-        return set()
-    candidates = _numeric_glyph_candidates(match.group(0))
-    if not candidates:
-        return set()
-
-    def trailing_folio(line: _PdfLine) -> int | None:
-        found = re.search(r"(?<!\w)(\d{1,4})\s*$", line.text)
-        return int(found.group(1)) if found is not None else None
-
-    lower = next(
-        (
-            value
-            for candidate_line in reversed(lines[:line_index])
-            for value in (trailing_folio(candidate_line),)
-            if value is not None
-        ),
-        None,
-    )
-    upper = next(
-        (
-            value
-            for candidate_line in lines[line_index + 1 :]
-            for value in (trailing_folio(candidate_line),)
-            if value is not None
-        ),
-        None,
-    )
-    if lower is not None and upper is not None and lower <= upper:
-        return {candidate for candidate in candidates if lower <= int(candidate) <= upper}
-    neighbour = lower if lower is not None else upper
-    if neighbour is None:
-        return set()
-    return {candidate for candidate in candidates if int(candidate) == neighbour}
 
 
 def _normalize_toc_entry_rows(lines: list[_PdfLine]) -> list[_PdfLine]:
@@ -2936,77 +2612,6 @@ def _normalize_toc_entry_rows(lines: list[_PdfLine]) -> list[_PdfLine]:
     return normalized
 
 
-def _reconcile_toc_spacing_from_ocr(
-    lines: list[_PdfLine],
-    ocr_markdown: str | None,
-) -> list[_PdfLine]:
-    """Restore only missing word boundaries corroborated by the local OCR layer."""
-
-    ocr_lines = _visible_ocr_lines(ocr_markdown or "")
-    if not ocr_lines:
-        return lines
-
-    def compact_with_boundaries(text: str) -> tuple[str, set[int]]:
-        compact: list[str] = []
-        boundaries: set[int] = set()
-        pending_space = False
-        for character in text.strip():
-            if character.isspace():
-                pending_space = bool(compact)
-                continue
-            if pending_space:
-                boundaries.add(len(compact))
-            compact.append(character)
-            pending_space = False
-        return "".join(compact), boundaries
-
-    reconciled: list[_PdfLine] = []
-    for line in lines:
-        match = _best_matching_text_line(line.text, ocr_lines)
-        if match is None or match[0] < 0.86:
-            reconciled.append(line)
-            continue
-        candidate = _aligned_visual_candidate(line.text, match[1])
-        native_compact, native_boundaries = compact_with_boundaries(line.text)
-        ocr_compact, ocr_boundaries = compact_with_boundaries(candidate)
-        if (
-            len(native_compact) != len(ocr_compact)
-            or _levenshtein_distance(native_compact.casefold(), ocr_compact.casefold()) > 2
-        ):
-            reconciled.append(line)
-            continue
-        added_boundaries = {
-            position
-            for position in ocr_boundaries - native_boundaries
-            if 0 < position < len(native_compact)
-            and native_compact[position - 1].isalpha()
-            and native_compact[position].isalpha()
-        }
-        if not added_boundaries:
-            reconciled.append(line)
-            continue
-        all_boundaries = native_boundaries | added_boundaries
-        text = "".join(
-            f" {character}" if index in all_boundaries else character
-            for index, character in enumerate(native_compact)
-        )
-        reconciled.append(replace(line, text=text))
-    return reconciled
-
-
-def _toc_lines_share_row(entry: _PdfLine, number: _PdfLine) -> bool:
-    entry_height = max(0.1, entry.bottom - entry.top)
-    number_height = max(0.1, number.bottom - number.top)
-    shorter_height = min(entry_height, number_height)
-    overlap = min(entry.bottom, number.bottom) - max(entry.top, number.top)
-    entry_center = (entry.top + entry.bottom) / 2
-    number_center = (number.top + number.bottom) / 2
-    return overlap >= shorter_height * 0.55 or abs(entry_center - number_center) <= max(
-        1.5,
-        shorter_height * 0.35,
-    )
-
-
 def _merge_toc_entry_number_line(entry: _PdfLine, number: _PdfLine) -> _PdfLine:
     merged_x0 = min(entry.x0, number.x0)
     merged_x1 = max(entry.x1, number.x1)
@@ -3067,6 +2672,7 @@ def _native_toc_heading_references(
                 previous,
                 body_size,
                 preserved_repeated_headings=preserved_margin_headings,
+                page_lines=page.lines,
             ):
                 continue
             gap_before = line.top - previous.bottom if previous is not None else body_size * 2
@@ -3199,11 +2805,6 @@ def _compact_character(raw: dict[str, Any]) -> _PdfCharacter | None:
         )
     except (KeyError, TypeError, ValueError):
         return None
-
-
-def _is_bold_font(font_name: str) -> bool:
-    normalized = font_name.casefold()
-    return any(marker in normalized for marker in ("bold", "black", "demi", "semibold"))
 
 
 def _is_italic_font(font_name: str) -> bool:
@@ -3390,7 +2991,7 @@ def _pages_requiring_ocr(pages: list[_PdfPage]) -> set[int]:
         )
         lacks_text = _page_letter_count(page) < _GRAPHIC_WARNING_LETTER_LIMIT
         if (
-            page.has_table
+            (page.has_table and not _has_reliable_native_table(page))
             or has_discrete_image
             or (has_full_page_image and lacks_text)
             or _has_suspicious_glyph_encoding(page)
@@ -3415,6 +3016,8 @@ def _hidden_text_audit_pages(pages: list[_PdfPage]) -> set[int]:
 
     ranked: list[tuple[int, int]] = []
     for page in pages:
+        if _has_reliable_native_table(page):
+            continue
         if not any(ratio >= _FULL_PAGE_IMAGE_AREA_RATIO for ratio in page.image_area_ratios):
             continue
         if _page_letter_count(page) < _GRAPHIC_WARNING_LETTER_LIMIT:
@@ -3439,6 +3042,20 @@ def _hidden_text_audit_pages(pages: list[_PdfPage]) -> set[int]:
         max(1, math.ceil(len(pages) * 0.25)),
     )
     return {page_number for _score, page_number in ranked[:budget]}
+
+
+def _has_reliable_native_table(page: _PdfPage) -> bool:
+    """Recognize a complete, readable native table that does not need a second OCR pass."""
+
+    return (
+        page.has_table
+        and bool(page.tables)
+        and all(not table.inferred_from_raster for table in page.tables)
+        and _page_letter_count(page) >= _RELIABLE_NATIVE_TABLE_LETTERS
+        and _native_page_quality(page) >= _RELIABLE_NATIVE_TABLE_QUALITY
+        and not _has_suspicious_glyph_encoding(page)
+        and not _has_suspicious_numeric_glyph_encoding(page)
+    )
 
 
 def _extract_secondary_native_text(
@@ -4109,52 +3726,6 @@ def _reconcile_document_token_consensus(
     return reconciled, len(replacements)
 
 
-def _reconcile_suspicious_numbers_from_ocr(
-    pages: list[_PdfPage],
-    ocr_pages: dict[int, str],
-) -> tuple[list[_PdfPage], int]:
-    """Repair a broken numeric token only when its aligned OCR line selects one value."""
-
-    replacements: dict[tuple[int, float, float, str], str] = {}
-    for page in pages:
-        ocr_markdown = ocr_pages.get(page.number)
-        if not ocr_markdown:
-            continue
-        ocr_lines = _visible_ocr_lines(ocr_markdown)
-        for line in page.lines:
-            if line.rotated:
-                continue
-            suspicious_matches = _suspicious_numeric_glyph_matches(line.text)
-            if not suspicious_matches:
-                continue
-            suspicious_spans = {match.span() for match in suspicious_matches}
-            match = _best_matching_text_line(line.text, ocr_lines)
-            if match is None or match[0] < 0.72:
-                continue
-            confirmed_numbers = set(re.findall(r"(?<!\d)\d{1,4}(?!\d)", match[1]))
-            if not confirmed_numbers:
-                continue
-
-            def reconcile_token(
-                candidate: re.Match[str],
-                confirmed_numbers: set[str] = confirmed_numbers,
-                suspicious_spans: set[tuple[int, int]] = suspicious_spans,
-            ) -> str:
-                if candidate.span() not in suspicious_spans:
-                    return candidate.group(0)
-                values = _numeric_glyph_candidates(candidate.group(0)) & confirmed_numbers
-                return next(iter(values)) if len(values) == 1 else candidate.group(0)
-
-            proposed = _SUSPICIOUS_NUMERIC_GLYPH_PATTERN.sub(reconcile_token, line.text)
-            if proposed != line.text:
-                replacements[_visual_line_key(line)] = proposed
-    if not replacements:
-        return pages, 0
-    reconciled = [_apply_page_text_replacements(page, replacements) for page in pages]
-    LOGGER.info("pdf_numeric_glyph_consensus_completed accepted=%d", len(replacements))
-    return reconciled, len(replacements)
-
-
 def _document_alpha_token_counts(texts: Iterable[str]) -> Counter[str]:
     counts: Counter[str] = Counter()
     for text in texts:
@@ -4492,148 +4063,8 @@ def _token_reconciled_visual_candidate(
     return candidate if candidate != native else None
 
 
-def _apply_page_text_replacements(
-    page: _PdfPage,
-    replacements: dict[tuple[int, float, float, str], str],
-) -> _PdfPage:
-    """Apply accepted visual readings to both flow lines and their structured table cells."""
-
-    changed_lines = tuple(
-        replace(line, text=replacements[_visual_line_key(line)])
-        if _visual_line_key(line) in replacements
-        else line
-        for line in page.lines
-    )
-    if not page.tables:
-        return replace(page, lines=changed_lines) if changed_lines != page.lines else page
-
-    changed_tables: list[_PdfTable] = []
-    for table in page.tables:
-        table_replacements = tuple(
-            (line.text, replacements[_visual_line_key(line)])
-            for line in page.lines
-            if _visual_line_key(line) in replacements and _line_inside_table(line, table)
-        )
-        if not table_replacements:
-            changed_tables.append(table)
-            continue
-        rows = [list(row) for row in table.rows]
-        for old, new in table_replacements:
-            matches = [
-                (row_index, column_index)
-                for row_index, row in enumerate(rows)
-                for column_index, cell in enumerate(row)
-                if old in cell
-            ]
-            if len(matches) == 1:
-                row_index, column_index = matches[0]
-                if rows[row_index][column_index].count(old) == 1:
-                    rows[row_index][column_index] = rows[row_index][column_index].replace(
-                        old, new, 1
-                    )
-                    continue
-            atom_replacement = _single_visual_atom_replacement(old, new)
-            if atom_replacement is None:
-                continue
-            old_atom, new_atom = atom_replacement
-            atom_matches = [
-                (row_index, column_index, match.start(), match.end())
-                for row_index, row in enumerate(rows)
-                for column_index, cell in enumerate(row)
-                for match in _VISUAL_ATOM_PATTERN.finditer(cell)
-                if match.group(0) == old_atom
-            ]
-            if len(atom_matches) != 1:
-                continue
-            row_index, column_index, start, end = atom_matches[0]
-            cell = rows[row_index][column_index]
-            rows[row_index][column_index] = cell[:start] + new_atom + cell[end:]
-        updated_rows = tuple(tuple(row) for row in rows)
-        changed_tables.append(
-            replace(table, rows=updated_rows) if updated_rows != table.rows else table
-        )
-    tables = tuple(changed_tables)
-    if changed_lines == page.lines and tables == page.tables:
-        return page
-    return replace(page, lines=changed_lines, tables=tables)
-
-
-def _single_visual_atom_replacement(old: str, new: str) -> tuple[str, str] | None:
-    old_atoms = _visual_atoms(old)
-    new_atoms = _visual_atoms(new)
-    if not old_atoms or len(old_atoms) != len(new_atoms):
-        return None
-    changed = [
-        (old_atom, new_atom)
-        for old_atom, new_atom in zip(old_atoms, new_atoms, strict=True)
-        if old_atom != new_atom
-    ]
-    return changed[0] if len(changed) == 1 else None
-
-
-def _best_matching_text_line(
-    source: str,
-    candidates: tuple[str, ...],
-) -> tuple[float, str] | None:
-    ranked = sorted(
-        (
-            (
-                SequenceMatcher(
-                    None,
-                    source.casefold(),
-                    candidate.casefold(),
-                    autojunk=False,
-                ).ratio(),
-                candidate,
-            )
-            for candidate in candidates
-        ),
-        reverse=True,
-    )
-    return ranked[0] if ranked else None
-
-
 def _comparison_line_key(text: str) -> str:
     return " ".join(unicodedata.normalize("NFC", text).casefold().split())
-
-
-def _aligned_visual_candidate(native: str, candidate: str) -> str:
-    native_atoms = _visual_atoms(native)
-    candidate_atoms = _visual_atoms(candidate)
-    if (
-        len(candidate_atoms) == len(native_atoms) + 1
-        and candidate_atoms[-1].isdigit()
-        and not any(atom.isdigit() for atom in native_atoms)
-    ):
-        return re.sub(r"\s+\d{1,6}\s*$", "", candidate).strip()
-    return candidate
-
-
-def _visible_ocr_lines(markdown: str) -> tuple[str, ...]:
-    lines: list[str] = []
-    for raw_line in markdown.splitlines():
-        stripped = raw_line.strip()
-        if not stripped or re.fullmatch(r"\|?[\s:|-]+\|?", stripped):
-            continue
-        from_table = "|" in stripped and stripped.startswith("|")
-        if from_table:
-            stripped = " ".join(
-                cell.strip() for cell in stripped.strip("|").split("|") if cell.strip()
-            )
-        stripped = re.sub(r"^[#>*+\-]+\s*", "", stripped)
-        if not from_table:
-            stripped = re.sub(r"^\d+[.)]\s+", "", stripped)
-        stripped = re.sub(r"[*_`]+", "", stripped)
-        stripped = re.sub(r"!?\[([^\]]*)\]\((?:<[^>]+>|[^)]+)\)", r"\1", stripped)
-        stripped = re.sub(r"<[^>]+>", " ", stripped)
-        stripped = " ".join(stripped.split())
-        if stripped:
-            lines.append(stripped)
-    return tuple(dict.fromkeys(lines))
-
-
-def _visual_atoms(text: str) -> tuple[str, ...]:
-    return tuple(_VISUAL_ATOM_PATTERN.findall(unicodedata.normalize("NFC", text)))
 
 
 def _visual_disagreement_priority(
@@ -4817,8 +4248,9 @@ def _plausible_mixed_visual_resolution(source: str, proposed: str) -> bool:
 
 
 def _render_visual_text_crop(page: Any, line: _PdfLine) -> bytes:
+    x0, top, x1, bottom = (float(value) for value in page.bbox)
     bbox = _visual_text_crop_bbox(
-        tuple(float(value) for value in page.bbox),
+        (x0, top, x1, bottom),
         line,
     )
     image = page.crop(bbox, strict=True).to_image(resolution=288, antialias=True).original
@@ -4949,30 +4381,6 @@ def _native_diacritic_is_stronger_than_ocr(native: str, ocr: str) -> bool:
     )
 
 
-def _visual_line_key(line: _PdfLine) -> tuple[int, float, float, str]:
-    return (line.page_number, line.top, line.x0, line.text)
-
-
-def _levenshtein_distance(left: str, right: str) -> int:
-    if left == right:
-        return 0
-    if len(left) < len(right):
-        left, right = right, left
-    previous = list(range(len(right) + 1))
-    for left_index, left_character in enumerate(left, start=1):
-        current = [left_index]
-        for right_index, right_character in enumerate(right, start=1):
-            current.append(
-                min(
-                    current[-1] + 1,
-                    previous[right_index] + 1,
-                    previous[right_index - 1] + (left_character != right_character),
-                )
-            )
-        previous = current
-    return previous[-1]
-
-
 def _has_spatial_table_candidate(lines: tuple[_PdfLine, ...]) -> bool:
     """Cheaply preselect pages whose text may form a table without vector rules."""
 
@@ -4990,27 +4398,6 @@ def _has_spatial_table_candidate(lines: tuple[_PdfLine, ...]) -> bool:
         return False
     side_by_side = _side_by_side_line_indexes(useful, page_width)
     return len(side_by_side) >= 6 and len(side_by_side) / len(useful) >= 0.20
-
-
-def _side_by_side_line_indexes(
-    lines: tuple[_PdfLine, ...],
-    page_width: float,
-) -> set[int]:
-    """Return lines participating in repeated horizontal cell relationships."""
-
-    side_by_side: set[int] = set()
-    minimum_gutter = page_width * 0.025
-    for left_index, left in enumerate(lines):
-        for right_index in range(left_index + 1, len(lines)):
-            right = lines[right_index]
-            vertical_overlap = min(left.bottom, right.bottom) - max(left.top, right.top)
-            minimum_height = max(1.0, min(left.bottom - left.top, right.bottom - right.top))
-            horizontally_separated = (
-                left.x1 + minimum_gutter <= right.x0 or right.x1 + minimum_gutter <= left.x0
-            )
-            if vertical_overlap >= minimum_height * 0.35 and horizontally_separated:
-                side_by_side.update((left_index, right_index))
-    return side_by_side
 
 
 def _extract_spatial_tables(page: Any, lines: tuple[_PdfLine, ...]) -> tuple[_PdfTable, ...]:
@@ -5168,632 +4555,6 @@ def _extract_spatial_tables(page: Any, lines: tuple[_PdfLine, ...]) -> tuple[_Pd
             )
         )
     return tuple(tables)
-
-
-def _open_raster_table_boundaries(
-    page: Any,
-    lines: tuple[_PdfLine, ...],
-    page_width: float,
-    page_height: float,
-    rules: tuple[_RasterHorizontalRule, ...],
-) -> tuple[tuple[float, ...], tuple[float, ...], bool] | None:
-    """Recover a strict open-table grid from an ABBYY full-page scan."""
-
-    if not 2 <= len(rules) <= 3:
-        return None
-    first = rules[0]
-    last = rules[-1]
-    widths = tuple(rule.x1 - rule.x0 for rule in rules)
-    overlap = min(rule.x1 for rule in rules) - max(rule.x0 for rule in rules)
-    if min(widths, default=0.0) <= 0 or overlap / min(widths) < 0.90:
-        return None
-    outer_left = float(median(rule.x0 for rule in rules))
-    outer_right = float(median(rule.x1 for rule in rules))
-    area_ratio = (outer_right - outer_left) * (last.top - first.top) / (page_width * page_height)
-    if not _OPEN_RASTER_TABLE_MIN_AREA_RATIO <= area_ratio <= _OPEN_RASTER_TABLE_MAX_AREA_RATIO:
-        return None
-
-    table_lines = tuple(
-        line for line in lines if first.top < (line.top + line.bottom) / 2 < last.top
-    )
-    side_by_side = _side_by_side_line_indexes(table_lines, page_width)
-    if (
-        len(side_by_side) < _OPEN_RASTER_TABLE_MIN_SIDE_BY_SIDE_LINES
-        or len(side_by_side) / max(1, len(table_lines)) < _OPEN_RASTER_TABLE_MIN_SIDE_BY_SIDE_RATIO
-    ):
-        return None
-
-    sparse_matrix = len(rules) == 3
-    if sparse_matrix:
-        vertical = _header_gutter_table_boundaries(table_lines, page_width, rules)
-        if vertical is None:
-            return None
-    else:
-        middle = _RasterHorizontalRule(
-            outer_left,
-            float((first.top + last.top) / 2),
-            outer_right,
-        )
-        repeated = _spatial_table_boundaries(
-            table_lines,
-            side_by_side,
-            page_width,
-            page_height,
-            (first, middle, last),
-        )
-        if repeated is None or len(repeated[0]) != 3:
-            return None
-        vertical = repeated[0]
-
-    horizontal_result = _open_table_horizontal_boundaries(page, vertical, rules)
-    if horizontal_result is None:
-        return None
-    horizontal, labelled_row_ratio = horizontal_result
-    if len(horizontal) - 1 < 4:
-        return None
-    if not sparse_matrix and labelled_row_ratio < 0.75:
-        return None
-    return vertical, horizontal, sparse_matrix
-
-
-def _header_gutter_table_boundaries(
-    lines: tuple[_PdfLine, ...],
-    page_width: float,
-    rules: tuple[_RasterHorizontalRule, ...],
-) -> tuple[float, ...] | None:
-    """Infer matrix columns only from gutters repeated across two header lines."""
-
-    if len(rules) != 3:
-        return None
-    candidates: list[tuple[float, float]] = []
-    for line in lines:
-        center_y = (line.top + line.bottom) / 2
-        if not rules[0].top < center_y < rules[1].top:
-            continue
-        characters = sorted(
-            (
-                character
-                for character in line.chars
-                if character.text and not character.text.isspace()
-            ),
-            key=lambda character: character.x0,
-        )
-        minimum_gap = max(page_width * 0.012, line.font_size * 0.80)
-        for previous, current in zip(characters, characters[1:], strict=False):
-            if current.x0 - previous.x1 >= minimum_gap:
-                candidates.append(((previous.x1 + current.x0) / 2, line.top))
-    if not candidates:
-        return None
-
-    tolerance = page_width * 0.015
-    clusters: list[list[tuple[float, float]]] = []
-    for candidate in sorted(candidates):
-        if not clusters or candidate[0] - median(item[0] for item in clusters[-1]) > tolerance:
-            clusters.append([candidate])
-        else:
-            clusters[-1].append(candidate)
-    internal = tuple(
-        float(median(item[0] for item in cluster))
-        for cluster in clusters
-        if len({round(item[1], 1) for item in cluster}) >= 2
-    )
-    table_lines = tuple(
-        line for line in lines if rules[0].top < (line.top + line.bottom) / 2 < rules[-1].top
-    )
-    vertical = (
-        min(
-            float(median(rule.x0 for rule in rules)),
-            min((line.x0 for line in table_lines), default=page_width),
-        ),
-        *internal,
-        max(
-            float(median(rule.x1 for rule in rules)),
-            max((line.x1 for line in table_lines), default=0.0),
-        ),
-    )
-    if not 5 <= len(vertical) <= 9 or any(
-        left >= right for left, right in zip(vertical, vertical[1:], strict=False)
-    ):
-        return None
-    return vertical
-
-
-def _open_table_horizontal_boundaries(
-    page: Any,
-    vertical: tuple[float, ...],
-    rules: tuple[_RasterHorizontalRule, ...],
-) -> tuple[tuple[float, ...], float] | None:
-    """Split open-table rows only at clear whitespace in the first column."""
-
-    inferred: list[float] = []
-    row_starts: list[dict[str, Any]] = []
-    for upper, lower in zip(rules, rules[1:], strict=False):
-        try:
-            first_column_crop = page.crop(
-                (vertical[0], upper.top, vertical[1], lower.top),
-                strict=False,
-            )
-            raw_lines = sorted(
-                first_column_crop.extract_text_lines(strip=True, return_chars=True),
-                key=lambda line: float(line["top"]),
-            )
-            full_width_lines = sorted(
-                page.crop(
-                    (vertical[0], upper.top, vertical[-1], lower.top),
-                    strict=False,
-                ).extract_text_lines(strip=True, return_chars=True),
-                key=lambda line: float(line["top"]),
-            )
-        except (PdfminerException, KeyError, OSError, TypeError, ValueError):
-            return None
-        raw_lines = [line for line in raw_lines if _normalize_text(str(line.get("text", "")))]
-        full_width_lines = [
-            line for line in full_width_lines if _normalize_text(str(line.get("text", "")))
-        ]
-        if not raw_lines:
-            return None
-        sizes = [
-            float(character.get("size", 0))
-            for line in raw_lines
-            for character in (line.get("chars") or ())
-            if float(character.get("size", 0)) > 0
-        ]
-        minimum_gap = max(3.5, (median(sizes) if sizes else 7.0) * 0.55)
-        segment_starts = [raw_lines[0]]
-        for previous, current in zip(raw_lines, raw_lines[1:], strict=False):
-            gap = float(current["top"]) - float(previous["bottom"])
-            if gap >= minimum_gap:
-                segment_starts.append(current)
-        row_starts.extend(segment_starts)
-        row_tolerance = max(2.0, (median(sizes) if sizes else 7.0) * 0.35)
-        for current, following in zip(segment_starts, segment_starts[1:], strict=False):
-            current_top = float(current["top"])
-            following_top = float(following["top"])
-            previous_bottom = max(
-                (
-                    float(line["bottom"])
-                    for line in full_width_lines
-                    if float(line["top"]) >= current_top - row_tolerance
-                    and float(line["top"]) < following_top - 1.0
-                ),
-                default=float(current["bottom"]),
-            )
-            if previous_bottom >= following_top:
-                return None
-            inferred.append(float((previous_bottom + following_top) / 2))
-
-    horizontal = tuple(sorted((*(rule.top for rule in rules), *inferred)))
-    if len(horizontal) - 1 > _MAX_PDF_TABLE_ROWS or any(
-        top >= bottom for top, bottom in zip(horizontal, horizontal[1:], strict=False)
-    ):
-        return None
-    labelled = sum(_raw_table_line_is_label(line) for line in row_starts)
-    return horizontal, labelled / max(1, len(row_starts))
-
-
-def _restore_visual_matrix_placeholders(
-    page: Any,
-    rows: tuple[tuple[str, ...], ...],
-    vertical: tuple[float, ...],
-    horizontal: tuple[float, ...],
-) -> tuple[tuple[str, ...], ...]:
-    """Restore dash placeholders visible in the scan but absent from hidden OCR text."""
-
-    if (
-        len(rows) + 1 != len(horizontal)
-        or not rows
-        or any(len(row) + 1 != len(vertical) for row in rows)
-    ):
-        return rows
-    try:
-        image = page.to_image(resolution=144, antialias=True).original.convert("L")
-        page_width = float(page.width)
-        page_height = float(page.height)
-    except (OSError, TypeError, ValueError):
-        return rows
-    if page_width <= 0 or page_height <= 0:
-        return rows
-
-    scale_x = image.width / page_width
-    scale_y = image.height / page_height
-    restored = [list(row) for row in rows]
-    for row_index in range(1, len(rows)):
-        for column_index in range(1, len(rows[row_index])):
-            if rows[row_index][column_index]:
-                continue
-            bbox = (
-                vertical[column_index],
-                horizontal[row_index],
-                vertical[column_index + 1],
-                horizontal[row_index + 1],
-            )
-            if _raster_cell_has_short_horizontal_mark(image, bbox, scale_x, scale_y):
-                restored[row_index][column_index] = "—"
-    return tuple(tuple(row) for row in restored)
-
-
-def _repair_consensus_degree_markers(
-    rows: tuple[tuple[str, ...], ...],
-) -> tuple[tuple[str, ...], ...]:
-    """Repair one hidden-OCR degree glyph only when peer headers establish the notation."""
-
-    if not rows or len(rows[0]) < 4:
-        return rows
-    header = rows[0]
-    confirmed = sum(bool(re.search(r"(?<!\d)\d{1,2}°\s*[A-Z]{3,}\b", cell)) for cell in header[1:])
-    if confirmed < max(2, (len(header) - 1) // 2):
-        return rows
-
-    repaired_header: list[str] = []
-    for cell in header:
-        repaired = re.sub(
-            r"(?<!\d)(?P<degree>[0-2]?\d)0(?=\s*[A-Z]{3,}\b)",
-            lambda match: f"{match.group('degree')}°",
-            cell,
-        )
-        repaired_header.append(re.sub(r"(?<=°)(?=[A-Z])", " ", repaired))
-    if tuple(repaired_header) == header:
-        return rows
-    return (tuple(repaired_header), *rows[1:])
-
-
-def _raster_cell_has_short_horizontal_mark(
-    image: Image.Image,
-    bbox: tuple[float, float, float, float],
-    scale_x: float,
-    scale_y: float,
-) -> bool:
-    """Recognize one small dash component while excluding the table's outer rules."""
-
-    x0, top, x1, bottom = bbox
-    inset_x = min(2.0, max(0.75, (x1 - x0) * 0.025))
-    inset_y = min(2.0, max(0.75, (bottom - top) * 0.025))
-    crop_box = (
-        max(0, round((x0 + inset_x) * scale_x)),
-        max(0, round((top + inset_y) * scale_y)),
-        min(image.width, round((x1 - inset_x) * scale_x)),
-        min(image.height, round((bottom - inset_y) * scale_y)),
-    )
-    if crop_box[2] <= crop_box[0] or crop_box[3] <= crop_box[1]:
-        return False
-    crop = image.crop(crop_box)
-    width, height = crop.size
-    pixels = crop.load()
-    visited: set[tuple[int, int]] = set()
-    for y in range(height):
-        for x in range(width):
-            if (x, y) in visited or pixels[x, y] >= 155:
-                continue
-            pending = [(x, y)]
-            visited.add((x, y))
-            component: list[tuple[int, int]] = []
-            while pending:
-                current_x, current_y = pending.pop()
-                component.append((current_x, current_y))
-                for delta_y in (-1, 0, 1):
-                    for delta_x in (-1, 0, 1):
-                        neighbour = (current_x + delta_x, current_y + delta_y)
-                        if (
-                            0 <= neighbour[0] < width
-                            and 0 <= neighbour[1] < height
-                            and neighbour not in visited
-                            and pixels[neighbour[0], neighbour[1]] < 155
-                        ):
-                            visited.add(neighbour)
-                            pending.append(neighbour)
-            component_width = (
-                max(point[0] for point in component) - min(point[0] for point in component) + 1
-            )
-            component_height = (
-                max(point[1] for point in component) - min(point[1] for point in component) + 1
-            )
-            density = len(component) / (component_width * component_height)
-            if (
-                6 <= component_width <= max(8, round(width * 0.45))
-                and component_height <= max(5, round(component_width * 0.25))
-                and component_width >= component_height * 3
-                and len(component) >= component_width * 0.60
-                and density >= 0.30
-            ):
-                return True
-    return False
-
-
-def _raw_table_line_is_label(raw_line: dict[str, Any]) -> bool:
-    text = _normalize_text(str(raw_line.get("text", "")))
-    if _is_uppercase_text(text):
-        return True
-    characters = tuple(raw_line.get("chars") or ())
-    weighted = sum(max(1, len(str(character.get("text", "")))) for character in characters)
-    bold = sum(
-        max(1, len(str(character.get("text", ""))))
-        for character in characters
-        if _is_bold_font(str(character.get("fontname", "")))
-    )
-    return weighted > 0 and bold / weighted >= 0.55
-
-
-def _complete_sparse_table_rules(
-    rules: tuple[_RasterHorizontalRule, ...],
-    lines: tuple[_PdfLine, ...],
-    page_width: float,
-) -> tuple[_RasterHorizontalRule, ...] | None:
-    """Infer missing inner rules for a short, explicitly captioned table fragment."""
-
-    if len(rules) != 2:
-        return None
-    side_by_side = _side_by_side_line_indexes(lines, page_width)
-    aligned = sorted((lines[index] for index in side_by_side), key=lambda line: line.x0)
-    if len(aligned) < 6:
-        return None
-    tolerance = page_width * 0.045
-    first_column = [aligned[0]]
-    for line in aligned[1:]:
-        if line.x0 - median(item.x0 for item in first_column) > tolerance:
-            break
-        first_column.append(line)
-    row_lines = sorted(
-        (
-            line
-            for line in first_column
-            if rules[0].top < (line.top + line.bottom) / 2 < rules[-1].top
-        ),
-        key=lambda line: line.top,
-    )
-    starts: list[float] = []
-    for line in row_lines:
-        if not starts or line.top - starts[-1] > max(2.0, line.font_size * 0.45):
-            starts.append(line.top)
-    if not 3 <= len(starts) <= _MAX_PDF_TABLE_ROWS:
-        return None
-    boundaries: list[float] = []
-    for current, following in zip(starts, starts[1:], strict=False):
-        row_tolerance = max(
-            4.0,
-            median(line.font_size for line in row_lines) * 0.75,
-        )
-        next_top = min(
-            (
-                line.top
-                for line in lines
-                if following - row_tolerance <= line.top <= following + row_tolerance
-            ),
-            default=following,
-        )
-        previous_bottom = max(
-            (
-                line.bottom
-                for line in lines
-                if line.top >= current - row_tolerance and line.top < next_top - 1.0
-            ),
-            default=current,
-        )
-        if previous_bottom >= next_top:
-            return None
-        boundaries.append(float((previous_bottom + next_top) / 2))
-    x0 = float(median(rule.x0 for rule in rules))
-    x1 = float(median(rule.x1 for rule in rules))
-    return (
-        rules[0],
-        *(_RasterHorizontalRule(x0, top, x1) for top in boundaries),
-        rules[-1],
-    )
-
-
-def _spatial_table_rule_groups(
-    rules: tuple[_RasterHorizontalRule, ...],
-    lines: tuple[_PdfLine, ...],
-) -> tuple[tuple[_RasterHorizontalRule, ...], ...]:
-    """Split consecutive ruled tables only at an explicit caption between their rule sets."""
-
-    if not rules:
-        return ()
-    split_after: set[int] = set()
-    for index, (upper, lower) in enumerate(zip(rules, rules[1:], strict=False)):
-        if index + 1 < 3 or len(rules) - index - 1 < 2:
-            continue
-        if any(
-            upper.top < (line.top + line.bottom) / 2 < lower.top
-            and _TABLE_CAPTION_LINE_PATTERN.match(line.text.strip())
-            for line in lines
-        ):
-            split_after.add(index)
-    groups: list[tuple[_RasterHorizontalRule, ...]] = []
-    start = 0
-    for index in sorted(split_after):
-        groups.append(rules[start : index + 1])
-        start = index + 1
-    groups.append(rules[start:])
-    return tuple(groups)
-
-
-def _raster_horizontal_rules(
-    page: Any,
-    *,
-    minimum_width_ratio: float = 0.70,
-) -> tuple[_RasterHorizontalRule, ...]:
-    """Locate long horizontal rules that exist only in the rendered page image."""
-
-    try:
-        image = page.to_image(resolution=144, antialias=True).original.convert("L")
-    except (OSError, TypeError, ValueError):
-        return ()
-    width, height = image.size
-    if width <= 0 or height <= 0:
-        return ()
-    data = image.tobytes()
-    grouped: list[list[tuple[int, tuple[int, int]]]] = []
-    current: list[tuple[int, tuple[int, int]]] = []
-    for y in range(height + 1):
-        span = (
-            _long_dark_horizontal_span(
-                data,
-                width,
-                height,
-                y,
-                minimum_width_ratio=minimum_width_ratio,
-            )
-            if y < height
-            else None
-        )
-        if span is not None and y / height < 0.97:
-            current.append((y, span))
-        elif current:
-            grouped.append(current)
-            current = []
-    scale_x = float(page.width) / width
-    scale_y = float(page.height) / height
-    return tuple(
-        _RasterHorizontalRule(
-            float(median(span[0] for _y, span in group)) * scale_x,
-            float(median(y for y, _span in group)) * scale_y,
-            float(median(span[1] for _y, span in group)) * scale_x,
-        )
-        for group in grouped
-    )
-
-
-def _long_dark_horizontal_span(
-    data: bytes,
-    width: int,
-    height: int,
-    y: int,
-    *,
-    minimum_width_ratio: float = 0.70,
-) -> tuple[int, int] | None:
-    dark_x = bytearray(width)
-    for scan_y in range(max(0, y - 2), min(height, y + 3)):
-        row = data[scan_y * width : (scan_y + 1) * width]
-        for x, value in enumerate(row):
-            if value < 200:
-                dark_x[x] = 1
-    best: tuple[int, int] | None = None
-    start: int | None = None
-    previous = -1
-    gap = 0
-    for x, is_dark in enumerate(dark_x):
-        if is_dark:
-            if start is None or gap > 3:
-                if start is not None and (best is None or previous + 1 - start > best[1] - best[0]):
-                    best = (start, previous + 1)
-                start = x
-            previous = x
-            gap = 0
-        elif start is not None:
-            gap += 1
-    if start is not None and (best is None or previous + 1 - start > best[1] - best[0]):
-        best = (start, previous + 1)
-    if best is None or best[1] - best[0] < width * minimum_width_ratio:
-        return None
-    return best
-
-
-def _spatial_table_boundaries(
-    lines: tuple[_PdfLine, ...],
-    side_by_side: set[int],
-    page_width: float,
-    page_height: float,
-    rules: tuple[_RasterHorizontalRule, ...],
-    *,
-    allow_singleton_columns: bool = False,
-) -> tuple[tuple[float, ...], tuple[float, ...]] | None:
-    if len(rules) < 3:
-        return None
-    tolerance = page_width * 0.045
-    aligned = sorted((lines[index] for index in side_by_side), key=lambda line: line.x0)
-    clusters: list[list[_PdfLine]] = []
-    for line in aligned:
-        if not clusters or line.x0 - median(item.x0 for item in clusters[-1]) > tolerance:
-            clusters.append([line])
-        else:
-            clusters[-1].append(line)
-    clusters = [cluster for cluster in clusters if len(cluster) >= 2 or allow_singleton_columns]
-    if not 2 <= len(clusters) <= 8:
-        return None
-    anchors = tuple(float(median(line.x0 for line in cluster)) for cluster in clusters)
-    table_row_lines = tuple(
-        line for line in lines if rules[0].top < (line.top + line.bottom) / 2 < rules[-1].top
-    )
-    internal_boundaries: list[float] = []
-    minimum_gutter = 0.01
-    for left_cluster, right_cluster in zip(clusters, clusters[1:], strict=False):
-        substantial_right_lines = tuple(
-            line for line in right_cluster if _heading_letter_count(line.text) >= 3
-        )
-        right_edge = min(line.x0 for line in (substantial_right_lines or tuple(right_cluster)))
-        character_edges = [
-            character.x1
-            for line in table_row_lines
-            for character in line.chars
-            if character.x0 < right_edge and character.x1 <= right_edge
-        ]
-        left_edge = (
-            max(character_edges) if character_edges else max(line.x1 for line in left_cluster)
-        )
-        if right_edge - left_edge < minimum_gutter:
-            return None
-        internal_boundaries.append(float((left_edge + right_edge) / 2))
-    outer_left = min(
-        float(median(rule.x0 for rule in rules)),
-        min((line.x0 for line in table_row_lines), default=page_width),
-    )
-    outer_right = max(
-        float(median(rule.x1 for rule in rules)),
-        max((line.x1 for line in table_row_lines), default=0.0),
-    )
-    vertical = (
-        outer_left,
-        *internal_boundaries,
-        outer_right,
-    )
-    if any(left >= right for left, right in zip(vertical, vertical[1:], strict=False)):
-        return None
-    horizontal = [rule.top for rule in rules]
-    first = horizontal[0]
-    near_above = tuple(
-        line
-        for line in lines
-        if not line.rotated
-        and line.bottom <= first + 1
-        and line.top >= max(0.0, first - page_height * 0.10)
-        and _LETTER_PATTERN.search(line.text)
-    )
-    aligned_columns = {
-        min(range(len(anchors)), key=lambda index: abs(line.x0 - anchors[index]))
-        for line in near_above
-        if min(abs(line.x0 - anchor) for anchor in anchors) <= page_width * 0.025
-    }
-    if len(_side_by_side_line_indexes(near_above, page_width)) >= 2 and len(aligned_columns) >= 2:
-        horizontal.insert(0, min(line.top for line in near_above))
-    if len(horizontal) < 3 or any(
-        top >= bottom for top, bottom in zip(horizontal, horizontal[1:], strict=False)
-    ):
-        return None
-    return vertical, tuple(horizontal)
-
-
-def _table_has_exact_character_coverage(
-    page: Any,
-    bbox: tuple[float, float, float, float],
-    rows: tuple[tuple[str, ...], ...],
-) -> bool:
-    x0, top, x1, bottom = bbox
-    source = "".join(
-        str(character.get("text", ""))
-        for character in page.chars
-        if x0 <= (float(character["x0"]) + float(character["x1"])) / 2 < x1
-        and top <= (float(character["top"]) + float(character["bottom"])) / 2 < bottom
-    )
-    extracted = "".join(cell for row in rows for cell in row)
-    return _significant_character_counts(source) == _significant_character_counts(extracted)
-
-
-def _significant_character_counts(value: str) -> Counter[str]:
-    return Counter(
-        character
-        for character in unicodedata.normalize("NFKC", value).casefold()
-        if unicodedata.category(character)[0] in {"L", "N", "P", "S"}
-    )
 
 
 def _page_letter_count(page: _PdfPage) -> int:
@@ -6027,7 +4788,14 @@ def _ordered_list_item_indexes(lines: list[_PdfLine], body_size: float) -> set[i
     run: list[tuple[int, int, str, _PdfLine]] = []
 
     def confirm_run() -> None:
-        if len(run) >= 3:
+        introduced_pair = (
+            len(run) == 2
+            and run[0][0] > 0
+            and lines[run[0][0] - 1].text.rstrip().endswith(":")
+            and 0 <= run[0][3].top - lines[run[0][0] - 1].bottom <= body_size * 2
+            and abs(run[0][3].x0 - lines[run[0][0] - 1].x0) <= body_size * 1.75
+        )
+        if len(run) >= 3 or introduced_pair:
             confirmed.update(candidate[0] for candidate in run)
 
     for candidate in candidates:
@@ -6460,6 +5228,7 @@ def _render_document(
                 body_size,
                 toc_page=toc_page,
                 preserved_repeated_headings=preserved_margin_headings,
+                page_lines=candidate_lines,
             ):
                 continue
             visible_lines.append(line)
@@ -6499,6 +5268,7 @@ def _render_document(
             previous_body_line = None
 
         previous_in_page: _PdfLine | None = None
+        paragraph_gap = None if toc_page else _paragraph_gap_threshold(visible_lines, body_size)
         active_ordered_list_block: _MarkdownBlock | None = None
         active_ordered_list_start: _PdfLine | None = None
         previous_ordered_list_line: _PdfLine | None = None
@@ -6557,6 +5327,18 @@ def _render_document(
                 following_line,
                 body_size,
             ):
+                level = None
+            if (
+                level is not None
+                and line.outline_level is None
+                and previous_body_line is not None
+                and (line.soft_hyphen_end or line.hard_hyphen_end)
+                and (previous_body_line.soft_hyphen_end or previous_body_line.hard_hyphen_end)
+                and line.text[:1].islower()
+                and abs(line.font_size - previous_body_line.font_size) <= body_size * 0.2
+                and _should_join_lines(previous_body_line, line, body_size, gap_before)
+            ):
+                # A wrapped prose line must retain its mixed emphasis, not become a heading.
                 level = None
             ordered_match = (
                 _ORDERED_LIST_PATTERN.match(line.text)
@@ -6681,17 +5463,32 @@ def _render_document(
                     line,
                     _escape_literal_markdown_legend(_apply_links(line)),
                 )
+                paragraph_index = -1
+                if (
+                    len(blocks) >= 2
+                    and blocks[-1].kind == "provenance"
+                    and blocks[-1].text == _pdf_page_marker(line.page_number)
+                    and previous_body_line is not None
+                    and previous_body_line.page_number + 1 == line.page_number
+                    and not previous_body_line.soft_hyphen_end
+                    and not previous_body_line.hard_hyphen_end
+                ):
+                    paragraph_index = -2
                 if (
                     blocks
-                    and blocks[-1].kind == "paragraph"
+                    and blocks[paragraph_index].kind == "paragraph"
                     and previous_body_line is not None
                     and _should_join_lines(
                         previous_body_line,
                         line,
                         body_size,
                         gap_before,
+                        paragraph_gap=paragraph_gap,
                     )
                 ):
+                    if paragraph_index == -2:
+                        # Keep the exact page boundary as inline provenance, not a paragraph break.
+                        rendered = blocks.pop().text + rendered
                     blocks[-1].text = _join_line_text(
                         blocks[-1].text,
                         rendered,
@@ -6699,6 +5496,9 @@ def _render_document(
                         line,
                     )
                     blocks[-1].source_line = line
+                    blocks[-1].source_pages = tuple(
+                        dict.fromkeys((*blocks[-1].source_pages, line.page_number))
+                    )
                 else:
                     blocks.append(
                         _MarkdownBlock(
@@ -6920,77 +5720,6 @@ def _demote_prose_like_headings(blocks: list[_MarkdownBlock]) -> list[_MarkdownB
     return repaired
 
 
-def _line_inside_table(line: _PdfLine, table: _PdfTable) -> bool:
-    x0, top, x1, bottom = table.bbox
-    center_x = (line.x0 + line.x1) / 2
-    center_y = (line.top + line.bottom) / 2
-    return x0 <= center_x <= x1 and top <= center_y <= bottom
-
-
-def _append_pdf_table(
-    blocks: list[_MarkdownBlock],
-    page_number: int,
-    table: _PdfTable,
-) -> None:
-    if table.rendering is _TableRendering.MARKDOWN:
-        markdown = _markdown_table(table.rows)
-    elif table.rendering is _TableRendering.HTML:
-        markdown = _html_table(table.rows)
-    else:
-        markdown = _structured_table_text(table.rows)
-        blocks.append(
-            _MarkdownBlock(
-                kind="warning",
-                text=(
-                    f"> **Aviso de conversión (página {page_number}):** la tabla es demasiado "
-                    "compleja para representarla con seguridad. Se ha conservado como texto "
-                    "estructurado; compárala con el original."
-                ),
-                page_number=page_number,
-            )
-        )
-    blocks.append(_MarkdownBlock(kind="raw", text=markdown, page_number=page_number))
-
-
-def _markdown_table(rows: tuple[tuple[str, ...], ...]) -> str:
-    header = tuple(_render_table_cell(cell) for cell in rows[0])
-
-    def row(cells: tuple[str, ...]) -> str:
-        return (
-            "| " + " | ".join(_render_table_cell(cell).replace("|", "\\|") for cell in cells) + " |"
-        )
-
-    return "\n".join(
-        (row(header), row(tuple("---" for _ in header)), *(row(item) for item in rows[1:]))
-    )
-
-
-def _html_table(rows: tuple[tuple[str, ...], ...]) -> str:
-    header = "".join(f"<th>{escape(_render_table_cell(cell))}</th>" for cell in rows[0])
-    body = "".join(
-        "<tr>"
-        + "".join(
-            f"<td>{escape(_render_table_cell(cell)).replace(chr(10), '<br>')}</td>" for cell in row
-        )
-        + "</tr>"
-        for row in rows[1:]
-    )
-    return f"<table>\n<thead><tr>{header}</tr></thead>\n<tbody>{body}</tbody>\n</table>"
-
-
-def _structured_table_text(rows: tuple[tuple[str, ...], ...]) -> str:
-    headers = tuple(cell or f"Columna {index}" for index, cell in enumerate(rows[0], start=1))
-    rendered = ["**Tabla recuperada**"]
-    for row_number, row in enumerate(rows[1:], start=1):
-        cells = "; ".join(
-            f"{header}: {_render_table_cell(value)}"
-            for header, value in zip(headers, row, strict=True)
-            if value
-        )
-        rendered.append(f"- Fila {row_number}: {cells or 'sin contenido'}")
-    return "\n".join(rendered)
-
-
 def _should_replace_with_ocr(page: _PdfPage, ocr_markdown: str) -> bool:
     if (
         _visual_only_page_reason(page, ocr_markdown) is not None
@@ -7129,18 +5858,6 @@ def _structured_raster_table_requires_visual(page: _PdfPage) -> bool:
     return bool(
         any(ratio >= _FULL_PAGE_IMAGE_AREA_RATIO for ratio in page.image_area_ratios)
         and any(table.rendering is _TableRendering.STRUCTURED_TEXT for table in page.tables)
-    )
-
-
-def _structured_raster_table_has_visual_crop(
-    page: _PdfPage,
-    table: _PdfTable,
-    resources: tuple[PdfEmbeddedResource, ...],
-) -> bool:
-    return bool(
-        table.rendering is _TableRendering.STRUCTURED_TEXT
-        and _structured_raster_table_requires_visual(page)
-        and _table_has_visual_crop(table, resources)
     )
 
 
@@ -7331,39 +6048,6 @@ def _has_suspicious_numeric_glyph_encoding(page: _PdfPage) -> bool:
         ):
             return True
     return False
-
-
-def _suspicious_numeric_glyph_matches(text: str) -> tuple[re.Match[str], ...]:
-    """Return numeric-looking damage outside ordinary identifiers and literal URLs."""
-
-    url_spans = tuple(match.span() for match in _LITERAL_URL_PATTERN.finditer(text))
-    matches: list[re.Match[str]] = []
-    for match in _SUSPICIOUS_NUMERIC_GLYPH_PATTERN.finditer(text):
-        if any(start <= match.start() and match.end() <= end for start, end in url_spans):
-            continue
-        token = match.group(0)
-        if re.fullmatch(r"\$\d+", token):
-            continue
-        if re.search(r"\d[$^]|[$^]\d", token) or _looks_like_broken_numeric_token(token):
-            matches.append(match)
-    return tuple(matches)
-
-
-def _looks_like_broken_numeric_token(token: str) -> bool:
-    """Require every letter in a mixed token to be a known number-shaped glyph."""
-
-    if not (
-        any(character.isdigit() for character in token)
-        and any(character.isalpha() for character in token)
-    ):
-        return False
-    letters = tuple(character for character in token if character.isalpha())
-    if not letters or any(character not in _NUMERIC_GLYPH_EXPANSIONS for character in letters):
-        return False
-    candidates = _numeric_glyph_candidates(token)
-    if token[0].isalpha() and token[-1].isalpha():
-        return any(len(candidate) == len(token) for candidate in candidates)
-    return bool(candidates)
 
 
 def _line_has_suspicious_numeric_glyph(line: _PdfLine) -> bool:
@@ -7914,8 +6598,10 @@ def _apply_source_emphasis(line: _PdfLine, rendered: str) -> str:
         applied = True
     if applied or line.emphasis_spans:
         return rendered
-    marker = _source_emphasis_marker(line)
-    return f"{marker}{rendered}{marker}" if marker is not None else rendered
+    fallback_marker = _source_emphasis_marker(line)
+    return (
+        f"{fallback_marker}{rendered}{fallback_marker}" if fallback_marker is not None else rendered
+    )
 
 
 def _source_emphasis_marker(line: _PdfLine) -> str | None:
@@ -8002,11 +6688,33 @@ def _display_heading_text(line: _PdfLine) -> str:
     return _normalize_text("".join(output)) or line.text
 
 
+def _paragraph_gap_threshold(lines: list[_PdfLine], body_size: float) -> float | None:
+    """Infer paragraph spacing only from several same-column prose continuations."""
+    gaps = [
+        current.top - previous.bottom
+        for previous, current in zip(lines, lines[1:], strict=False)
+        if previous.page_number == current.page_number
+        and 0 < current.top - previous.bottom < body_size * 1.15
+        and -body_size * 1.75 <= current.x0 - previous.x0 < body_size * 0.25
+        and abs(current.font_size - body_size) < body_size * 0.15
+        and abs(previous.font_size - body_size) < body_size * 0.15
+        and previous.text.rstrip()[-1:] not in ".!?;:\"'”’»)]"
+        and current.text[:1].islower()
+    ]
+    if len(gaps) < 3:
+        return None
+    typical = median(gaps)
+    deviation = median(abs(gap - typical) for gap in gaps)
+    return typical + max(body_size * 0.18, typical * 0.3, deviation * 3)
+
+
 def _should_join_lines(
     previous: _PdfLine,
     current: _PdfLine,
     body_size: float,
     gap_before: float,
+    *,
+    paragraph_gap: float | None = None,
 ) -> bool:
     same_page = previous.page_number == current.page_number
     wraps_word = previous.soft_hyphen_end or (
@@ -8036,9 +6744,16 @@ def _should_join_lines(
         return False
     if abs(previous.font_size - current.font_size) > body_size * 0.35:
         return False
-    if current.x0 - previous.x0 > current.page_width * 0.08 and previous.text.rstrip().endswith(
-        (".", "!", "?")
+    if (
+        paragraph_gap is not None
+        and gap_before > paragraph_gap
+        and previous.text.rstrip().rstrip("\"'”’»)]").endswith((".", "!", "?", ":", ";"))
     ):
+        return False
+    # First-line indentation scales with type, not the full page width.
+    if current.x0 - previous.x0 > max(
+        body_size, previous.font_size
+    ) and previous.text.rstrip().endswith((".", "!", "?")):
         return False
     return True
 
@@ -8091,16 +6806,6 @@ def _carry_continuation_emphasis(left: str, right: str) -> str | None:
         prefix, separator, fragment = left.rpartition(" ")
         return f"{prefix}{separator}{marker}{fragment}{right[len(marker) :]}"
     return None
-
-
-def _hard_hyphen_wraps_word(previous: str, current: str) -> bool:
-    if not current[:1].isalpha():
-        return False
-    if current[:1].islower():
-        return True
-    previous_word = previous.rstrip("-").rsplit(maxsplit=1)[-1]
-    current_word = current.split(maxsplit=1)[0]
-    return previous_word.isupper() and current_word.isupper()
 
 
 def _collapse_adjacent_links(markdown: str) -> str:
@@ -8187,6 +6892,7 @@ def _omit_margin_line(
     *,
     toc_page: bool = False,
     preserved_repeated_headings: frozenset[tuple[int, float, float, str]] = frozenset(),
+    page_lines: Iterable[_PdfLine] = (),
 ) -> bool:
     if _visual_line_key(line) in preserved_repeated_headings:
         return False
@@ -8225,12 +6931,59 @@ def _omit_margin_line(
         page_number_key
     ):
         return True
+    if not toc_page and _is_isolated_footer_label(line, page_lines, body_size):
+        return True
     gap_before = line.top - previous.bottom if previous is not None else line.page_height
     return bool(
         in_bottom_margin
         and len(text) <= 48
         and gap_before >= body_size * 1.5
+        and not re.search(r"[.!?;:]$", text)
         and _RUNNING_FOOTER_PATTERN.fullmatch(text)
+    )
+
+
+def _is_isolated_footer_label(
+    line: _PdfLine, page_lines: Iterable[_PdfLine], body_size: float
+) -> bool:
+    """Recognize a detached italic label sharing the last row with an outer folio."""
+    if (
+        line.top < line.page_height * 0.86
+        or not line.centered
+        or not line.italic
+        or line.rotated
+        or line.links
+        or line.outline_level is not None
+        or line.x1 - line.x0 > line.page_width * 0.3
+        or not body_size * 0.75 <= line.font_size <= body_size * 1.35
+        or len(line.text.strip()) > 48
+        or not re.fullmatch(r"[^\W\d_]+(?:[ ’'-][^\W_]+){0,5}", line.text.strip())
+    ):
+        return False
+    others = [other for other in page_lines if other is not line]
+    if any(other.page_number != line.page_number for other in others):
+        return False
+    above = [other for other in others if other.bottom <= line.top]
+    if (
+        not above
+        or line.top - max(other.bottom for other in above) < max(body_size, line.font_size) * 2
+    ):
+        return False
+    row = [other for other in others if other.bottom > line.top]
+    if len(row) != 1:
+        return False
+    folio = row[0]
+    return bool(
+        re.fullmatch(r"\d{1,4}", folio.text.strip())
+        and not folio.centered
+        and not folio.rotated
+        and not folio.links
+        and folio.outline_level is None
+        and folio.x1 - folio.x0 <= line.page_width * 0.08
+        and (folio.x1 <= line.page_width * 0.25 or folio.x0 >= line.page_width * 0.75)
+        and min(abs(folio.x0 - line.x1), abs(line.x0 - folio.x1)) >= line.page_width * 0.15
+        and abs(folio.bottom - line.bottom) <= max(line.font_size, folio.font_size) * 0.35
+        and line.font_size * 0.75 <= folio.font_size <= line.font_size * 1.35
     )
 
 
@@ -8310,107 +7063,6 @@ def _restore_preserved_structural_ocr_headings(
         ):
             lines[index] = f"## {stripped}"
     return "\n".join(lines)
-
-
-def _repair_ocr_spacing_from_native(page: _PdfPage, markdown: str) -> str:
-    """Restore spacing only when an OCR line has exactly the native line's characters."""
-
-    native_words = {
-        word.casefold()
-        for line in page.lines
-        if not line.rotated
-        for word in re.findall(r"[^\W\d_]{5,}", line.text, re.UNICODE)
-    }
-    candidates: defaultdict[str, list[_PdfLine]] = defaultdict(list)
-    for line in page.lines:
-        key = _spacing_insensitive_line_key(line.text)
-        if not line.rotated and len(key) >= 12:
-            candidates[key].append(line)
-
-    lines = markdown.splitlines()
-    fence: str | None = None
-    for index, line in enumerate(lines):
-        stripped = line.strip()
-        marker = (
-            "```" if stripped.startswith("```") else "~~~" if stripped.startswith("~~~") else None
-        )
-        if marker is not None:
-            if fence is None:
-                fence = marker
-            elif marker == fence:
-                fence = None
-            continue
-        if (
-            fence is not None
-            or not stripped
-            or stripped.startswith(("#", ">", "|", "![", "- ", "+ ", "* "))
-        ):
-            continue
-        compact_line = _spacing_insensitive_text_with_offsets(stripped)
-        if compact_line is not None:
-            compact, offsets = compact_line
-            replacements: list[tuple[int, int, str]] = []
-            for key, native in candidates.items():
-                if len(native) != 1:
-                    continue
-                compact_start = compact.find(key)
-                if compact_start < 0 or compact.find(key, compact_start + 1) >= 0:
-                    continue
-                compact_end = compact_start + len(key) - 1
-                start = offsets[compact_start]
-                end = offsets[compact_end] + 1
-                source_segment = stripped[start:end]
-                native_text = native[0].text.strip()
-                if len(re.findall(r"\s", source_segment)) < len(re.findall(r"\s", native_text)) + 2:
-                    continue
-                if any(
-                    start < previous_end and end > previous_start
-                    for previous_start, previous_end, _ in replacements
-                ):
-                    continue
-                replacements.append((start, end, native_text))
-            for start, end, replacement in sorted(replacements, reverse=True):
-                stripped = f"{stripped[:start]}{replacement}{stripped[end:]}"
-            if replacements:
-                leading = line[: len(line) - len(line.lstrip())]
-                lines[index] = f"{leading}{stripped}"
-        repaired_words = stripped
-        for pattern in (_SPACED_WORD_PATTERN, _PARTIAL_SPACED_WORD_PATTERN):
-            repaired_words = pattern.sub(
-                lambda match: (
-                    compact
-                    if (compact := re.sub(r"\s+", "", match.group())).casefold() in native_words
-                    else match.group()
-                ),
-                repaired_words,
-            )
-        if repaired_words != stripped:
-            leading = line[: len(line) - len(line.lstrip())]
-            lines[index] = f"{leading}{repaired_words}"
-            stripped = repaired_words
-        native = candidates.get(_spacing_insensitive_line_key(stripped), ())
-        if len(native) != 1:
-            continue
-        native_text = native[0].text.strip()
-        if len(re.findall(r"\s", stripped)) < len(re.findall(r"\s", native_text)) + 2:
-            continue
-        leading = line[: len(line) - len(line.lstrip())]
-        lines[index] = f"{leading}{native_text}"
-    return "\n".join(lines)
-
-
-def _spacing_insensitive_text_with_offsets(text: str) -> tuple[str, tuple[int, ...]] | None:
-    compact: list[str] = []
-    offsets: list[int] = []
-    for index, character in enumerate(text):
-        if character.isspace():
-            continue
-        normalized = unicodedata.normalize("NFKC", character).casefold()
-        if len(normalized) != 1:
-            return None
-        compact.append(normalized)
-        offsets.append(index)
-    return "".join(compact), tuple(offsets)
 
 
 def _repair_ocr_degree_marker_consensus(markdown: str) -> str:
@@ -8870,75 +7522,9 @@ def _overlaps(
     return min(x1, other_x1) > max(x0, other_x0) and min(bottom, other_bottom) > max(top, other_top)
 
 
-def _normalize_text(text: str) -> str:
-    normalized = unicodedata.normalize("NFC", text).replace("\u00ad", "")
-    normalized = _repair_suspicious_glyph_encoding(normalized)
-    return _WHITESPACE_PATTERN.sub(" ", normalized).strip()
-
-
-def _repair_suspicious_glyph_encoding(text: str) -> str:
-    lowercase_accents = str.maketrans("aeiou", "áéíóú")
-    uppercase_accents = str.maketrans("AEIOU", "ÁÉÍÓÚ")
-
-    def accent_vowel(match: re.Match[str]) -> str:
-        vowel = match.group(1)
-        table = uppercase_accents if vowel.isupper() else lowercase_accents
-        return vowel.translate(table)
-
-    repaired = re.sub(r"([aeiouAEIOU])\$(?=[^\W\d_])", accent_vowel, text)
-
-    def repair_word_final_vowel(match: re.Match[str]) -> str:
-        word = match.group(1)
-        if any(character in "áéíóúÁÉÍÓÚ" for character in word):
-            return word
-        vowel = word[-1]
-        table = uppercase_accents if vowel.isupper() else lowercase_accents
-        return f"{word[:-1]}{vowel.translate(table)}"
-
-    repaired = re.sub(
-        r"([^\W\d_]*[aeiouAEIOU])\$(?=\s|$|[.,;:!?])",
-        repair_word_final_vowel,
-        repaired,
-    )
-    repaired = re.sub(
-        r"([bcdfghjklmnpqrstvwxyzBCDFGHJLMNPQRSTVWXYZ])\$\s+(?=[a-záéíóúñ])",
-        r"\1",
-        repaired,
-    )
-    repaired = re.sub(
-        r"(?i)n\"(?=[a-záéíóú])",
-        lambda match: "Ñ" if match.group().isupper() else "ñ",
-        repaired,
-    )
-    # In the affected legacy encoding, ``K`` stands in for an acute accent before
-    # a consonant (``PRAKCTICA`` -> ``PRÁCTICA``).  Treating it as a marker before
-    # any uppercase letter corrupts ordinary English words such as ``MAKE`` and
-    # ``TAKE``.  Ambiguous vowel-to-vowel cases stay native so OCR/visual review can
-    # arbitrate them instead of silently deleting a real character.
-    repaired = re.sub(
-        r"([AEIOU])K(?=[BCDFGHJLMNPQRSTVWXYZÑ]|$)",
-        accent_vowel,
-        repaired,
-    )
-    # Some embedded fonts map a digit to ``$``.  Removing every remaining
-    # dollar sign used to turn a native TOC label such as ``1$.`` into ``1.``
-    # before OCR had a chance to arbitrate it.  Only discard a residue still
-    # attached to a natural-language word; keep numeric/currency uses visible.
-    return re.sub(r"(?<=[^\W\d_])\$", "", repaired)
-
-
 def _margin_key(text: str) -> str:
     normalized = _normalize_text(text).casefold()
     return re.sub(r"(?<=\d)\s+(?=\d)", "", normalized)
-
-
-def _is_uppercase_text(text: str) -> bool:
-    letters = "".join(character for character in text if character.isalpha())
-    return bool(letters) and letters == letters.upper()
-
-
-def _heading_letter_count(text: str) -> int:
-    return sum(character.isalpha() for character in text)
 
 
 def _is_toc_page(lines: list[_PdfLine]) -> bool:
@@ -8992,14 +7578,6 @@ def _split_toc_entry_text(text: str) -> tuple[str, str] | None:
         return None
     candidate = re.sub(r"\s+", "", parts[1])
     return (parts[0], candidate) if _is_toc_folio(candidate) else None
-
-
-def _normalize_toc_leaders(markdown: str) -> str:
-    parts = _MARKDOWN_LINK_DESTINATION_SPLIT_PATTERN.split(markdown)
-    return "".join(
-        part if index % 2 else re.sub(r"\s*\.{2,}\s*", " — ", part)
-        for index, part in enumerate(parts)
-    )
 
 
 def _escape_link_label(label: str) -> str:
