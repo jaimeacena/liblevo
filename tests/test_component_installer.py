@@ -9,17 +9,17 @@ from typing import Any
 import httpx
 import pytest
 
-import parsezen.component_installer as installer
-from parsezen.component_catalog import (
+import liblevo.component_installer as installer
+from liblevo.component_catalog import (
     REVIEW_MODEL_NAME,
     REVIEW_OLLAMA_SOURCE_MODEL,
     TRANSLATION_LICENSE_SHA256,
     TRANSLATION_MODEL_NAME,
     TRANSLATION_OLLAMA_SOURCE_MODEL,
 )
-from parsezen.errors import LocalModelUnavailableError
-from parsezen.local_ai_policy import ComponentCapability, ComponentVerification
-from parsezen.local_models import LocalAISetupCancelled, LocalHardware
+from liblevo.errors import LocalModelUnavailableError
+from liblevo.local_ai_policy import ComponentCapability, ComponentVerification
+from liblevo.local_models import LocalAISetupCancelled, LocalHardware
 
 
 def _hardware() -> LocalHardware:

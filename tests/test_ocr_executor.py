@@ -8,11 +8,11 @@ from typing import Any
 
 import pytest
 
-import parsezen.ocr_executor as executor
-from parsezen.cancellation import CancellationToken
-from parsezen.errors import ConversionError, ProcessingCancelledError
-from parsezen.ocr_protocol import PROTOCOL_VERSION, OcrProtocolError
-from parsezen.workers import private_channel
+import liblevo.ocr_executor as executor
+from liblevo.cancellation import CancellationToken
+from liblevo.errors import ConversionError, ProcessingCancelledError
+from liblevo.ocr_protocol import PROTOCOL_VERSION, OcrProtocolError
+from liblevo.workers import private_channel
 
 
 class _Connection:
@@ -75,7 +75,7 @@ def test_worker_source_path_uses_ascii_directly_and_copies_unicode(
     unicode_source.write_bytes(b"unicode-pdf")
     with executor._worker_source_path(unicode_source) as prepared:
         assert prepared != unicode_source
-        assert prepared.name == "parsezen.pdf"
+        assert prepared.name == "liblevo.pdf"
         assert prepared.read_bytes() == b"unicode-pdf"
     assert not prepared.exists()
 
@@ -90,7 +90,7 @@ def test_worker_source_cleanup_retries_a_transient_windows_handle(
 ) -> None:
     directory = tmp_path / "worker-source"
     directory.mkdir()
-    (directory / "parsezen.pdf").write_bytes(b"pdf")
+    (directory / "liblevo.pdf").write_bytes(b"pdf")
     real_rmtree = executor.shutil.rmtree
     calls = 0
 
@@ -369,9 +369,9 @@ def test_start_worker_process_builds_an_isolated_command(
     result = executor._start_worker_process("address", "family", b"a" * 32)
 
     assert result is sentinel
-    assert captured["command"][1:3] == ["-m", "parsezen.ocr_worker"]
+    assert captured["command"][1:3] == ["-m", "liblevo.ocr_worker"]
     assert captured["stdin"] is subprocess.DEVNULL
-    assert "PARSEZEN_OCR_AUTH" in captured["env"]
+    assert "LIBLEVO_OCR_AUTH" in captured["env"]
 
     monkeypatch.setattr(executor.sys, "frozen", True)
     executor._start_worker_process("address", "family", b"b" * 32)

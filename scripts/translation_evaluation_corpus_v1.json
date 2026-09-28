@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "corpus_version": "parsezen-translation-en-es-v1",
+  "corpus_version": "liblevo-translation-en-es-v1",
   "source_language": "en",
   "target_language": "es",
   "cases": [

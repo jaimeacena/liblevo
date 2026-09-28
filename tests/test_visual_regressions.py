@@ -9,9 +9,9 @@ import pytest
 from PySide6.QtCore import QEvent, QPoint, QRect, QSize, Qt
 from PySide6.QtWidgets import QApplication, QWidget
 
-from parsezen.application.book_editor import create_book_from_markdown
-from parsezen.application.planner import activate_next_stage
-from parsezen.domain.attempt_activity import (
+from liblevo.application.book_editor import create_book_from_markdown
+from liblevo.application.planner import activate_next_stage
+from liblevo.domain.attempt_activity import (
     AttemptEvent,
     AttemptEventStatus,
     AttemptPhase,
@@ -19,7 +19,7 @@ from parsezen.domain.attempt_activity import (
     FailureSnapshot,
     ReusableWork,
 )
-from parsezen.domain.jobs import (
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentJob,
     DocumentSource,
@@ -27,21 +27,21 @@ from parsezen.domain.jobs import (
     OutputConfiguration,
     PageRangeConfiguration,
 )
-from parsezen.domain.reviews import ReviewKind, ReviewSession, ReviewUnit
-from parsezen.domain.stages import StageKind, StageStatus
-from parsezen.epub_builder import EpubBookMetadata
-from parsezen.failure_recovery import RecoveryAction, RecoveryPlan
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.local_models import OllamaStatus
-from parsezen.presentation.activity_view import ActivityView
-from parsezen.presentation.book_editor_dialog import BookEditorDialog
-from parsezen.presentation.design_system import ThemeMode, apply_parsezen_theme
-from parsezen.presentation.job_configuration_dialog import JobConfigurationDialog
-from parsezen.presentation.main_window import ParsezenMainWindow
-from parsezen.presentation.phase_review_dialog import PhaseReviewDialog
-from parsezen.presentation.workspace import InternalBackButton, ParsezenWorkspace
-from parsezen.recent_activity import RecentJob, RecentJobStatus
-from parsezen.settings import AppSettings
+from liblevo.domain.reviews import ReviewKind, ReviewSession, ReviewUnit
+from liblevo.domain.stages import StageKind, StageStatus
+from liblevo.epub_builder import EpubBookMetadata
+from liblevo.failure_recovery import RecoveryAction, RecoveryPlan
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.local_models import OllamaStatus
+from liblevo.presentation.activity_view import ActivityView
+from liblevo.presentation.book_editor_dialog import BookEditorDialog
+from liblevo.presentation.design_system import ThemeMode, apply_liblevo_theme
+from liblevo.presentation.job_configuration_dialog import JobConfigurationDialog
+from liblevo.presentation.main_window import LiblevoMainWindow
+from liblevo.presentation.phase_review_dialog import PhaseReviewDialog
+from liblevo.presentation.workspace import InternalBackButton, LiblevoWorkspace
+from liblevo.recent_activity import RecentJob, RecentJobStatus
+from liblevo.settings import AppSettings
 
 
 def _make_job(path: Path, *, order: int = 0) -> DocumentJob:
@@ -121,7 +121,7 @@ def test_activity_render_matrix_keeps_failed_and_completed_states_inside_viewpor
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
+    apply_liblevo_theme(application, theme)
     completed_source = tmp_path / f"completed-{theme.value}-{width}.txt"
     completed_source.write_text("Original", encoding="utf-8")
     completed_result = tmp_path / f"completed-{theme.value}-{width}.md"
@@ -185,8 +185,8 @@ def test_workspace_render_matrix_keeps_core_actions_inside_the_viewport(
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
-    workspace = ParsezenWorkspace()
+    apply_liblevo_theme(application, theme)
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.set_jobs((_make_job(tmp_path / f"workspace-{theme.value}-{width}.txt"),))
     workspace.resize(width, 760)
@@ -229,8 +229,8 @@ def test_empty_workspace_render_matrix_keeps_one_clear_import_action(
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
-    workspace = ParsezenWorkspace()
+    apply_liblevo_theme(application, theme)
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(width, 760)
     workspace.show()
@@ -268,8 +268,8 @@ def test_workspace_wide_tall_matrix_preserves_intentional_queue_geometry(
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
-    workspace = ParsezenWorkspace()
+    apply_liblevo_theme(application, theme)
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     jobs = tuple(
         _make_job(
@@ -316,7 +316,7 @@ def test_running_row_render_matrix_keeps_progress_inside_the_row(
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
+    apply_liblevo_theme(application, theme)
     job = _make_job(tmp_path / f"running-{theme.value}-{width}.txt")
     ready = activate_next_stage(job)
     running = ready.replace_stage(
@@ -324,7 +324,7 @@ def test_running_row_render_matrix_keeps_progress_inside_the_row(
         .transition(StageStatus.RUNNING)
         .with_progress(25, 100, "Extrayendo")
     )
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.set_jobs((running,))
     workspace.resize(width, 760)
@@ -348,7 +348,7 @@ def test_phase_review_render_matrix_keeps_current_session_progress_and_actions_v
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
+    apply_liblevo_theme(application, theme)
     store = ArtifactStore(
         tmp_path / f"phase-artifacts-{theme.value}-{width}",
         protect=_reversible,
@@ -390,7 +390,7 @@ def test_epub_editor_render_matrix_keeps_safe_exit_and_helper_visible(
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
+    apply_liblevo_theme(application, theme)
     store = ArtifactStore(
         tmp_path / f"epub-artifacts-{theme.value}-{width}",
         protect=_reversible,
@@ -437,8 +437,8 @@ def test_recovery_actions_remain_visible_without_overlap(
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
-    workspace = ParsezenWorkspace()
+    apply_liblevo_theme(application, theme)
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(width, 760)
     workspace.show()
@@ -476,7 +476,7 @@ def test_configuration_combines_visual_format_with_compact_settings(
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
+    apply_liblevo_theme(application, theme)
     editor = JobConfigurationDialog(
         _make_job(tmp_path / f"{theme.value}.txt"),
         embedded=False,
@@ -515,7 +515,7 @@ def test_configuration_contextual_controls_stay_in_one_vertical_flow(
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
+    apply_liblevo_theme(application, theme)
     editor = JobConfigurationDialog(
         _make_job(tmp_path / f"advanced-{theme.value}.pdf"),
         embedded=False,
@@ -553,10 +553,10 @@ def test_configuration_is_a_fully_visible_internal_page(
 ) -> None:
     application = QApplication.instance()
     assert isinstance(application, QApplication)
-    apply_parsezen_theme(application, theme)
+    apply_liblevo_theme(application, theme)
     source = tmp_path / f"internal-{theme.value}.pdf"
     source.write_bytes(b"%PDF-1.4\n")
-    window = ParsezenMainWindow(
+    window = LiblevoMainWindow(
         settings=AppSettings(),
         auto_discover_ai=False,
         state_path=tmp_path / "workspace.sqlite3",
@@ -578,7 +578,7 @@ def test_configuration_is_a_fully_visible_internal_page(
     QApplication.processEvents()
 
     assert editor.window() is window
-    assert window.parsezen_workspace.current_internal_widget is editor
+    assert window.liblevo_workspace.current_internal_widget is editor
     assert not hasattr(editor, "scroll_area")
     assert editor.content.width() >= 700
     left_margin = editor.content.mapTo(editor, QPoint()).x()

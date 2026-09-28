@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from parsezen.semantic_blocks import (
+from liblevo.semantic_blocks import (
     SemanticRole,
     analyze_markdown,
     discover_document_terms,
@@ -20,7 +20,7 @@ def test_semantic_block_identity_survives_an_insertion_before_it() -> None:
 
 
 def test_semantic_analysis_is_not_limited_by_the_interactive_review_size(monkeypatch) -> None:
-    monkeypatch.setattr("parsezen.revision._MAX_REVIEW_MARKDOWN_CHARACTERS", 3)
+    monkeypatch.setattr("liblevo.revision._MAX_REVIEW_MARKDOWN_CHARACTERS", 3)
 
     document = analyze_markdown("Four words remain analyzable.\n")
 

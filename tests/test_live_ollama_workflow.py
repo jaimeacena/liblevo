@@ -16,7 +16,7 @@ pytestmark = pytest.mark.live_ollama
 
 
 @pytest.mark.skipif(
-    os.environ.get("PARSEZEN_RUN_LIVE_OLLAMA") != "1",
+    os.environ.get("LIBLEVO_RUN_LIVE_OLLAMA") != "1",
     reason="La prueba real de Ollama solo se ejecuta de forma explícita.",
 )
 def test_short_pdf_completes_translation_reviews_and_epub_build(tmp_path: Path) -> None:

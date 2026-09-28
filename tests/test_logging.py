@@ -5,23 +5,23 @@ import re
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from parsezen.__main__ import (
+from liblevo.__main__ import (
     LOG_BACKUP_COUNT,
     LOG_MAX_BYTES,
     configure_logging,
 )
-from parsezen.processing import ProcessRequest, process_document
+from liblevo.processing import ProcessRequest, process_document
 
 
 def test_configures_one_rotating_local_log(tmp_path: Path) -> None:
     log_path = configure_logging(tmp_path / "logs")
-    logger = logging.getLogger("parsezen")
+    logger = logging.getLogger("liblevo")
 
     try:
         handlers = [
             handler for handler in logger.handlers if isinstance(handler, RotatingFileHandler)
         ]
-        assert log_path == tmp_path / "logs" / "parsezen.log"
+        assert log_path == tmp_path / "logs" / "liblevo.log"
         assert log_path.exists()
         assert len(handlers) == 1
         assert handlers[0].maxBytes == LOG_MAX_BYTES
@@ -32,7 +32,7 @@ def test_configures_one_rotating_local_log(tmp_path: Path) -> None:
 
 def test_processing_log_omits_document_name_path_and_content(tmp_path: Path) -> None:
     log_path = configure_logging(tmp_path / "logs")
-    logger = logging.getLogger("parsezen")
+    logger = logging.getLogger("liblevo")
     source = tmp_path / "private-customer-name.txt"
     source.write_text("TOP SECRET DOCUMENT CONTENT", encoding="utf-8")
 

@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
-import parsezen.windows_integration as windows_module
-from parsezen.windows_integration import SystemSleepBlocker
+import liblevo.windows_integration as windows_module
+from liblevo.windows_integration import SystemSleepBlocker
 
 
 def test_sleep_blocker_balances_windows_execution_state(monkeypatch) -> None:

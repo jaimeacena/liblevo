@@ -13,10 +13,10 @@ from scripts.validate_epub import (
     run_epubcheck,
 )
 
-from parsezen.application.book_editor import BookEditor, create_book_from_markdown, publish_book
-from parsezen.epub_builder import EpubBookMetadata
-from parsezen.epub_conversion import translate_epub
-from parsezen.infrastructure.artifact_store import ArtifactStore
+from liblevo.application.book_editor import BookEditor, create_book_from_markdown, publish_book
+from liblevo.epub_builder import EpubBookMetadata
+from liblevo.epub_conversion import translate_epub
+from liblevo.infrastructure.artifact_store import ArtifactStore
 from test_epub_conversion import _write_epub3
 
 

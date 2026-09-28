@@ -5,14 +5,14 @@ from pathlib import Path, PurePosixPath
 
 import pytest
 
-import parsezen.markdown_export as export_module
-import parsezen.output as output_module
-from parsezen.document_model import ConvertedResource
-from parsezen.domain.jobs import MarkdownOrganization
-from parsezen.errors import FinalIntegrityError, OutputWriteError
-from parsezen.final_integrity import text_integrity_capture
-from parsezen.markdown_export import prepare_markdown_export
-from parsezen.output import replace_markdown_output, write_conversion_output
+import liblevo.markdown_export as export_module
+import liblevo.output as output_module
+from liblevo.document_model import ConvertedResource
+from liblevo.domain.jobs import MarkdownOrganization
+from liblevo.errors import FinalIntegrityError, OutputWriteError
+from liblevo.final_integrity import text_integrity_capture
+from liblevo.markdown_export import prepare_markdown_export
+from liblevo.output import replace_markdown_output, write_conversion_output
 
 
 def test_chapter_export_builds_an_index_and_portable_relative_images(tmp_path: Path) -> None:
@@ -24,7 +24,7 @@ def test_chapter_export_builds_an_index_and_portable_relative_images(tmp_path: P
 
 ## First chapter
 
-![Figure](<__parsezen_resources__/pdf/figure.png>)
+![Figure](<__liblevo_resources__/pdf/figure.png>)
 
 <!-- PZDOC PDF PAGE 8 -->
 
@@ -192,7 +192,7 @@ def test_publication_rejects_damaged_actual_files(
     else:
         assert not tuple(tmp_path.glob("*.md"))
     assert not tuple(tmp_path.glob("*chapters*"))
-    assert not tuple(tmp_path.glob(".parsezen-*.tmp"))
+    assert not tuple(tmp_path.glob(".liblevo-*.tmp"))
 
 
 def test_splitter_conservation_guard_rejects_an_omitted_preamble(
@@ -218,7 +218,7 @@ def test_relative_links_are_relocated_even_alongside_extracted_images(
     markdown = (
         '# Book\n\n## One\n\n[Local](./appendix.pdf "Title")\n\n'
         '[Parent](../shared.pdf)\n\n[Complex](<dir/a(b).pdf> "Other")\n\n'
-        "![Extracted](<__parsezen_resources__/figure.png>)\n\n## Two\n\nSecond."
+        "![Extracted](<__liblevo_resources__/figure.png>)\n\n## Two\n\nSecond."
     )
     result = write_conversion_output(
         tmp_path / "book.pdf",
@@ -312,8 +312,8 @@ def test_process_interruption_keeps_a_complete_linked_generation(
 import os
 import sys
 from pathlib import Path
-import parsezen.output as output
-from parsezen.domain.jobs import MarkdownOrganization
+import liblevo.output as output
+from liblevo.domain.jobs import MarkdownOrganization
 replace = output.os.replace
 def interrupted(source, destination):
     if sys.argv[2] == "True":

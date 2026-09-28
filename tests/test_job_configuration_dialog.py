@@ -4,8 +4,8 @@ import pytest
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtWidgets import QBoxLayout, QDialog, QMenu
 
-from parsezen.application.runtime_mapping import request_and_settings_from_job
-from parsezen.domain.jobs import (
+from liblevo.application.runtime_mapping import request_and_settings_from_job
+from liblevo.domain.jobs import (
     AIProfileConfiguration,
     DocumentFormat,
     DocumentJob,
@@ -19,10 +19,10 @@ from parsezen.domain.jobs import (
     TranslationConfiguration,
     TranslationMethod,
 )
-from parsezen.domain.stages import StageKind
-from parsezen.glossary import GlossaryEntry
-from parsezen.local_models import OllamaStatus
-from parsezen.presentation.job_configuration_dialog import (
+from liblevo.domain.stages import StageKind
+from liblevo.glossary import GlossaryEntry
+from liblevo.local_models import OllamaStatus
+from liblevo.presentation.job_configuration_dialog import (
     JobConfigurationDialog,
     _GlossaryEditorDialog,
     _PageRangeDialog,

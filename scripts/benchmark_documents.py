@@ -15,8 +15,8 @@ from pathlib import Path
 from tempfile import mkstemp
 from time import monotonic
 
-from parsezen.errors import ParsezenError
-from parsezen.pdf_conversion import (
+from liblevo.errors import LiblevoError
+from liblevo.pdf_conversion import (
     PdfEmbeddedResource,
     PdfPageRange,
     PdfProgressPhase,
@@ -314,7 +314,7 @@ def check_manifest(path: Path) -> tuple[RegressionCheck, ...]:
                 page_range=baseline.page_range,
                 force_ocr=baseline.force_ocr,
             )
-        except (ParsezenError, OSError, RuntimeError, ValueError) as exc:
+        except (LiblevoError, OSError, RuntimeError, ValueError) as exc:
             checks.append(RegressionCheck(source, False, (str(exc),)))
             continue
         problems = _compare_metrics(metrics, baseline)
@@ -690,7 +690,7 @@ def main(argv: list[str] | None = None) -> int:
             for problem in check.problems:
                 print(f"  {problem}")
         return 0 if all(check.passed for check in checks) else 1
-    except (ParsezenError, OSError, RuntimeError, ValueError) as exc:
+    except (LiblevoError, OSError, RuntimeError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
 

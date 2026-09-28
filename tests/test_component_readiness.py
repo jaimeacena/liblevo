@@ -4,21 +4,21 @@ import hashlib
 
 import httpx
 
-from parsezen.component_readiness import (
+from liblevo.component_readiness import (
     ComponentCatalogEntry,
     ReadinessStatus,
     evaluate_component_catalog,
     evaluate_component_readiness,
     inspect_component_catalog,
 )
-from parsezen.local_ai_policy import (
+from liblevo.local_ai_policy import (
     POLICY_VERSION,
     ComponentCapability,
     ComponentManifest,
     ComponentVerification,
     OllamaModelIdentity,
 )
-from parsezen.local_models import ComponentRequirements, LocalHardware
+from liblevo.local_models import ComponentRequirements, LocalHardware
 
 _DIGEST = "a" * 64
 

@@ -20,29 +20,29 @@ from time import monotonic
 from xml.etree import ElementTree
 from zipfile import ZIP_STORED, BadZipFile, ZipFile
 
-from parsezen.conversion import SUPPORTED_EXTENSIONS
-from parsezen.direct_models import active_direct_profile, direct_profile, verified_direct_model_path
-from parsezen.epub_conversion import inspect_epub_package
-from parsezen.errors import ParsezenError, SettingsError
-from parsezen.glossary import GlossaryEntry, validate_glossary
-from parsezen.improvement import ImprovementMode
-from parsezen.local_ai_policy import ComponentCapability
-from parsezen.local_models import (
+from liblevo.conversion import SUPPORTED_EXTENSIONS
+from liblevo.direct_models import active_direct_profile, direct_profile, verified_direct_model_path
+from liblevo.epub_conversion import inspect_epub_package
+from liblevo.errors import LiblevoError, SettingsError
+from liblevo.glossary import GlossaryEntry, validate_glossary
+from liblevo.improvement import ImprovementMode
+from liblevo.local_ai_policy import ComponentCapability
+from liblevo.local_models import (
     OllamaStatus,
     discover_ollama,
     is_cloud_model_id,
     is_reasoning_model_id,
 )
-from parsezen.pdf_conversion import PdfPageRange
-from parsezen.processing import (
+from liblevo.pdf_conversion import PdfPageRange
+from liblevo.processing import (
     OutputFormat,
     ProcessRequest,
     ProcessStage,
     apply_reviewed_revision,
     process_document,
 )
-from parsezen.revision import RevisionDecision
-from parsezen.settings import AppSettings, load_settings
+from liblevo.revision import RevisionDecision
+from liblevo.settings import AppSettings, load_settings
 
 REPORT_SCHEMA_VERSION = 14
 EVALUATION_REPORT_SCHEMA_VERSION = 1
@@ -483,7 +483,7 @@ def run_live_workflows(
                 )
                 if not stages or stages[-1] is not ProcessStage.COMPLETED:
                     raise RuntimeError("El flujo terminó sin anunciar su finalización.")
-            except (ParsezenError, OSError, RuntimeError, ValueError, BadZipFile) as exc:
+            except (LiblevoError, OSError, RuntimeError, ValueError, BadZipFile) as exc:
                 error_type = type(exc).__name__
             elapsed = monotonic() - started
             passed = error_type is None
@@ -1062,7 +1062,7 @@ def _pdf_stream(content: bytes) -> bytes:
 
 
 def _write_pdf_objects(destination: Path, objects: list[bytes]) -> None:
-    payload = bytearray(b"%PDF-1.4\n%Parsezen\n")
+    payload = bytearray(b"%PDF-1.4\n%Liblevo\n")
     offsets = [0]
     for number, obj in enumerate(objects, start=1):
         offsets.append(len(payload))
@@ -1166,9 +1166,9 @@ def _run_from_arguments(arguments: argparse.Namespace) -> int:
     ):
         raise ValueError(
             "La comprobación sin Ollama admite solo --profile translation. "
-            "La revisión adicional se prueba dentro de Parsezen."
+            "La revisión adicional se prueba dentro de Liblevo."
         )
-    with TemporaryDirectory(prefix="parsezen-real-") as temporary_name:
+    with TemporaryDirectory(prefix="liblevo-real-") as temporary_name:
         temporary = Path(temporary_name)
         if arguments.sources:
             sources = tuple(arguments.sources)
@@ -1293,7 +1293,7 @@ def main(argv: list[str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
     try:
         return _run_from_arguments(arguments)
-    except (ParsezenError, OSError, RuntimeError, ValueError) as exc:
+    except (LiblevoError, OSError, RuntimeError, ValueError) as exc:
         print(f"No se pudo completar la comprobación real: {exc}", file=sys.stderr)
         return 2
 

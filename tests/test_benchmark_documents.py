@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 import scripts.benchmark_documents as benchmark_module
 
-from parsezen.pdf_conversion import PdfProgressPhase, PdfQualityReport
+from liblevo.pdf_conversion import PdfProgressPhase, PdfQualityReport
 
 
 def test_private_pdf_benchmark_records_no_document_text_and_detects_regressions(

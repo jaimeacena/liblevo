@@ -18,7 +18,7 @@ vinculan obligatoriamente con la misma versión canónica, auditada desde `requi
 ## Excepción temporal: CVE-2026-54499 en Stanza
 
 Argos Translate 1.11.0 exige actualmente `stanza==1.10.1`. Stanza anterior a 1.12.2 tiene una
-vulnerabilidad de deserialización insegura al cargar un modelo `.pt` malicioso. Parsezen no usa
+vulnerabilidad de deserialización insegura al cargar un modelo `.pt` malicioso. Liblevo no usa
 esa ruta: antes de importar o preparar un traductor fuerza `ARGOS_CHUNK_TYPE=MINISBD` y también fija
 el enum de Argos en memoria. De este modo la segmentación se realiza con MiniSBD y nunca se construye
 ni carga un pipeline o modelo Stanza. Hay una prueba de regresión que impide retirar esta guarda por
@@ -37,17 +37,17 @@ Referencias primarias:
 
 ## Mitigación temporal: CVE-2026-69112 en Accelerate
 
-**IMPLEMENTADO en Parsezen; no corregido en la dependencia upstream.** Accelerate 1.14.0 llega por
+**IMPLEMENTADO en Liblevo; no corregido en la dependencia upstream.** Accelerate 1.14.0 llega por
 Docling y sus modelos. `load_checkpoint_in_model` y `load_checkpoint_and_dispatch` aceptan rutas
 no comprobadas desde índices fragmentados. La versión 1.15.0 consultada el 22 de septiembre conserva
 esa construcción de rutas: actualizar solo para salir del rango publicado del aviso no es una
 corrección demostrada.
 
-Parsezen no utiliza estos cargadores. Antes de importar Docling, `ocr_dependency_guard.py` sustituye
+Liblevo no utiliza estos cargadores. Antes de importar Docling, `ocr_dependency_guard.py` sustituye
 ambas funciones y sus seis alias exportados por un rechazo explícito, antes de abrir cualquier
 checkpoint. No cambia ni relaja el cargador safetensors que sí usa el OCR, ni autoriza modelos o
 plugins arbitrarios. El smoke del paquete instala la misma protección. La mitigación vale para los
-procesos de Parsezen, no para otros programas que utilicen ese entorno Python.
+procesos de Liblevo, no para otros programas que utilicen ese entorno Python.
 
 La opción `--allow-blocked-accelerate` de la auditoría solo permite `PYSEC-2026-3804` cuando el lock y
 el entorno tienen exactamente Accelerate 1.14.0 y los seis alias rechazan una llamada de prueba con
@@ -65,8 +65,8 @@ Referencias primarias:
 
 ## Componentes de IA local
 
-Parsezen ya no descarga, actualiza ni ejecuta herramientas de recomendación de modelos. La interfaz
-activa muestra únicamente las capacidades fijadas por el catálogo de Parsezen. Los trabajos nuevos
+Liblevo ya no descarga, actualiza ni ejecuta herramientas de recomendación de modelos. La interfaz
+activa muestra únicamente las capacidades fijadas por el catálogo de Liblevo. Los trabajos nuevos
 usan directamente los archivos GGUF del catálogo local mediante `llama-cpp-python`, sin Ollama ni
 conexiones de red para procesar el documento. Antes de usarlos se verifican tamaño y SHA-256 del
 archivo completo; la preparación solo acepta una capacidad fija y un modelo público verificado.

@@ -1,6 +1,9 @@
-# Guía de uso de Parsezen
+# Guía de uso de Liblevo
 
-Esta guía describe la versión actual de Parsezen.
+Esta guía describe Liblevo 1.3.0.
+
+Tus trabajos, modelos y ajustes se guardan en el perfil local de Liblevo.
+La apariencia puede seguir Windows o usar los modos claro y oscuro desde Ajustes.
 
 Las opciones se guardan automáticamente: espera a ver **Cambios guardados** antes de volver a la
 cola. Si aparece un aviso de guardado, los cambios aún no están asegurados para la próxima apertura.
@@ -41,7 +44,7 @@ técnico permanente bajo las opciones.
 **Traducir** parte en **No traducir**. Al elegir un idioma aparecen dos filas idénticas:
 **Traductor** —Argos o IA local— y **Glosario**. La revisión adicional con IA parte desactivada en los
 documentos nuevos. Cada elección válida se guarda inmediatamente; **Volver** y Escape solo regresan
-a la cola. Si falta la IA exigida por una elección, Parsezen mantiene la intención y abre
+a la cola. Si falta la IA exigida por una elección, Liblevo mantiene la intención y abre
 `Componentes de IA local`. Una configuración guardada conserva sus decisiones.
 
 **Procesamiento directo** convierte o traduce, comprueba la salida y puede recomendar después una
@@ -78,7 +81,7 @@ imposibles.
 - La configuración, las acciones de estado y el resultado responden al pasar el puntero; el asa de
   ordenación muestra un cursor de arrastre.
 - Usa la papelera del extremo derecho para retirar esa fila de la cola. En un documento pausado o
-  pendiente de revisión, Parsezen pide confirmación antes de descartar su progreso o revisión; el
+  pendiente de revisión, Liblevo pide confirmación antes de descartar su progreso o revisión; el
   archivo original nunca se modifica.
 - Usa `···` o la tecla de menú para retirar un trabajo pendiente.
 - En un PDF, **Páginas** permite usar todas o pedir un intervalo inclusivo en un diálogo breve; al
@@ -89,7 +92,7 @@ La configuración queda bloqueada al empezar para evitar que el resultado deje d
 lo mostrado.
 
 El botón contextual situado sobre la cola utiliza exclusivamente la configuración guardada de cada
-fila. Si un documento no puede arrancar, Parsezen muestra el motivo en la interfaz actual en lugar de
+fila. Si un documento no puede arrancar, Liblevo muestra el motivo en la interfaz actual en lugar de
 dejar el fallo en segundo plano.
 
 La interfaz sigue por defecto la apariencia de Windows. En **Ajustes → Apariencia** puedes elegir
@@ -105,12 +108,12 @@ permanecen en su fila y las comparaciones pasan a orientación vertical.
 
 ### Markdown
 
-Adecuado para texto estructurado, Obsidian y sistemas de conocimiento. Parsezen genera un único
+Adecuado para texto estructurado, Obsidian y sistemas de conocimiento. Liblevo genera un único
 archivo canónico y conserva las imágenes compatibles sin pedir decisiones de organización antes de
 procesar.
 
 Si un resultado de una configuración anterior incluye una carpeta de capítulos, conserva y
-comparte esa carpeta junto al archivo principal y las imágenes. Al revisar el resultado, Parsezen
+comparte esa carpeta junto al archivo principal y las imágenes. Al revisar el resultado, Liblevo
 puede crear una carpeta de capítulos con otro nombre: utiliza siempre la que enlaza el índice
 actual. Cuando la división no permite conservar los enlaces con seguridad, mantiene un solo archivo.
 
@@ -135,7 +138,7 @@ es Markdown o EPUB.
 Al elegir un idioma en **Traducción**, aparecen dos motores que funcionan dentro del equipo:
 
 - **Contextual · IA local**: opción inicial. Usa el componente Hy-MT2 aprobado y verificado por
-  Parsezen. La interfaz no pide elegir un modelo y conserva cada fragmento original que no supera
+  Liblevo. La interfaz no pide elegir un modelo y conserva cada fragmento original que no supera
   sus comprobaciones.
 - **Rápida y ligera · Argos**: alternativa manual de consumo predecible. No necesita un modelo
   conversacional, pero nunca se activa automáticamente ni se usa en pruebas sin pedirlo
@@ -146,15 +149,15 @@ Indica si el recorrido usa Argos o IA local, si la comprobación bilingüe es in
 pasadas habrá y un coste cualitativo bajo, medio o alto. No es una estimación monetaria: todo sigue
 siendo local y gratuito; resume tiempo, cómputo y memoria relativos.
 
-La elección del traductor es independiente del nivel de revisión. Parsezen no cambia de traductor
+La elección del traductor es independiente del nivel de revisión. Liblevo no cambia de traductor
 dentro del documento: si eliges Argos y revisión semántica, Argos traduce primero y el modelo local
 revisa después. Si ese componente no está preparado, el trabajo se detiene con un diagnóstico en vez
 de degradarse silenciosamente a Argos. El modelo solo propone
-sustituciones breves: Parsezen las aplica una a una cuando conservan cifras, enlaces, nombres,
+sustituciones breves: Liblevo las aplica una a una cuando conservan cifras, enlaces, nombres,
 párrafos y estructura. Una propuesta rechazada no elimina otras correcciones seguras ni permite
 reescribir el resto del documento. El idioma y el glosario se comparten entre ambos recorridos.
 
-Si Parsezen puede determinar con suficiente confianza que el contenido ya está en el idioma de
+Si Liblevo puede determinar con suficiente confianza que el contenido ya está en el idioma de
 destino, omite la traducción. En EPUB compara el idioma declarado por el propio libro con una muestra
 suficiente de su texto; si se contradicen, confía en el contenido y evita omitir una traducción
 necesaria. Cuando la coincidencia es segura no muestra una fase de traducción ni genera un informe de
@@ -163,18 +166,18 @@ calidad ficticio.
 Cada motor trabaja en fragmentos verificables. Si una propuesta pierde contenido, cambia
 valores protegidos —incluidos cifras y símbolos de moneda o porcentaje—, altera cursivas o negritas
 de Markdown o no parece estar en el
-idioma solicitado, Parsezen vuelve a intentar solo
+idioma solicitado, Liblevo vuelve a intentar solo
 las partes necesarias. Cuando ninguna alternativa es segura, conserva ese fragmento original y lo
 incluye en la revisión en vez de publicar silenciosamente una transformación dudosa. El informe de
 traducción se vuelve a calcular sobre la propuesta final para que sus incidencias pendientes no
 describan una versión anterior. En títulos, conserva localmente la sintaxis estructural mientras traduce
 solo las palabras; los nombres editoriales se mantienen como nombres propios. Una cita en otro
 idioma puede permanecer intacta si el resto de su frase se ha traducido. Si un encabezado pertenece
-claramente a un tercer idioma y el modelo lo deforma, Parsezen recupera automáticamente el texto
+claramente a un tercer idioma y el modelo lo deforma, Liblevo recupera automáticamente el texto
 original sin deshacer su nivel. Si un mismo término aparece traducido de formas parecidas pero
 incompatibles, lo muestra en la revisión en lugar de elegir una por semejanza.
 
-En traducciones de inglés a español, Parsezen también avisa cuando detecta que una expresión
+En traducciones de inglés a español, Liblevo también avisa cuando detecta que una expresión
 claramente vulgar o enfática se ha neutralizado por completo. No inventa una alternativa ni cambia el
 texto por su cuenta: presenta el original y la traducción de ese fragmento para confirmar el registro.
 
@@ -182,11 +185,11 @@ Las descripciones visibles de las imágenes también se traducen. La ruta privad
 recurso permanecen protegidos, por lo que cambiar `Cover` por `Portada` no puede romper ni sustituir
 la imagen del libro.
 
-Si una corrección parcial deja repetido el complemento de un título, Parsezen revisa de nuevo solo
+Si una corrección parcial deja repetido el complemento de un título, Liblevo revisa de nuevo solo
 esa línea completa y conserva la versión anterior cuando la alternativa no supera todos los
 controles. No amplía esa reparación al autor ni a los párrafos contiguos.
 
-Antes de traducir, Parsezen construye una memoria terminológica conservadora para todo el
+Antes de traducir, Liblevo construye una memoria terminológica conservadora para todo el
 documento. Protege firmas atribuidas, organizaciones y nombres propios que se repiten; el glosario
 manual mantiene siempre la prioridad. La detección no trata una frase con mayúsculas, un número
 romano ni un término demasiado frecuente como nombre propio solo por repetirse, por lo que los
@@ -217,20 +220,20 @@ Las propuestas que añaden o eliminan bloques, cambian cifras, fechas, nombres p
 párrafos o una parte sustancial del texto se consideran arriesgadas y conservan el original por
 defecto. La aprobación masiva aplica las correcciones conservadoras, pero no sustituye esos
 originales arriesgados. Si varios fragmentos son válidos por separado pero su combinación no lo es,
-Parsezen conserva los fragmentos que siguen siendo seguros en lugar de descartar toda la propuesta.
+Liblevo conserva los fragmentos que siguen siendo seguros en lugar de descartar toda la propuesta.
 
 Con Argos, el traductor termina primero y la revisión bilingüe trabaja después sobre el resultado en
 el idioma final. Con traducción por IA, traducción y corrección se combinan en una pasada principal;
 esa corrección no constituye una segunda versión independiente. En EPUB, la estructura añade otra
 pasada. Las guardas de contenido siguen siendo las mismas.
 
-Parsezen conserva esta diferencia en el propio resultado y la muestra al revisar y en Actividad
+Liblevo conserva esta diferencia en el propio resultado y la muestra al revisar y en Actividad
 reciente. El resumen separa bloques comprobados automáticamente, bloques revisados semánticamente,
 bloques con verificación bilingüe independiente, bloques sin revisión semántica e incidencias que
 siguen pendientes. En libros largos, la revisión puede concentrarse de forma adaptativa en los
 bloques con señales y en una muestra distribuida: el resumen cuenta únicamente los bloques para los
 que el revisor devolvió una respuesta válida y deja visibles los demás como no revisados. Si el
-modelo responde en un formato inválido o su propuesta no supera las protecciones, Parsezen conserva
+modelo responde en un formato inválido o su propuesta no supera las protecciones, Liblevo conserva
 la traducción anterior y no cuenta ese intento como revisión semántica. Las comprobaciones
 heurísticas nunca se presentan como una certificación.
 
@@ -242,30 +245,30 @@ añadir decisiones técnicas a la página de configuración.
 
 ### Revisión recomendada después del modo directo
 
-Al terminar un procesamiento directo, Parsezen usa sus comprobaciones locales para buscar indicios
+Al terminar un procesamiento directo, Liblevo usa sus comprobaciones locales para buscar indicios
 acotables: daño de conversión, incidencias PDF repetidas, texto original residual o varias
 incoherencias de traducción. Una advertencia aislada y débil no basta. Si las señales se pueden
 asociar a bloques concretos, la fila cambia a `Revisión sugerida` y ofrece `Revisar con IA`.
 
 La sugerencia solo guarda tipos, cantidades, posiciones y huellas no reversibles del resultado;
 no guarda extractos del documento. No
-inicia el modelo, no cambia el resultado y no impide abrirlo. Si aceptas, Parsezen envía al modelo local
+inicia el modelo, no cambia el resultado y no impide abrirlo. Si aceptas, Liblevo envía al modelo local
 un máximo de 64 bloques afectados, excluye código, imágenes y metadatos internos y conserva el resto
 exactamente como estaba. En una traducción, compara cada bloque con su original cuando puede
 alinearlos. Los cambios se presentan como propuesta antes de sustituir el resultado.
 
 Puedes ignorar la recomendación. Si cancelas la revisión o falla el modelo local, el trabajo vuelve a
 `Completado` y el archivo anterior permanece intacto. La recomendación también se conserva al cerrar
-Parsezen; al retomarla, el texto se reconstruye desde los archivos locales y sus huellas se vuelven
+Liblevo; al retomarla, el texto se reconstruye desde los archivos locales y sus huellas se vuelven
 a validar. Los bloques se pueden volver a localizar tras el empaquetado EPUB, pero si su contenido
-cambió fuera de Parsezen deberá procesarse de nuevo.
+cambió fuera de Liblevo deberá procesarse de nuevo.
 
 ## EPUB y estructura
 
 Todo EPUB recibe la estructura técnica mínima necesaria para ser válido. Con procesamiento directo no
 se decide nada más antes de procesar. Con revisión semántica, el modelo local prepara un esquema de conjunto a
 partir del índice, la geometría y páginas de origen, los encabezados existentes y los roles
-semánticos. No puede reescribir el texto: devuelve solo pares seguros de línea y nivel, que Parsezen
+semánticos. No puede reescribir el texto: devuelve solo pares seguros de línea y nivel, que Liblevo
 aplica con las palabras exactas del original. Una respuesta inválida conserva el documento entero.
 La confirmación final es siempre ligera; el editor completo solo se abre por petición o cuando un
 bloqueo impide publicar. EPUB→EPUB también sigue esta misma ruta.
@@ -278,7 +281,7 @@ inventa. El índice no se confunde con un capítulo del cuerpo. Cuando existe un
 la revisión muestra arriba el árbol actual y el propuesto antes de presentar las decisiones concretas
 de encabezado.
 
-Si el índice parece plano o mezcla sangrías, Parsezen puede recuperar una jerarquía de dos niveles
+Si el índice parece plano o mezcla sangrías, Liblevo puede recuperar una jerarquía de dos niveles
 cuando encuentra varias partes, libros o apéndices explícitos y suficientes entradas consecutivas.
 La negrita parcial de una fila no basta para elevarla. Los rótulos de grupo que no muestran folio —por
 ejemplo, `PARTE II` o `TABLAS`— solo entran en el índice refluible cuando aparecen en la misma página y
@@ -296,11 +299,11 @@ Una `Parte` es un contenedor superior: agrupa los capítulos consecutivos que la
 capítulo puede conservar secciones y subsecciones navegables sin convertirlas en archivos separados.
 Los capítulos numerados que el índice confirma abren siempre una sección propia, incluso cuando la
 página de la parte anterior contiene muy poco texto. Si el diseño ornamental separa las letras de
-`Part/Parte`, Parsezen solo recompone el rótulo cuando el propio índice o la combinación exacta de
+`Part/Parte`, Liblevo solo recompone el rótulo cuando el propio índice o la combinación exacta de
 sus fragmentos aporta una única lectura. Una errata menor del índice también puede emparejarse con
 el cuerpo, pero únicamente dentro del mismo número de capítulo y con un solo candidato próximo. Un
 encabezado Markdown pegado a la línea anterior sigue contando como frontera si el índice lo confirma.
-Si la extracción no conserva ningún encabezado corporal recuperable, Parsezen mantiene el contenido
+Si la extracción no conserva ningún encabezado corporal recuperable, Liblevo mantiene el contenido
 en el capítulo contiguo y deja la corrección de navegación al editor en vez de inventar un destino.
 
 Los cortes técnicos por tamaño se retrasan para respetar el capítulo semántico completo. Por ello,
@@ -309,13 +312,13 @@ siguen siendo XHTML válidos y refluibles. Un `CHAPTER N` aislado seguido inmedi
 subtítulo se muestra una sola vez como `CHAPTER N — Subtítulo`, sin duplicar el marcador desnudo.
 
 En libros muy extensos, un nivel con más de 128 rótulos se considera normalmente una capa de
-secciones. Parsezen usa el nivel superior para los archivos de lectura y conserva los rótulos como
+secciones. Liblevo usa el nivel superior para los archivos de lectura y conserva los rótulos como
 destinos del índice. Si el índice impreso o los marcadores internos solo coinciden de forma aislada,
 no se usan para ocultar el resto de la jerarquía; un conjunto coherente sí mantiene compacto el menú.
 Esta decisión no elimina ni reescribe ningún encabezado del cuerpo.
 
 La sangría del índice también puede confirmar relaciones como `Parte → Capítulo → Sección`, aunque
-los títulos no estén numerados. Parsezen solo aplica esa relación cuando cada título es único, aparece
+los títulos no estén numerados. Liblevo solo aplica esa relación cuando cada título es único, aparece
 en el cuerpo y mantiene el mismo orden; una duda deja esos elementos al mismo nivel. Las secciones y
 subsecciones seleccionadas siguen apuntando al interior del capítulo después de guardar, reabrir o
 publicar desde el editor, sin añadir archivos ni información técnica visible al EPUB. Publicar desde
@@ -324,18 +327,18 @@ la jerarquía detectada.
 
 ## Procesamiento y cola
 
-Parsezen ejecuta una sola tarea pesada cada vez. La barra de la cola reúne el total, las revisiones
+Liblevo ejecuta una sola tarea pesada cada vez. La barra de la cola reúne el total, las revisiones
 reales y la acción principal disponible. Antes de empezar, muestra un intervalo aproximado para el
 trabajo automático. Esta estimación mejora con ejecuciones similares realizadas en el equipo y no
 guarda nombres, rutas ni contenido. Al pulsar `Procesar`, la preparación comienza directamente; solo
 una configuración inválida o un problema real impide crear el trabajador.
 
-Un documento que llega a revisión queda pendiente, pero no detiene los demás: Parsezen continúa con
+Un documento que llega a revisión queda pendiente, pero no detiene los demás: Liblevo continúa con
 el siguiente trabajo elegible y reúne las decisiones en una única superficie `Revisión del
 documento` cuando vuelves a revisarlo.
 
 En PDFs de 120 páginas o más —o desde 60 cuando el flujo incluye OCR forzado, IA local o EPUB—,
-Parsezen examina hasta nueve candidatos baratos y elige como máximo cinco páginas distintas: inicio,
+Liblevo examina hasta nueve candidatos baratos y elige como máximo cinco páginas distintas: inicio,
 final y ejemplos de contenido denso, visual o tabular. La muestra pasa por el mismo flujo real,
 pero evita el trabajo final redundante: convierte las cinco páginas, no construye el EPUB ni ejecuta
 la revisión o reestructuración definitiva y prueba la traducción como máximo en tres posiciones
@@ -351,7 +354,7 @@ cuantificable, el tiempo restante puede ajustarse al ritmo real de esa fase y se
 se descontó el tiempo transcurrido o si la observación amplió el intervalo. Si se supera el máximo
 inicial, muestra `Más tiempo del previsto` en lugar de fingir una precisión que ya no existe.
 
-Desde que Parsezen fija y valida la ejecución, y mientras lee, convierte, aplica OCR o prepara
+Desde que Liblevo fija y valida la ejecución, y mientras lee, convierte, aplica OCR o prepara
 recursos, la fila activa muestra siempre `Preparando`. Después, **Estado** muestra
 `Traduciendo`, `Corrigiendo`, `Personalizando` o `Publicando` según la fase real, además del porcentaje
 cuando existe una medida. Si un documento necesita
@@ -360,10 +363,10 @@ celda muestra `Ver error` y abre su explicación completa sin perder los resulta
 Según la causa, ofrece `Reintentar esta fase`, `Revisar configuración`, `Revisar destino` o
 `Abrir IA local`. El reintento actúa solo sobre ese documento y conserva las fases, decisiones y
 checkpoints ya válidos. La explicación indica qué fase falló, qué trabajo sigue siendo reutilizable
-y mantiene las acciones de recuperación en la propia pantalla; Parsezen no abre un modal ni muestra
+y mantiene las acciones de recuperación en la propia pantalla; Liblevo no abre un modal ni muestra
 trazas técnicas automáticamente.
 
-Antes de exponer un resultado, Parsezen vuelve a comprobar el archivo temporal. En texto verifica
+Antes de exponer un resultado, Liblevo vuelve a comprobar el archivo temporal. En texto verifica
 codificación, contenido y estructura; en DOCX y EPUB comprueba además que el paquete sea válido e
 idéntico al ya aprobado. Una fila completada muestra `Integridad final comprobada`; su ayuda
 enumera los controles y un inventario sin contenido documental. Si el control detecta una
@@ -378,11 +381,11 @@ Al terminar, `Ver resumen` separa cuatro conceptos que no deben confundirse:
   una garantía de calidad literaria.
 - **Revisión manual**: decisiones que una persona realizó o que todavía se esperan.
 
-El encabezado sobre la tabla resume el lote completo. Si Parsezen está minimizado o en segundo
+El encabezado sobre la tabla resume el lote completo. Si Liblevo está minimizado o en segundo
 plano, Windows muestra un aviso al terminar o al requerir atención; no duplica ese aviso mientras la
 ventana está activa.
 
-`Pausar` solicita detenerse en el siguiente punto seguro. Al volver, Parsezen usa los checkpoints
+`Pausar` solicita detenerse en el siguiente punto seguro. Al volver, Liblevo usa los checkpoints
 cifrados en lugar de repetir trabajo válido. Un lote pausado dice `Procesamiento pausado`; uno
 interrumpido definitivamente dice `Procesamiento detenido`. El aviso se recalcula al retirar parte
 del lote y desaparece al eliminar el último documento relacionado; el registro histórico permanece
@@ -427,7 +430,7 @@ parcial y las futuras a cero. No suma cambios estructurales futuros ni incidenci
 pudieron convertirse en una decisión. La prioridad, el aviso o una sugerencia concreta aparecen en
 una línea adicional únicamente cuando cambian la decisión que conviene tomar.
 
-Dentro de cada fase, Parsezen presenta primero las incidencias críticas y altas, mantiene estable el
+Dentro de cada fase, Liblevo presenta primero las incidencias críticas y altas, mantiene estable el
 orden entre elementos de la misma gravedad y muestra solo las prioridades alta o crítica sobre la
 comparación. Si guardaste una revisión a medias, se
 abre directamente el primer caso pendiente; las decisiones ya tomadas siguen disponibles al volver
@@ -451,7 +454,7 @@ sin recorrer primero todos los cambios individuales; en ventanas estrechas ambos
 
 `Guardar y salir` cifra el material de la revisión, incluidos recursos y ediciones. Abrir un caso no
 lo resuelve por sí solo: una elección cambiada o una edición se guarda al salir. Al abrir de nuevo
-Parsezen, la misma fila vuelve a `Revisar` y continúa en la siguiente decisión pendiente, sin repetir
+Liblevo, la misma fila vuelve a `Revisar` y continúa en la siguiente decisión pendiente, sin repetir
 la conversión o la IA.
 
 En traducción, cada panel muestra únicamente el fragmento dudoso: no presenta el resultado actual
@@ -459,16 +462,16 @@ como una sugerencia fiable ni permite aprobarlo en bloque. Debes corregirlo en e
 o usar `Confirmar` solo si realmente es correcto. `Aplicar seguras` aparece únicamente cuando una
 fase de corrección contiene varias propuestas validadas; no ocupa espacio en una decisión individual.
 
-Cuando un documento requiere varias revisiones, Parsezen las presenta en el orden en que se generó
+Cuando un documento requiere varias revisiones, Liblevo las presenta en el orden en que se generó
 el contenido: OCR, traducción, corrección y estructura. Cada paso queda aplicado antes de mostrar el
 siguiente. Puedes cerrar tras cualquiera de ellos y continuar desde el paso pendiente; las
 decisiones ya aceptadas no vuelven a preguntarse ni relanzan el procesamiento automático.
 
-Antes de publicar, Parsezen vuelve a comprobar la combinación completa de elecciones. Si mezclar
+Antes de publicar, Liblevo vuelve a comprobar la combinación completa de elecciones. Si mezclar
 originales y propuestas duplicara, inventara o perdiera una cifra que ninguna de las dos versiones
 permite, la publicación se detiene y conserva el archivo anterior para que revises esa decisión.
 
-`Anterior` dentro de la primera unidad de una fase vuelve a la fase previa real. Parsezen pide una
+`Anterior` dentro de la primera unidad de una fase vuelve a la fase previa real. Liblevo pide una
 confirmación breve, conserva sus decisiones como punto de partida, invalida y recalcula solo las
 revisiones posteriores sin aumentar intentos y no vuelve a ejecutar OCR, traducción ni IA.
 
@@ -478,7 +481,7 @@ Todo resultado EPUB abre primero una confirmación ligera. Revisa título, autor
 portada y número de capítulos. `Publicar EPUB` termina sin añadir pasos; `Abrir editor completo`
 entra en las herramientas avanzadas y Las nuevas portadas deben ser imágenes estáticas PNG, JPG, GIF o WebP de hasta 20 MB y 16 millones
 de píxeles, o SVG de vectores autocontenidos. Si una imagen está dañada o depende de recursos
-externos, Parsezen pide elegir otra. Los EPUB de entrada admiten hasta 512 MB.
+externos, Liblevo pide elegir otra. Los EPUB de entrada admiten hasta 512 MB.
 
 `Guardar y salir` conserva el borrador.
 
@@ -496,7 +499,7 @@ El panel izquierdo contiene la estructura y el derecho el contenido editable.
 `Guardar y salir` conserva metadatos, portada, estructura y el capítulo actual en el borrador cifrado
 para reanudar después. `Descartar cambios` es una acción destructiva secundaria y pide confirmación
 si hay cambios. `Generar EPUB definitivo` valida y publica el archivo antes de mostrarlo como
-completado. Cuando editas un EPUB de origen, Parsezen conserva el paquete exacto si no cambias nada;
+completado. Cuando editas un EPUB de origen, Liblevo conserva el paquete exacto si no cambias nada;
 si solo modificas el texto de capítulos, mantiene byte por byte su navegación, estilos, fuentes,
 imágenes y demás recursos. Los cambios estructurales o de metadatos usan la reconstrucción EPUB
 normalizada.
@@ -519,7 +522,7 @@ descarga y verifica; ocupa unos 4,6 GB. `Revisión IA` es opcional y ocupa unos 
 Los documentos no se envían durante la preparación ni al procesarlos. Ollama puede estar cerrado.
 
 La pantalla fija, accesible desde Ajustes y desde los avisos que requieren IA, comprueba al abrirse
-los dos componentes fijados por Parsezen. `Comprobar de nuevo` permite repetir manualmente la
+los dos componentes fijados por Liblevo. `Comprobar de nuevo` permite repetir manualmente la
 consulta local.
 Un componente pendiente de comprobar no significa que el ordenador sea insuficiente. Si falta memoria o espacio,
 el aviso identifica el recurso. El idioma y las demás opciones se conservan como borrador mientras
@@ -530,7 +533,7 @@ Un archivo incompleto o cuyo SHA-256 no coincida no se considera preparado.
 Que una fila esté `Preparada` confirma su instalación e identidad local; las propuestas de revisión
 siguen necesitando tus decisiones y no equivalen a una garantía semántica automática.
 
-En traducciones de inglés a español, Parsezen puede mantener automáticamente frases técnicas de
+En traducciones de inglés a español, Liblevo puede mantener automáticamente frases técnicas de
 astrología cuando el libro aporta varias señales claras de ese dominio. No se activa por una palabra
 aislada y nunca sustituye tus elecciones: cualquier término que añadas al glosario tiene prioridad.
 
@@ -546,42 +549,42 @@ tardar más la primera vez.
 No se ha publicado todavía el resultado definitivo. Abre `Revisar`, completa todas las decisiones y
 espera a que la fila cambie a `Completado`.
 
-### Parsezen se cerró durante una revisión
+### Liblevo se cerró durante una revisión
 
 Abre de nuevo la aplicación. La cola, las decisiones y el libro pendiente se recuperan desde la
-instantánea cifrada. Si el original se movió o se eliminó, Parsezen no puede continuar ese trabajo.
+instantánea cifrada. Si el original se movió o se eliminó, Liblevo no puede continuar ese trabajo.
 Si el original fue modificado, la revisión anterior se descarta para no mezclar dos versiones. Quita
 el trabajo de la cola y vuelve a añadir el documento para capturar explícitamente su nueva identidad.
 
 ### La recuperación automática muestra un aviso
 
-Parsezen seguirá intentando guardar si el problema es temporal. No cierres la aplicación mientras
+Liblevo seguirá intentando guardar si el problema es temporal. No cierres la aplicación mientras
 aparezca el aviso si quieres conservar el estado de la cola. Si intentas cerrar con trabajo sin
-guardar, Parsezen te pedirá confirmación.
+guardar, Liblevo te pedirá confirmación.
 
-Si la cola anterior no puede leerse, Parsezen conserva primero una copia local de su base de datos y
+Si la cola anterior no puede leerse, Liblevo conserva primero una copia local de su base de datos y
 de los materiales cifrados de revisión, y después abre una cola limpia. El aviso muestra los nombres
 de esas copias; los documentos y resultados no se modifican. Si la base está dañada y ni siquiera
-puede abrirse, Parsezen la aísla junto con sus revisiones cifradas en una carpeta de recuperación.
+puede abrirse, Liblevo la aísla junto con sus revisiones cifradas en una carpeta de recuperación.
 
 ### Error de OCR
 
 Compara la página original. Las tablas sencillas se publican como Markdown y las que necesitan más
 fidelidad como HTML compatible. Si una tabla es demasiado compleja para reconstruirla con seguridad,
-Parsezen conserva sus celdas como texto estructurado, la marca para revisión y, cuando incluyes
+Liblevo conserva sus celdas como texto estructurado, la marca para revisión y, cuando incluyes
 imágenes, añade también un recorte visual de respaldo. Los títulos, notas y unidades situados junto
 a la tabla permanecen en el orden de lectura. Si la tabla nativa ya ofrece filas, columnas y celdas
-fiables, Parsezen la mantiene con sus saltos internos aunque exista una lectura OCR de toda la página.
+fiables, Liblevo la mantiene con sus saltos internos aunque exista una lectura OCR de toda la página.
 Tipografía decorativa, rotación y manuscritos pueden
 necesitar edición manual. Un OCR vacío en una página visual es un resultado válido, no un bloqueo del
-documento completo. En una página formada por una imagen completa, Parsezen puede retirar del texto
+documento completo. En una página formada por una imagen completa, Liblevo puede retirar del texto
 una marca aislada mucho más pequeña que la tipografía reconocida, pero la imagen original siempre se
 mantiene y las etiquetas cortas de tamaño uniforme no se filtran. Si un escaneo denso incluye un
-rótulo inequívoco de figura numerada, Parsezen conserva la página completa como referencia visual
+rótulo inequívoco de figura numerada, Liblevo conserva la página completa como referencia visual
 además del texto refluido; una mención corriente dentro de la prosa no activa este respaldo. Si el OCR
-pega el rótulo de una tabla a su primera fila, Parsezen lo separa automáticamente para conservar ambos
+pega el rótulo de una tabla a su primera fila, Liblevo lo separa automáticamente para conservar ambos
 y publicar una tabla real. Si las líneas de una tabla están dibujadas dentro de la imagen pero el
-texto sigue siendo seleccionable, Parsezen combina ambas capas localmente y solo publica la cuadrícula
+texto sigue siendo seleccionable, Liblevo combina ambas capas localmente y solo publica la cuadrícula
 cuando todas las letras, cifras y signos quedan conservados. Las tablas abiertas que solo tienen bordes
 horizontales pueden reconstruirse mediante sus huecos de cabecera, rótulos de fila y espacios verticales;
 aparecen como HTML traducible, incluyen un recorte del original y quedan marcadas para comprobar las
@@ -591,7 +594,7 @@ técnicos como parte del libro. En una portada gráfica, un título repetido en 
 nativa puede corregir un único término corto introducido por OCR, pero solo si la coincidencia es
 inequívoca; si existen variantes, la aplicación mantiene el texto reconocido para revisión.
 
-En los índices, Parsezen reconoce una columna derecha de folios y vuelve a unir cada número con la
+En los índices, Liblevo reconoce una columna derecha de folios y vuelve a unir cada número con la
 entrada situada en la misma fila. Las entradas se publican con título y folio en columnas alineadas,
 conservan sangría, negrita, cursiva y enlaces internos, y mantienen el orden de origen en lugar de
 agrupar primero todos los títulos y después todos los números. También reconoce folios de cuatro
@@ -600,19 +603,19 @@ solo aplica el espacio o la cifra que corroboren la fila visual, sus números ve
 una lectura ambigua permanece visible para revisión.
 
 En la prosa PDF, la negrita y la cursiva se conservan aunque afecten solo a unas palabras dentro de
-una línea. Si una palabra en cursiva o negrita queda partida entre dos líneas, Parsezen vuelve a
+una línea. Si una palabra en cursiva o negrita queda partida entre dos líneas, Liblevo vuelve a
 unirla sin crear dos fragmentos de formato ni conservar el guion tipográfico de final de línea. Una
 frase que empieza en versalitas y continúa en minúscula con el mismo espaciado se mantiene como un
 solo párrafo. Los símbolos pequeños y elevados se corrigen únicamente cuando la geometría del PDF
 demuestra que no son cifras normales.
 
-Si una fuente incrustada está dañada de forma repetida, Parsezen puede contrastar localmente las cajas
+Si una fuente incrustada está dañada de forma repetida, Liblevo puede contrastar localmente las cajas
 exactas de sus líneas con una segunda lectura nativa. Solo activa esta reparación para un patrón
 sistémico y conserva los espacios, la puntuación y las cifras de la capa principal; si las dos lecturas
 no bastan, mantiene el caso para OCR o revisión en vez de adivinarlo.
 
 Un libro muy largo puede superar el tamaño que el editor Markdown interno admite cómodamente sin
-impedir la conversión a EPUB. Parsezen sigue analizando, estructurando y validando el documento
+impedir la conversión a EPUB. Liblevo sigue analizando, estructurando y validando el documento
 completo; en ese caso mantiene la revisión final ligera y permite abrir el resultado con una
 aplicación externa si necesitas inspeccionar todo el texto seguido.
 
@@ -621,7 +624,7 @@ que lo desplace se descarta sin perder las demás correcciones seguras. Los rót
 tienen página propia aparecen separados de la entrada anterior.
 
 Cuando una página con capa de texto también contiene una imagen completa y presenta señales de riesgo
-—por ejemplo, un índice, fórmulas o glifos extraños—, Parsezen puede contrastarla localmente con OCR y
+—por ejemplo, un índice, fórmulas o glifos extraños—, Liblevo puede contrastarla localmente con OCR y
 un segundo extractor. En la ruta directa, una región breve que siga ambigua queda señalada para
 revisión: el árbitro visual opcional de la ruta antigua de Ollama todavía no forma parte del motor
 integrado. La capa nativa sigue teniendo prioridad y ninguna página ni documento se envía fuera del
@@ -652,13 +655,13 @@ Cuando termines un libro:
    puedes hacerlo desde el resumen del resultado. Copia ese archivo a tu
    lugar habitual de respaldo. Si elegiste **Junto al original**, estará junto al PDF; si elegiste
    otra carpeta de destino, estará allí.
-2. Conserva también una copia del PDF original. No dependas de la cola de Parsezen para localizarlo
+2. Conserva también una copia del PDF original. No dependas de la cola de Liblevo para localizarlo
    en el futuro.
 3. Abre **la copia** del EPUB en Calibre u otro lector de PC y comprueba principio, mitad, final e
    índice. Así sabrás que la copia se puede leer antes de necesitarla.
 
 La caché y las revisiones cifradas permiten continuar trabajos en esta cuenta de Windows; no son
-una biblioteca ni una copia portable del trabajo pendiente. No copies la carpeta interna de Parsezen
+una biblioteca ni una copia portable del trabajo pendiente. No copies la carpeta interna de Liblevo
 mientras la app esté abierta esperando que eso restaure un trabajo en otro PC o en otra cuenta. Si
 cambias de equipo, lleva el PDF y el EPUB terminados; puede ser necesario empezar de nuevo una
 conversión que todavía no haya terminado.

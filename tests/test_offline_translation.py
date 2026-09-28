@@ -4,13 +4,13 @@ from dataclasses import dataclass
 
 import pytest
 
-import parsezen.offline_translation as translation_module
-import parsezen.offline_translation_executor as translation_executor
-from parsezen.errors import TranslationError
-from parsezen.offline_translation import (
+import liblevo.offline_translation as translation_module
+import liblevo.offline_translation_executor as translation_executor
+from liblevo.errors import TranslationError
+from liblevo.offline_translation import (
     _translate_markdown_offline_in_process as translate_markdown_offline,
 )
-from parsezen.offline_translation import (
+from liblevo.offline_translation import (
     detect_source_language,
     resolve_target_language,
 )
@@ -24,7 +24,7 @@ def test_translates_only_text_and_preserves_markdown_structure(
         "Read [the guide](https://example.com/docs/10) and keep `value = 3`.\n\n"
         "| Name | Value |\n"
         "| --- | ---: |\n"
-        "| Parsezen | 42 |\n\n"
+        "| Liblevo | 42 |\n\n"
         "```python\nprint('Hello 99')\n```\n"
     )
     monkeypatch.setattr(translation_module, "detect_source_language", lambda _text: "en")
@@ -41,7 +41,7 @@ def test_translates_only_text_and_preserves_markdown_structure(
         "ES:Read [the guide](https://example.com/docs/10) and keep `value = 3`.\n\n"
         "| ES:Name | Value |\n"
         "| --- | ---: |\n"
-        "| ES:Parsezen | 42 |\n\n"
+        "| ES:Liblevo | 42 |\n\n"
         "```python\nprint('Hello 99')\n```\n"
     )
 

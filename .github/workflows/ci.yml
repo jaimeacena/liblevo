@@ -36,9 +36,9 @@ jobs:
           python -m ruff check .
           python -m ruff format --check .
       - name: Validar tipos
-        run: python -m mypy src/parsezen
+        run: python -m mypy src/liblevo
       - name: Ejecutar pruebas
-        run: python -m pytest --cov=parsezen --cov-report=term-missing --cov-fail-under=88
+        run: python -m pytest --cov=liblevo --cov-report=term-missing --cov-fail-under=88
       - name: Verificar dependencias
         run: |
           $PSNativeCommandUseErrorActionPreference = $true

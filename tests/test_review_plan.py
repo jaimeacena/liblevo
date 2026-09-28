@@ -1,24 +1,24 @@
 from pathlib import Path
 
-from parsezen.application.review_plan import (
+from liblevo.application.review_plan import (
     ReviewStep,
     review_steps_for_result,
     review_workload_for_result,
 )
-from parsezen.domain.jobs import (
+from liblevo.domain.jobs import (
     DocumentFormat,
     JobConfiguration,
     OutputConfiguration,
     ProcessingPlan,
     TranslationConfiguration,
 )
-from parsezen.domain.reviews import ReviewKind
-from parsezen.domain.stages import StageKind
-from parsezen.epub_builder import EpubBookMetadata
-from parsezen.pdf_conversion import PdfQualityReport, PdfReviewIssue
-from parsezen.processing import ProcessResult
-from parsezen.revision import RevisionChange, RevisionDraft, RevisionKind
-from parsezen.translation_quality import (
+from liblevo.domain.reviews import ReviewKind
+from liblevo.domain.stages import StageKind
+from liblevo.epub_builder import EpubBookMetadata
+from liblevo.pdf_conversion import PdfQualityReport, PdfReviewIssue
+from liblevo.processing import ProcessResult
+from liblevo.revision import RevisionChange, RevisionDraft, RevisionKind
+from liblevo.translation_quality import (
     TranslationIssueKind,
     TranslationQualityIssue,
     TranslationQualityReport,

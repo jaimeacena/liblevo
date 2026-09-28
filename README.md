@@ -1,10 +1,10 @@
-![Parsezen](assets/branding/generated/parsezen-readme.png)
+![Liblevo](assets/branding/generated/liblevo-readme.png)
 
 ## ***Convierte documentos complejos en contenido útil.***
 
-El nombre *Parsezen* proviene de *parse* (extraer y estructurar información) con *zen* (hacerlo de forma sencilla y fluida).
+**Convierte. Traduce. Lee.** Liblevo lleva tus documentos a formatos cómodos para leer y trabajar.
 
-Parsezen transforma PDFs, documentos de Word y otros archivos con texto, imágenes y tablas en
+Liblevo transforma PDFs, documentos de Word y otros archivos con texto, imágenes y tablas en
 Markdown limpio o en un EPUB organizado. El procesamiento directo comprueba el resultado y, solo si
 encuentra señales concretas, puede proponerte una revisión local de los bloques afectados. También
 puedes solicitar de antemano una revisión adicional. La traducción opcional usa por defecto un modelo
@@ -31,17 +31,17 @@ la preparación. Es open source, privado y gratuito.
 Las reglas de conservación, revisión y formatos se explican en la [guía de uso](docs/user-guide.md).
 Los límites de lo demostrado y la evaluación pendiente están en el [plan actual](docs/work-plan.md).
 
-## Cómo usar Parsezen
+## Cómo usar Liblevo
 
-1. **[Descarga la última versión](https://github.com/jaimeacena/parsezen/releases/latest).** Necesitas Windows de 64 bits, pero no tienes que instalar Python.
+1. **[Descarga la última versión](https://github.com/jaimeacena/liblevo/releases/latest).** Necesitas Windows de 64 bits, pero no tienes que instalar Python.
 
 2. **Añade tu documento.** Puedes trabajar con PDF, Word, EPUB, Markdown y archivos de texto.
-3. **Configura el resultado.** Dentro de Parsezen, dos tarjetas claras permiten elegir Markdown o
+3. **Configura el resultado.** Dentro de Liblevo, dos tarjetas claras permiten elegir Markdown o
    EPUB; traducción, páginas y OCR usan filas breves `Etiqueta — Valor — ›`, y la revisión adicional con IA un
    único interruptor. Al elegir un idioma aparecen traductor y glosario; un intervalo se resume como
    `25–140`. Cada elección válida se guarda al instante, sin texto técnico permanente, pie de acciones
    ni scroll en el tamaño normal.
-4. **Procesa y revisa.** Parsezen extrae y organiza el contenido, conserva las imágenes y tablas
+4. **Procesa y revisa.** Liblevo extrae y organiza el contenido, conserva las imágenes y tablas
    compatibles y mantiene también la lámina original cuando una página completa contiene una tabla
    OCR, una imagen girada o una figura numerada que no puede separarse con seguridad del escaneo.
    Las portadas sin capa textual útil, las contraportadas y los mosaicos de rótulos permanecen como
@@ -65,18 +65,18 @@ Los límites de lo demostrado y la evaluación pendiente están en el [plan actu
    cuando su geometría exterior, tamaño y cercanía al número de página solo son compatibles con un
    folio. Cualquier decisión pendiente se muestra antes de publicar.
    Si una cifra imposible dentro de un signo zodiacal sigue sin confirmarse, el OCR se conserva solo
-   como evidencia privada: no puede añadir rótulos ni listas al texto del libro. Parsezen mantiene la
+   como evidencia privada: no puede añadir rótulos ni listas al texto del libro. Liblevo mantiene la
    capa nativa, la lámina original y señala la página para compararla, sin adivinar el valor.
 
-> Windows puede mostrar «Editor desconocido» porque Parsezen todavía no utiliza una firma comercial. Asegúrate de descargarlo desde este repositorio.
+> Windows puede mostrar «Editor desconocido» porque Liblevo todavía no utiliza una firma comercial. Asegúrate de descargarlo desde este repositorio.
 
 
 ## Lo que debes saber
 
-- Parsezen transforma el contenido de un PDF; no intenta reproducir exactamente el diseño de cada página.
+- Liblevo transforma el contenido de un PDF; no intenta reproducir exactamente el diseño de cada página.
 - Los documentos escaneados, las tablas complejas y las maquetaciones poco habituales pueden requerir una revisión final.
 - Los modelos de IA son opcionales y pueden ocupar varios gigabytes.
-- Necesitas conexión a Internet para obtener Parsezen y los modelos que no estén ya en este PC.
+- Necesitas conexión a Internet para obtener Liblevo y los modelos que no estén ya en este PC.
   Después, los documentos se procesan localmente y Ollama puede permanecer cerrado.
 
 
@@ -84,7 +84,7 @@ Los límites de lo demostrado y la evaluación pendiente están en el [plan actu
 
 - [Guía de uso](docs/user-guide.md)
 - [Configurar la IA local](docs/local-ai-setup.md)
-- [Informar de un problema](https://github.com/jaimeacena/parsezen/issues)
+- [Informar de un problema](https://github.com/jaimeacena/liblevo/issues)
 - [Ver todos los cambios](CHANGELOG.md)
 
 ## Desarrollo
@@ -131,4 +131,4 @@ atómico de hashes e indicadores agregados, sin contenido, prompts, respuestas n
 
 ## Licencia
 
-Parsezen es gratuito y se distribuye bajo licencia [MIT](LICENSE).
+Liblevo es gratuito y se distribuye bajo licencia [MIT](LICENSE).

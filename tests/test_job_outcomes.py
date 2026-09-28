@@ -2,18 +2,18 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.job_execution import JobExecutionController
-from parsezen.application.job_outcomes import JobOutcomeCoordinator, OutcomeWarning
-from parsezen.application.job_queue import JobQueue
-from parsezen.domain.jobs import (
+from liblevo.application.job_execution import JobExecutionController
+from liblevo.application.job_outcomes import JobOutcomeCoordinator, OutcomeWarning
+from liblevo.application.job_queue import JobQueue
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentSource,
     JobConfiguration,
     JobStatus,
     ProcessingPlan,
 )
-from parsezen.domain.stages import StageKind, StageStatus
-from parsezen.processing import ProcessResult
+from liblevo.domain.stages import StageKind, StageStatus
+from liblevo.processing import ProcessResult
 
 
 class SnapshotRepository:

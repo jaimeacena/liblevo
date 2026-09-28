@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.planner import activate_next_stage
-from parsezen.domain.jobs import (
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.planner import activate_next_stage
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentJob,
     DocumentSource,
@@ -13,7 +13,7 @@ from parsezen.domain.jobs import (
     JobStatus,
     ProcessingPlan,
 )
-from parsezen.domain.stages import StageKind, StageStatus
+from liblevo.domain.stages import StageKind, StageStatus
 
 
 def source(name: str, *, size: int = 100, modified: int = 1) -> DocumentSource:

@@ -6,15 +6,15 @@ from pathlib import Path
 import pytest
 from PySide6.QtCore import Qt
 
-import parsezen.diagnostics as diagnostics_module
-from parsezen.diagnostics import build_diagnostic_report
-from parsezen.presentation.diagnostics_dialog import DiagnosticsDialog
-from parsezen.recent_activity import (
+import liblevo.diagnostics as diagnostics_module
+from liblevo.diagnostics import build_diagnostic_report
+from liblevo.presentation.diagnostics_dialog import DiagnosticsDialog
+from liblevo.recent_activity import (
     RecentJob,
     RecentJobStatus,
     append_recent_jobs,
 )
-from parsezen.settings import AppSettings
+from liblevo.settings import AppSettings
 
 
 def test_diagnostic_report_contains_useful_state_but_no_private_paths_or_names(
@@ -37,10 +37,10 @@ def test_diagnostic_report_contains_useful_state_but_no_private_paths_or_names(
     checkpoint_directory = checkpoint_root / ("a" * 64)
     checkpoint_directory.mkdir(parents=True)
     (checkpoint_directory / f"{'b' * 64}.json").write_bytes(b"encrypted")
-    log_path = tmp_path / "parsezen.log"
+    log_path = tmp_path / "liblevo.log"
     log_path.write_text(
         "processing_failed incident=deadbeef unexpected_error_type=RuntimeError "
-        "module=parsezen.processing function=process_document line=199 "
+        "module=liblevo.processing function=process_document line=199 "
         "stage=organizing_structure "
         f"private_path={source}\n",
         encoding="utf-8",
@@ -69,7 +69,7 @@ def test_diagnostic_report_contains_useful_state_but_no_private_paths_or_names(
 
 
 def test_diagnostics_dialog_copies_only_the_prepared_report(qtbot) -> None:
-    report = "Parsezen — diagnóstico local\nPrivacidad: sin rutas."
+    report = "Liblevo — diagnóstico local\nPrivacidad: sin rutas."
     dialog = DiagnosticsDialog(report)
     qtbot.addWidget(dialog)
 
@@ -139,7 +139,7 @@ def test_diagnostic_fallbacks_remain_sanitized_when_local_checks_fail(
 def test_diagnostics_uses_the_latest_canonical_early_check_failure(
     tmp_path: Path,
 ) -> None:
-    log_path = tmp_path / "parsezen.log"
+    log_path = tmp_path / "liblevo.log"
     log_path.write_text(
         "processing_failed attempt_id=older phase=translate error_code=translation "
         "error_type=TranslationError\n"

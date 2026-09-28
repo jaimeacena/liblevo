@@ -8,9 +8,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from parsezen.errors import ImprovementError
-from parsezen.improvement import ImprovementMode, improve_markdown
-from parsezen.settings import AppSettings
+from liblevo.errors import ImprovementError
+from liblevo.improvement import ImprovementMode, improve_markdown
+from liblevo.settings import AppSettings
 
 _FIXTURE_PATH = Path(__file__).parent / "fixtures" / "ai_regressions.json"
 _SETTINGS = AppSettings(model="regression-model", context_window=4_096)

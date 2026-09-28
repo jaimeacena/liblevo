@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from parsezen.errors import RequestValidationError, TranslationError
-from parsezen.glossary import (
+from liblevo.errors import RequestValidationError, TranslationError
+from liblevo.glossary import (
     GlossaryEntry,
     glossary_fingerprint,
     protect_glossary,
@@ -14,21 +14,21 @@ from parsezen.glossary import (
 def test_glossary_protects_longest_terms_without_touching_code_or_links() -> None:
     entries = (
         GlossaryEntry("Source", "Destino"),
-        GlossaryEntry("Parsezen", "Parsezen revisado"),
+        GlossaryEntry("Liblevo", "Liblevo revisado"),
     )
     source = (
-        "Parsezen ayuda al SOURCE. `Source`\n\n"
+        "Liblevo ayuda al SOURCE. `Source`\n\n"
         "[Source](https://example.test/Source)\n\n"
-        "```txt\nParsezen\n```"
+        "```txt\nLiblevo\n```"
     )
 
     protected = protect_glossary(source, entries)
     restored = protected.restore(protected.text)
 
-    assert restored.startswith("Parsezen revisado ayuda al Destino.")
+    assert restored.startswith("Liblevo revisado ayuda al Destino.")
     assert "`Source`" in restored
     assert "[Destino](https://example.test/Source)" in restored
-    assert "```txt\nParsezen\n```" in restored
+    assert "```txt\nLiblevo\n```" in restored
     assert len(protected.replacements) == 3
 
 

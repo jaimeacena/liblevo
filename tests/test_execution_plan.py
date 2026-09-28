@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.domain.execution_plan import ExecutionStep, compile_execution_plan
-from parsezen.domain.jobs import (
+from liblevo.domain.execution_plan import ExecutionStep, compile_execution_plan
+from liblevo.domain.jobs import (
     CoverStrategy,
     DocumentFormat,
     DocumentSource,

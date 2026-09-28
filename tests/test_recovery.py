@@ -1,10 +1,10 @@
-from parsezen.domain.stages import StageKind
-from parsezen.errors import (
+from liblevo.domain.stages import StageKind
+from liblevo.errors import (
     FinalIntegrityError,
     LocalModelUnavailableError,
     OutputWriteError,
 )
-from parsezen.failure_recovery import (
+from liblevo.failure_recovery import (
     FailureKind,
     ProcessingFailure,
     RecoveryAction,

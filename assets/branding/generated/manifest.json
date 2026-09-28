@@ -1,73 +1,53 @@
 {
-  "source": "assets/branding/masters/parsezen-icon-source.jpg",
-  "source_sha256": "40cde374c877d4f275e501120a0642b775b08d2dfeae814fb428fe18e5c408a5",
-  "light_wordmark_reference": "assets/branding/masters/parsezen-light-master.png",
-  "light_wordmark_reference_sha256": "6d2509d650766caaa263a4c0b8d95c0e89b8b867741511da1f03aa7f0a03a78b",
-  "dark_wordmark_reference": "assets/branding/masters/parsezen-dark-reference.png",
-  "dark_wordmark_reference_sha256": "19625b64e85d54f49044303c0438eee8e116573749ddacbaf27e6ee2f169772b",
-  "alpha_threshold": 8,
-  "background_extraction": {
-    "icon": {
-      "transparent_delta": 12,
-      "opaque_delta": 220,
-      "flood_limit": 224,
-      "sampling": "border-connected-black"
-    },
-    "wordmarks": {
-      "transparent_delta": 10,
-      "opaque_delta": 72,
-      "sampling": "scanline-edge-median"
-    }
+  "brand": "Liblevo",
+  "tagline": "Convierte. Traduce. Lee.",
+  "source": "assets/branding/masters/liblevo-symbol.svg",
+  "source_sha256": "83cd1933354cd364decd29b0cf30979db15fad3696c065c799853f260e7bfb1b",
+  "font": "assets/fonts/Inter.ttf",
+  "font_sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031",
+  "palette": {
+    "teal": "#176B63",
+    "ink": "#172E36",
+    "paper": "#F7F4EE",
+    "mint": "#DDEFE8",
+    "white": "#FFFFFF"
   },
   "outputs": {
-    "parsezen-logo-light.png": {
-      "sha256": "9a59006a2b67b2680b4dd606c15b9dafc720ecbbc0173513977790d273ff3707",
-      "size": [
-        510,
-        96
-      ]
+    "liblevo-logo-light.svg": {
+      "sha256": "45ea8343bbf9c9ef2216f7ac6159e448d5d8934f02f1ace55618b9bcf10247e3"
     },
-    "parsezen-logo-light@2x.png": {
-      "sha256": "8687ed5fc448c19a6721d5cb7de19370ee8df0c18d1b43bb4a00bd8de3f0e4c5",
-      "size": [
-        1019,
-        192
-      ]
+    "liblevo-logo-light.png": {
+      "sha256": "48dfd230e3eee2f22db72defeb2edaa0e4094813f50f66db84be8762a9c13f9f"
     },
-    "parsezen-logo-dark.png": {
-      "sha256": "319392e6d42b7543870de207084059ffd3ac612fbb5c9285c70f0f1786b57ec5",
-      "size": [
-        508,
-        96
-      ]
+    "liblevo-logo-light@2x.png": {
+      "sha256": "c4befb75534d8a20bc4a1ff8687608bfb7acddaf35193259df49f787d9e8063d"
     },
-    "parsezen-logo-dark@2x.png": {
-      "sha256": "1ac3d1ac0fa74d38abab265d6bc480cd0cf36caa997404081abca6358b54e7b6",
-      "size": [
-        1015,
-        192
-      ]
+    "liblevo-logo-dark.svg": {
+      "sha256": "d1d086b6ad6b5bedf98fba5b8dec7b9c4b8c2bb18530acf8442a323a62af9fa5"
     },
-    "parsezen-readme.png": {
-      "sha256": "4d68fb7e26e2786cf24570e782a605dd795460acb7df5a4c9eb593ac31ae51bf",
-      "size": [
-        480,
-        90
-      ]
+    "liblevo-logo-dark.png": {
+      "sha256": "f4d2aed17768688bda84a968eed8d3a03c3baa57ad02d542b099391e2f1f01b4"
     },
-    "parsezen-symbol-1024.png": {
-      "sha256": "ad441cac600f7d8aafa1888eb45755166517dc48a4b857418026b6bf96f7a8e6",
-      "size": [
-        1024,
-        1024
-      ]
+    "liblevo-logo-dark@2x.png": {
+      "sha256": "124559b1459874671dfe6c4e4e61052540f929369027e05774011b2abb0b18c3"
     },
-    "parsezen-app-icon.ico": {
-      "sha256": "af8b2817dc757b6e2beeea80beb6e3e15f827e074c67a3698f028e9e38ec7453",
-      "size": [
-        256,
-        256
-      ]
+    "liblevo-logo-tagline.svg": {
+      "sha256": "60dbb1c2fddb6cc1f06f5977513b4dcedc54b70c4f1e71363d53804513e17dbe"
+    },
+    "liblevo-readme.png": {
+      "sha256": "e124471a71c00758c27d8ae6aa974d7707e7cfc615057a9ff21f7e236332de70"
+    },
+    "liblevo-symbol-mono.svg": {
+      "sha256": "552762cf3ba3a76d635e724c836818bbe20e00b4743f105b5e78fceec6dc1b80"
+    },
+    "liblevo-app-icon.svg": {
+      "sha256": "65d2b65c3a5f8b7ba8ae6c671986ed2db3b7fda80abe1d9a43e7634937312f04"
+    },
+    "liblevo-symbol-1024.png": {
+      "sha256": "8596528b8be48fd8204a8caeb18b7ac66eb013902040f5ea845d67fa218fdef1"
+    },
+    "liblevo-app-icon.ico": {
+      "sha256": "13e5c174b1fc22203359900b89ae92bb34780ebac0ef8acd4e7cce035d234d74"
     }
   }
 }

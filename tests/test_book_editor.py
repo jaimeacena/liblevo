@@ -5,15 +5,15 @@ from zipfile import ZipFile
 import pytest
 from defusedxml import ElementTree
 
-from parsezen.application.book_editor import (
+from liblevo.application.book_editor import (
     BookEditor,
     create_book_from_markdown,
     preview_book_navigation,
     publish_book,
 )
-from parsezen.document_model import ConvertedResource
-from parsezen.epub_builder import EPUB_CHAPTER_MARKER, EpubBookMetadata
-from parsezen.infrastructure.artifact_store import ArtifactStore
+from liblevo.document_model import ConvertedResource
+from liblevo.epub_builder import EPUB_CHAPTER_MARKER, EpubBookMetadata
+from liblevo.infrastructure.artifact_store import ArtifactStore
 
 
 def reversible(payload: bytes) -> bytes:
@@ -490,7 +490,7 @@ def test_final_book_navigation_preserves_sections_below_parts_and_chapters(
     assert '<a href="text/chapter-0003.xhtml">Chapter 2 — Branches</a>' in navigation
     assert 'id="section-0002-0002"' in chapter
     assert 'id="section-0002-0003"' in chapter
-    assert "data-parsezen-navigation" not in chapter
+    assert "data-liblevo-navigation" not in chapter
 
 
 def test_final_book_navigation_deduplicates_a_bare_marker_from_a_combined_chapter_title(

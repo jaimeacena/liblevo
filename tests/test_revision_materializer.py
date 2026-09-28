@@ -1,12 +1,12 @@
 from pathlib import Path
 
-from parsezen.application.revision_materializer import (
+from liblevo.application.revision_materializer import (
     create_revision_review,
     render_revision_reviews,
 )
-from parsezen.domain.reviews import ReviewChoice
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.revision import RevisionKind, build_revision_draft
+from liblevo.domain.reviews import ReviewChoice
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.revision import RevisionKind, build_revision_draft
 
 
 def reversible(payload: bytes) -> bytes:

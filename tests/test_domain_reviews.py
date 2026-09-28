@@ -1,6 +1,6 @@
 import pytest
 
-from parsezen.domain.reviews import (
+from liblevo.domain.reviews import (
     ReviewChoice,
     ReviewKind,
     ReviewSession,
@@ -8,7 +8,7 @@ from parsezen.domain.reviews import (
     ReviewStatus,
     ReviewUnit,
 )
-from parsezen.domain.stages import StageKind
+from liblevo.domain.stages import StageKind
 
 
 @pytest.mark.parametrize(

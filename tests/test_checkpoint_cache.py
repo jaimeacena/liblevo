@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.checkpoint_cache import (
+from liblevo.checkpoint_cache import (
     CheckpointCacheStats,
     checkpoint_cache_stats,
     prune_checkpoint_cache,

@@ -159,8 +159,8 @@ def test_accelerate_exception_is_version_bound() -> None:
 def test_accelerate_guard_rejects_all_loader_aliases_before_opening_a_checkpoint(
     monkeypatch, tmp_path
 ) -> None:
-    from parsezen.errors import ConversionError
-    from parsezen.ocr_dependency_guard import protect_accelerate_loaders
+    from liblevo.errors import ConversionError
+    from liblevo.ocr_dependency_guard import protect_accelerate_loaders
 
     protect_accelerate_loaders()
     import accelerate

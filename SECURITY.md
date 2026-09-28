@@ -2,7 +2,7 @@
 
 ## Versiones compatibles
 
-La versión estable más reciente de Parsezen recibe correcciones de seguridad. Las versiones
+La versión estable más reciente de Liblevo recibe correcciones de seguridad. Las versiones
 anteriores pueden dejar de recibirlas cuando se publica una actualización.
 
 ## Comunicar una vulnerabilidad
@@ -16,12 +16,12 @@ corrección.
 
 ## Privacidad
 
-Parsezen procesa los documentos localmente. Una incidencia nunca debe adjuntar documentos,
+Liblevo procesa los documentos localmente. Una incidencia nunca debe adjuntar documentos,
 prompts, respuestas completas, rutas personales, bases de datos de estado ni checkpoints.
 
 ## Modelo de amenazas local
 
-La frontera de seguridad actual es la cuenta de Windows. Parsezen protege con DPAPI para el usuario
+La frontera de seguridad actual es la cuenta de Windows. Liblevo protege con DPAPI para el usuario
 actual el contenido intermedio que necesita conservar: checkpoints, textos y recursos de revisión y
 artefactos de reanudación. Un archivo protegido copiado fuera del perfil no debería poder descifrarse
 desde otra cuenta. El contenido documental no se envía a servicios remotos: los trabajos nuevos de
@@ -31,12 +31,12 @@ solicitados por la persona.
 
 Quedan fuera del alcance actual un proceso malicioso que ya se ejecute como la misma cuenta de
 Windows, un administrador con control de la sesión, la lectura de memoria en vivo y el acceso físico a
-los originales o resultados que la propia persona guarda sin cifrado de Parsezen. DPAPI no pretende
+los originales o resultados que la propia persona guarda sin cifrado de Liblevo. DPAPI no pretende
 proteger frente al usuario que puede abrir la aplicación y los documentos.
 
 ### Metadatos conservados sin cifrar
 
-Parsezen depende de los permisos del perfil de Windows para los siguientes archivos. No contienen el
+Liblevo depende de los permisos del perfil de Windows para los siguientes archivos. No contienen el
 cuerpo completo del documento, pero sí pueden revelar información sensible:
 
 | Almacén | Metadatos en texto claro | Contenido excluido o protegido |
@@ -49,7 +49,7 @@ cuerpo completo del documento, pero sí pueden revelar información sensible:
 
 Los originales y los Markdown/EPUB publicados son archivos normales elegidos por la persona y no se
 cifran ni se eliminan automáticamente. Los modelos GGUF del catálogo, los modelos de Ollama y los
-paquetes de Argos tampoco son datos documentales de Parsezen.
+paquetes de Argos tampoco son datos documentales de Liblevo.
 
 ### Decisión y limpieza
 
@@ -62,4 +62,4 @@ recuperación; no se hará como una migración criptográfica implícita.
 La interfaz permite retirar un trabajo —incluidas sus revisiones y artefactos asociados— y usar
 `Borrar actividad` para eliminar el historial reciente. Los checkpoints expiran según la retención
 configurada. Los originales y resultados publicados se borran, si se desea, desde el sistema de
-archivos porque pertenecen a la persona y no al estado recuperable de Parsezen.
+archivos porque pertenecen a la persona y no al estado recuperable de Liblevo.

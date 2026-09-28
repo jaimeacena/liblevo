@@ -29,7 +29,7 @@ anyio==4.14.2 \
 argostranslate==1.11.0 \
     --hash=sha256:a89b42d82f40843900338f9ac60d4c82fda590b6898247f5d0c15d46731ca7df \
     --hash=sha256:be43fa826cbac15399a33a90c842dfe504ad6b8fa55e252514e7071f5425b406
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 attrs==26.1.0 \
     --hash=sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309 \
     --hash=sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32
@@ -606,7 +606,7 @@ defusedxml==0.7.1 \
     #   docling-core
     #   docling-slim
     #   markitdown
-    #   parsezen (pyproject.toml)
+    #   liblevo (pyproject.toml)
     #   py-serializable
 doclang==0.7.3 \
     --hash=sha256:9440c4ca9f7e061a7b8d33bdf15b1029be69a4c13cd8952dd6ce541884e4c685 \
@@ -654,7 +654,7 @@ docling-parse==7.8.1 \
 docling-slim==2.113.0 \
     --hash=sha256:34135ce73e82cce494483133752f54d97391351d4faa49fbf66c6058eb18329d \
     --hash=sha256:5a2446c8add5e2af8968387240727a89a1a7c5ebea97d82dab9d7866edfb9e04
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 easyocr==1.7.2 \
     --hash=sha256:5be12f9b0e595d443c9c3d10b0542074b50f0ec2d98b141a109cd961fd1c177c
     # via docling-slim
@@ -715,7 +715,7 @@ httpx==0.28.1 \
     --hash=sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad
     # via
     #   huggingface-hub
-    #   parsezen (pyproject.toml)
+    #   liblevo (pyproject.toml)
     #   weasel
 huggingface-hub==1.24.0 \
     --hash=sha256:18431ff4daae0749aa9ba102fc952e314c98e1d30ebdec5319d85ca0a83e1ae5 \
@@ -774,7 +774,7 @@ jsonschema-specifications==2025.9.1 \
 langdetect==1.0.9 \
     --hash=sha256:7cbc0746252f19e76f77c0b1690aadf01963be835ef0cd4b56dddf2a8f1dfc2a \
     --hash=sha256:cbc1fef89f8d062739774bd51eda3da3274006b3661d199c2655f6b3f6d605a0
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 latex2mathml==3.81.0 \
     --hash=sha256:4b959cdc3cac8686bc0e3e5aece8127dfb1b81ca1241bed8e00ef31b82bb4022 \
     --hash=sha256:d317710393fe20579aea39cfe8928fa2ad9b8780896e585326c75e89c1d1d1a4
@@ -1019,7 +1019,7 @@ lxml==6.1.1 \
     # via
     #   doclang
     #   markitdown
-    #   parsezen (pyproject.toml)
+    #   liblevo (pyproject.toml)
 magika==0.6.3 \
     --hash=sha256:3d9661eedbdf445ac9567e97e7ceefb93545d77a6a32858139ea966b5806fb64 \
     --hash=sha256:7cc52aa7359af861957043e2bf7265ed4741067251c104532765cd668c0c0cb1 \
@@ -1032,12 +1032,12 @@ mammoth==1.11.0 \
     --hash=sha256:c077ab0d450bd7c0c6ecd529a23bf7e0fa8190c929e28998308ff4eada3f063b
     # via
     #   markitdown
-    #   parsezen (pyproject.toml)
+    #   liblevo (pyproject.toml)
 markdown-it-py==4.2.0 \
     --hash=sha256:04a21681d6fbb623de53f6f364d352309d4094dd4194040a10fd51833e418d49 \
     --hash=sha256:9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a
     # via
-    #   parsezen (pyproject.toml)
+    #   liblevo (pyproject.toml)
     #   rich
 markdownify==1.2.3 \
     --hash=sha256:1a176f05522c8a2cb1dd3ab9d307dcdadbed5c26ae717855bfc42b3b6d38d937 \
@@ -1046,7 +1046,7 @@ markdownify==1.2.3 \
 markitdown==0.1.6 \
     --hash=sha256:07b2d5bf87b5c53e13a9f2fdc440df8ccc85e26f40c1e557781727b700049775 \
     --hash=sha256:e5bdbaffd971b29598c7c39ef0e9afce2f08c0751fbfa4e4257678ebaf8cfc7e
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 markupsafe==3.0.3 \
     --hash=sha256:0303439a41979d9e74d18ff5e2dd8c43ed6c6001fd40e5bf2e43f7bd9bbc523f \
     --hash=sha256:068f375c472b3e7acbe2d5318dea141359e6900156b5b2ba06a30b169086b91a \
@@ -1333,7 +1333,7 @@ mypy==1.20.2 \
     --hash=sha256:e8222c26daaafd9e8626dec58ae36029f82585890589576f769a650dd20fd665 \
     --hash=sha256:edfbfca868cdd6bd8d974a60f8a3682f5565d3f5c99b327640cedd24c4264026 \
     --hash=sha256:f376e37f9bf2a946872fc5fd1199c99310748e3c26c7a26683f13f8bdb756cbd
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 mypy-extensions==1.1.0 \
     --hash=sha256:1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505 \
     --hash=sha256:52e68efc3284861e772bbcd66823fde5ae21fd2fdb51c62a211403730b916558
@@ -1556,7 +1556,7 @@ pdfminer-six==20260107 \
 pdfplumber==0.11.10 \
     --hash=sha256:7741ea81bf165b474b153e6789d10d18e06b6ddcf3ec84289c3ef2fed6802580 \
     --hash=sha256:b95b2d28c66efb0a794a83b88c6c6aea5987532a445d20a1cbcfa657022e6e57
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 pefile==2024.8.26 \
     --hash=sha256:3ff6c5d8b43e8c37bb6e6dd5085658d658a7a0bdcd20b6a07b1fcfc1c4e9d632 \
     --hash=sha256:76f8b485dcd3b1bb8166f1128d395fa3d87af26360c2358fb75b80019b957c6f
@@ -1656,7 +1656,7 @@ pillow==12.3.0 \
     #   docling-slim
     #   easyocr
     #   imageio
-    #   parsezen (pyproject.toml)
+    #   liblevo (pyproject.toml)
     #   pdfplumber
     #   scikit-image
     #   torchvision
@@ -1667,7 +1667,7 @@ pip-api==0.0.34 \
 pip-audit==2.10.1 \
     --hash=sha256:1eb4565d19ebe5d48996f4b770b4d2b32887e12cb12cfa637f1a064011b55ffc \
     --hash=sha256:99ef3f600a317c1945f1e89e227ef26e1c2d618429b8bd3fa6f4f7c440c4611a
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 pip-requirements-parser==32.0.1 \
     --hash=sha256:4659bc2a667783e7a15d190f6fccf8b2486685b6dba4c19c3876314769c57526 \
     --hash=sha256:b4fa3a7a0be38243123cf9d1f3518da10c51bdb165a2b2985566247f9155a7d3
@@ -1675,12 +1675,12 @@ pip-requirements-parser==32.0.1 \
 pip-tools==7.6.1 \
     --hash=sha256:6111c8b4b07fd14b7223ca921485b0e96cf66e20bf94da95eeed9845f510cb8f \
     --hash=sha256:695556edeb647eb94ee8345cc7108657fdb7fb16b3876623a399b4f61bbede01
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 platformdirs==4.10.1 \
     --hash=sha256:0e4eff26be2d75293977f7cddc153fd9b8eaa7fb0c7b64ffe4076cb443117443 \
     --hash=sha256:ceab4084426fe6319ce18e86deada8ab1b7487c7aee7040c55e277c9ae793695
     # via
-    #   parsezen (pyproject.toml)
+    #   liblevo (pyproject.toml)
     #   pip-audit
 pluggy==1.6.0 \
     --hash=sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3 \
@@ -1991,7 +1991,7 @@ pyinstaller==6.21.0 \
     --hash=sha256:bb9fab705983e393a2d1cac77d6972513057ad800215fd861dc15ff5272e98fd \
     --hash=sha256:c6b28d30d8fd99ce162ff3aab5013ed44dbfb747566b1f01b9bed7964d7c14e9 \
     --hash=sha256:f13c95c9c03fb567217135919f93815c305813126780b0ed6e0123cb8acaf025
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 pyinstaller-hooks-contrib==2026.6 \
     --hash=sha256:bef5002c32f4f50bd55b005da12cff64eca8783e7eaf86a06a62410164bab725 \
     --hash=sha256:fd13b8ac126b35361175edacd41a0d97080b75dd5f4b594ecefefff969509dd3
@@ -2025,7 +2025,7 @@ pypdfium2==5.12.1 \
     --hash=sha256:e5358d2ce4ebc5c899aab1df9ca5d215357244e9168aa443225d3c1e649c7eac
     # via
     #   docling-slim
-    #   parsezen (pyproject.toml)
+    #   liblevo (pyproject.toml)
     #   pdfplumber
 pyproject-hooks==1.2.0 \
     --hash=sha256:1e859bd5c40fae9448642dd871adf459e5e2084186e8d2c2a79a824c970da1f8 \
@@ -2043,7 +2043,7 @@ pyside6==6.11.1 \
     --hash=sha256:75f0005c3eb95c07cfb65522ec50d0815ac007a96482c21dc3cb4b4c04895d84 \
     --hash=sha256:acee467cb5f256cc47ebb9d815a054c1d8416da380c191b247a76d164aa3f805 \
     --hash=sha256:b1fc521ba2bb5109425ab8add06bddbdd524abcad06cfa012cc39a22a189feb2
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 pyside6-addons==6.11.1 \
     --hash=sha256:0d13c4dfd671b050a48e4f8d8ddc724b7248f9c0437e7fc47fdf316278572923 \
     --hash=sha256:3494f480dee92f415be2f2d989c0b3f4755ac332b28045cbf4ba0f5c5a22ba37 \
@@ -2064,17 +2064,17 @@ pytest==9.1.1 \
     --hash=sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313 \
     --hash=sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c
     # via
-    #   parsezen (pyproject.toml)
+    #   liblevo (pyproject.toml)
     #   pytest-cov
     #   pytest-qt
 pytest-cov==7.1.0 \
     --hash=sha256:30674f2b5f6351aa09702a9c8c364f6a01c27aae0c1366ae8016160d1efc56b2 \
     --hash=sha256:a0461110b7865f9a271aa1b51e516c9a95de9d696734a2f71e3e78f46e1d4678
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 pytest-qt==4.5.0 \
     --hash=sha256:51620e01c488f065d2036425cbc1cbcf8a6972295105fd285321eb47e66a319f \
     --hash=sha256:ed21ea9b861247f7d18090a26bfbda8fb51d7a8a7b6f776157426ff2ccf26eff
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 python-bidi==0.6.11 \
     --hash=sha256:034090c597af250d699299d7e7f1e83eb016f9e47b3b707bd89ab2bdec77bce0 \
     --hash=sha256:0608bddcc1c53dfa5293499de13ca9935b31aa46d1c722c404a88c703d1a4e47 \
@@ -2612,7 +2612,7 @@ ruff==0.15.22 \
     --hash=sha256:e5ba0e4a13fd14abbed2a77b517a3911290c6c6c59ef67784328d1668fab76cf \
     --hash=sha256:e8b9b3f8779a4f08c969defc3c8c35abffaa757e601ed5ae66d6d1db6519969a \
     --hash=sha256:fabfd168afdf29fee5be98b831efa9683c94d7c5a3b58b9ce5a2e38444589a74
-    # via parsezen (pyproject.toml)
+    # via liblevo (pyproject.toml)
 sacremoses==0.1.1 \
     --hash=sha256:31e04c98b169bfd902144824d191825cd69220cdb4ae4bcf1ec58a7db5587b1a \
     --hash=sha256:b6fd5d3a766b02154ed80b962ddca91e1fd25629c0978c7efba21ebccf663934

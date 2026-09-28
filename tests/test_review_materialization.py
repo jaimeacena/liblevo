@@ -5,27 +5,27 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.review_materialization import (
+from liblevo.application.review_materialization import (
     ReviewMaterializationService,
     review_for_current_candidate,
 )
-from parsezen.domain.jobs import (
+from liblevo.domain.jobs import (
     DocumentJob,
     DocumentSource,
     JobConfiguration,
     TranslationConfiguration,
 )
-from parsezen.domain.reviews import (
+from liblevo.domain.reviews import (
     ReviewChoice,
     ReviewKind,
     ReviewSession,
     ReviewStatus,
     ReviewUnit,
 )
-from parsezen.domain.stages import StageKind
-from parsezen.processing import ProcessResult
-from parsezen.revision import RevisionKind, build_revision_draft
-from parsezen.translation_quality import (
+from liblevo.domain.stages import StageKind
+from liblevo.processing import ProcessResult
+from liblevo.revision import RevisionKind, build_revision_draft
+from liblevo.translation_quality import (
     TranslationIssueKind,
     TranslationQualityIssue,
     TranslationQualityReport,

@@ -5,12 +5,12 @@ from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QFont, QImage, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QInputDialog, QLabel, QMessageBox, QToolButton
 
-import parsezen.presentation.book_editor_dialog as editor_dialog_module
-from parsezen.application.book_editor import create_book_from_markdown
-from parsezen.document_model import ConvertedResource
-from parsezen.epub_builder import EPUB_CHAPTER_MARKER, EpubBookMetadata
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.presentation.book_editor_dialog import BookEditorDialog
+import liblevo.presentation.book_editor_dialog as editor_dialog_module
+from liblevo.application.book_editor import create_book_from_markdown
+from liblevo.document_model import ConvertedResource
+from liblevo.epub_builder import EPUB_CHAPTER_MARKER, EpubBookMetadata
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.presentation.book_editor_dialog import BookEditorDialog
 
 
 def reversible(payload: bytes) -> bytes:
@@ -66,7 +66,7 @@ def test_qt_editor_round_trip_preserves_internal_anchors_and_links(qtbot) -> Non
     assert parsed.xpath(".//*[@id='empty-anchor']")
     assert parsed.xpath(".//a[@href='chapter-0002.xhtml#destination']")
     assert "\u2060" not in restored
-    assert "parsezen-anchor:" not in restored
+    assert "liblevo-anchor:" not in restored
 
 
 def test_book_editor_dialog_edits_and_publishes_the_same_book(qtbot, tmp_path: Path) -> None:
@@ -401,7 +401,7 @@ def test_book_editor_dialog_resolves_encrypted_book_images(qtbot, tmp_path: Path
         "+A8AAQUBAScY42YAAAAASUVORK5CYII="
     )
     book = create_book_from_markdown(
-        "# Chapter\n\n![Figure](__parsezen_resources__/pdf/figure.png)",
+        "# Chapter\n\n![Figure](__liblevo_resources__/pdf/figure.png)",
         (ConvertedResource(PurePosixPath("pdf/figure.png"), image, "image/png"),),
         EpubBookMetadata("Book", "en"),
         store,

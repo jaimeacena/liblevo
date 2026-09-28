@@ -7,23 +7,23 @@ from zipfile import ZIP_DEFLATED, ZIP_STORED, ZipFile
 
 import pytest
 
-import parsezen.epub_conversion as epub_conversion_module
-import parsezen.pipeline.transform as transform_module
-import parsezen.processing as processing_module
-from parsezen.conversion import RESOURCE_REFERENCE_PREFIX, convert_document, convert_file
-from parsezen.epub_builder import EpubBookMetadata, build_epub
-from parsezen.epub_conversion import (
+import liblevo.epub_conversion as epub_conversion_module
+import liblevo.pipeline.transform as transform_module
+import liblevo.processing as processing_module
+from liblevo.conversion import RESOURCE_REFERENCE_PREFIX, convert_document, convert_file
+from liblevo.epub_builder import EpubBookMetadata, build_epub
+from liblevo.epub_conversion import (
     inspect_epub_package,
     patch_epub_xhtml_package,
     read_editable_epub_package,
     replace_epub_metadata,
     translate_epub,
 )
-from parsezen.errors import ConversionError, RequestValidationError
-from parsezen.improvement import ImprovementMode
-from parsezen.output import write_improvement_outputs
-from parsezen.processing import OutputFormat, ProcessRequest, ProcessStage, process_document
-from parsezen.settings import AppSettings
+from liblevo.errors import ConversionError, RequestValidationError
+from liblevo.improvement import ImprovementMode
+from liblevo.output import write_improvement_outputs
+from liblevo.processing import OutputFormat, ProcessRequest, ProcessStage, process_document
+from liblevo.settings import AppSettings
 
 
 def _patch_transformation_dependency(
@@ -385,7 +385,7 @@ def test_epub_translation_preserves_xml_prolog_comments_and_processing_instructi
     opening = opening.replace(
         b'<html xmlns="http://www.w3.org/1999/xhtml">',
         (
-            b"<!DOCTYPE html>\n<!-- preserved prolog -->\n<?parsezen keep?>\n"
+            b"<!DOCTYPE html>\n<!-- preserved prolog -->\n<?liblevo keep?>\n"
             b'<html xmlns="http://www.w3.org/1999/xhtml">'
         ),
     ).replace(b"  <body>", b"  <body><!-- preserved body comment -->")
@@ -404,7 +404,7 @@ def test_epub_translation_preserves_xml_prolog_comments_and_processing_instructi
         generated = result.read("EPUB/opening.xhtml")
     assert b"<!DOCTYPE html>" in generated
     assert b"<!-- preserved prolog -->" in generated
-    assert b"<?parsezen keep?>" in generated
+    assert b"<?liblevo keep?>" in generated
     assert b"<!-- preserved body comment -->" in generated
     assert "Contenido EPUB moderno." in generated.decode("utf-8")
 
@@ -1621,7 +1621,7 @@ def _write_epub2(destination: Path) -> None:
          version="2.0" unique-identifier="book-id">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:title>Small Book</dc:title>
-    <dc:creator opf:role="aut">Parsezen Author</dc:creator>
+    <dc:creator opf:role="aut">Liblevo Author</dc:creator>
     <dc:language>en</dc:language>
     <dc:identifier id="book-id">small-book-id</dc:identifier>
     <meta name="cover" content="cover-image"/>

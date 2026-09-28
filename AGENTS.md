@@ -15,7 +15,7 @@
 
 ## Reglas de trabajo
 
-- Trabaja siempre dentro del checkout existente de `parsezen`; no crees otro repositorio.
+- Trabaja siempre dentro del checkout existente de `liblevo`; no crees otro repositorio.
 - Avanza por incrementos verificables y no implementes fases futuras sin una petición explícita.
 - Formula una hipótesis por incremento. Separa detección, propuesta, guarda y publicación para que un
   resultado pueda atribuirse a una causa; una muestra pequeña puede descartar, pero no aprobar.

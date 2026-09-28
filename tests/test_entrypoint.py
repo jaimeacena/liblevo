@@ -8,11 +8,11 @@ from typing import cast
 import pytest
 from PySide6.QtWidgets import QApplication
 
-import parsezen.__main__ as entry
-import parsezen.ocr_worker as ocr_worker
-import parsezen.offline_translation_worker as translation_worker
-from parsezen.errors import SettingsError
-from parsezen.presentation.main_window import ParsezenMainWindow
+import liblevo.__main__ as entry
+import liblevo.ocr_worker as ocr_worker
+import liblevo.offline_translation_worker as translation_worker
+from liblevo.errors import SettingsError
+from liblevo.presentation.main_window import LiblevoMainWindow
 
 
 def _install_llama_cpp_stub(monkeypatch) -> None:
@@ -31,8 +31,8 @@ def test_worker_switches_dispatch_without_starting_qt(monkeypatch) -> None:
         lambda arguments: 12 if arguments == ["book"] else 1,
     )
 
-    assert entry.main(["parsezen", "--ocr-worker", "page"]) == 11
-    assert entry.main(["parsezen", "--translation-worker", "book"]) == 12
+    assert entry.main(["liblevo", "--ocr-worker", "page"]) == 11
+    assert entry.main(["liblevo", "--translation-worker", "book"]) == 12
 
 
 def test_regular_desktop_lifecycle_configures_theme_before_window(
@@ -74,7 +74,7 @@ def test_regular_desktop_lifecycle_configures_theme_before_window(
 
     assert (
         entry._run_desktop_application(
-            ["parsezen"],
+            ["liblevo"],
             Application,
             lambda path: ("QIcon", path),
             Window,
@@ -82,7 +82,8 @@ def test_regular_desktop_lifecycle_configures_theme_before_window(
         == 7
     )
     assert "show" in calls
-    assert ("name", "Parsezen") in calls
+    assert ("name", "Liblevo") in calls
+    assert ("display", "Liblevo") in calls
     assert calls.index("theme") < calls.index("window") < calls.index("show")
 
 
@@ -105,12 +106,12 @@ def test_logging_rotates_the_owned_handler_without_duplicating_it(tmp_path: Path
         owned = [
             handler
             for handler in entry.LOGGER.handlers
-            if getattr(handler, "_parsezen_file_handler", False)
+            if getattr(handler, "_liblevo_file_handler", False)
         ]
         assert len(owned) == 1
     finally:
         for handler in list(entry.LOGGER.handlers):
-            if getattr(handler, "_parsezen_file_handler", False):
+            if getattr(handler, "_liblevo_file_handler", False):
                 entry.LOGGER.removeHandler(handler)
                 handler.close()
 
@@ -145,7 +146,7 @@ def test_real_main_window_surfaces_a_corrupt_settings_warning(
         entry,
         "_main_window_type",
         lambda: (
-            lambda **kwargs: ParsezenMainWindow(
+            lambda **kwargs: LiblevoMainWindow(
                 **kwargs,
                 state_path=tmp_path / "workspace.sqlite3",
                 auto_discover_ai=False,
@@ -155,7 +156,7 @@ def test_real_main_window_surfaces_a_corrupt_settings_warning(
     window = entry.build_main_window()
     qtbot.addWidget(window)
 
-    assert window.parsezen_workspace.recovery_warning.text() == (
+    assert window.liblevo_workspace.recovery_warning.text() == (
         "Configuración corrupta conservada."
     )
 
@@ -173,7 +174,7 @@ def test_package_smoke_opens_and_closes_the_real_window(
         lambda: verified.append(True),
     )
 
-    assert entry.main(["parsezen", "--package-smoke"]) == 0
+    assert entry.main(["liblevo", "--package-smoke"]) == 0
     assert verified == [True]
 
 
@@ -190,8 +191,8 @@ def test_regular_main_delegates_to_the_testable_desktop_lifecycle(monkeypatch) -
         lambda arguments, *_factories: calls.append(arguments) or 9,
     )
 
-    assert entry.main(["parsezen"]) == 9
-    assert calls == ["logging", ["parsezen"]]
+    assert entry.main(["liblevo"]) == 9
+    assert calls == ["logging", ["liblevo"]]
 
 
 def test_packaged_runtime_verifies_every_lazy_processing_edge(monkeypatch) -> None:

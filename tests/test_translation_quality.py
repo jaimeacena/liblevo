@@ -4,8 +4,8 @@ import builtins
 
 import pytest
 
-import parsezen.translation_quality as translation_quality_module
-from parsezen.translation_quality import (
+import liblevo.translation_quality as translation_quality_module
+from liblevo.translation_quality import (
     MAX_REPORT_EXCERPT_CHARACTERS,
     NUMBER_PATTERN,
     LinguisticReviewCoverage,

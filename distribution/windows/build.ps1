@@ -30,13 +30,13 @@ if ($PreflightOnly) {
 }
 
 if ($InstallInnoSetup) {
-    $installerDefinition = Get-Content -LiteralPath "distribution\windows\Parsezen.iss" -Raw
+    $installerDefinition = Get-Content -LiteralPath "distribution\windows\Liblevo.iss" -Raw
     $versionMatch = [regex]::Match($installerDefinition, '#define AppVersion "([^"]+)"')
     if (-not $versionMatch.Success) {
         throw "No se pudo determinar la versión del instalador."
     }
     $installerPath = Join-Path $repository (
-        "outputs\Parsezen-Setup-{0}.exe" -f $versionMatch.Groups[1].Value
+        "outputs\Liblevo-Setup-{0}.exe" -f $versionMatch.Groups[1].Value
     )
     if (Test-Path -LiteralPath $installerPath) {
         throw "Ya existe un instalador de esta versión. Consérvalo y usa otra versión."
@@ -66,26 +66,26 @@ $noticesPath = Join-Path $candidateDirectory "THIRD-PARTY-NOTICES.txt"
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
-$previousNoticesPath = $env:PARSEZEN_NOTICES_PATH
+$previousNoticesPath = $env:LIBLEVO_NOTICES_PATH
 $previousPyInstallerConfig = $env:PYINSTALLER_CONFIG_DIR
 try {
-    $env:PARSEZEN_NOTICES_PATH = $noticesPath
+    $env:LIBLEVO_NOTICES_PATH = $noticesPath
     $env:PYINSTALLER_CONFIG_DIR = Join-Path $buildCache "config"
     & $python -m PyInstaller --noconfirm --clean `
         --workpath $buildCache `
         --distpath $candidateDirectory `
-        "distribution\windows\Parsezen.spec"
+        "distribution\windows\Liblevo.spec"
     if ($LASTEXITCODE -ne 0) {
         throw "No se pudo construir el candidato; el paquete anterior permanece intacto."
     }
 }
 finally {
-    $env:PARSEZEN_NOTICES_PATH = $previousNoticesPath
+    $env:LIBLEVO_NOTICES_PATH = $previousNoticesPath
     $env:PYINSTALLER_CONFIG_DIR = $previousPyInstallerConfig
 }
 
-$candidateBundle = Join-Path $candidateDirectory "Parsezen"
-$applicationPath = Join-Path $candidateBundle "Parsezen.exe"
+$candidateBundle = Join-Path $candidateDirectory "Liblevo"
+$applicationPath = Join-Path $candidateBundle "Liblevo.exe"
 if (-not (Test-Path -LiteralPath $applicationPath -PathType Leaf)) {
     throw "La construcción no produjo el ejecutable esperado."
 }
@@ -119,8 +119,8 @@ if ($smokeProcess.ExitCode -ne 0) {
     throw "El candidato no superó la prueba de arranque; el paquete anterior permanece intacto."
 }
 
-$bundleDirectory = Join-Path $packageDirectory "Parsezen"
-$previousBundle = Join-Path $packageDirectory ("Parsezen.previous-" + $buildId)
+$bundleDirectory = Join-Path $packageDirectory "Liblevo"
+$previousBundle = Join-Path $packageDirectory ("Liblevo.previous-" + $buildId)
 $oldBundleMoved = $false
 if (Test-Path -LiteralPath $bundleDirectory) {
     $bundleItem = Get-Item -LiteralPath $bundleDirectory
@@ -175,7 +175,7 @@ if ($InstallInnoSetup) {
     if (-not $compilerPath) {
         throw "Inno Setup 6 no está disponible. Instálalo aparte si necesitas crear un instalador."
     }
-    & $compilerPath "distribution\windows\Parsezen.iss"
+    & $compilerPath "distribution\windows\Liblevo.iss"
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }

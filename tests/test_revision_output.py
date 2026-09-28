@@ -4,12 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.review_plan import review_steps_for_result
-from parsezen.domain.jobs import JobConfiguration, ProcessingPlan
-from parsezen.epub_builder import EpubBookMetadata, iter_epub_text_documents
-from parsezen.errors import RequestValidationError
-from parsezen.processing import ProcessResult, apply_reviewed_revision
-from parsezen.revision import RevisionKind, build_revision_draft
+from liblevo.application.review_plan import review_steps_for_result
+from liblevo.domain.jobs import JobConfiguration, ProcessingPlan
+from liblevo.epub_builder import EpubBookMetadata, iter_epub_text_documents
+from liblevo.errors import RequestValidationError
+from liblevo.processing import ProcessResult, apply_reviewed_revision
+from liblevo.revision import RevisionKind, build_revision_draft
 
 
 def _draft():

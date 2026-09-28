@@ -5,11 +5,11 @@ from PySide6.QtCore import QMimeData, QPointF, QRect, Qt
 from PySide6.QtGui import QDropEvent, QFont, QFontMetrics
 from PySide6.QtWidgets import QStyleOptionViewItem
 
-import parsezen.presentation.job_table as job_table_module
-from parsezen.application.planner import activate_next_stage
-from parsezen.application.preflight import DocumentPreflight, RuntimeEstimate
-from parsezen.domain.estimates import DurationEstimate
-from parsezen.domain.jobs import (
+import liblevo.presentation.job_table as job_table_module
+from liblevo.application.planner import activate_next_stage
+from liblevo.application.preflight import DocumentPreflight, RuntimeEstimate
+from liblevo.domain.estimates import DurationEstimate
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentJob,
     DocumentSource,
@@ -21,9 +21,9 @@ from parsezen.domain.jobs import (
     TranslationConfiguration,
     TranslationMethod,
 )
-from parsezen.domain.stages import StageKind, StageStatus
-from parsezen.final_integrity import FinalIntegrityReport, IntegrityLedger
-from parsezen.presentation.job_table import (
+from liblevo.domain.stages import StageKind, StageStatus
+from liblevo.final_integrity import FinalIntegrityReport, IntegrityLedger
+from liblevo.presentation.job_table import (
     CELL_PRESENTATION_ROLE,
     COLUMNS,
     CONFIGURABLE_ROLE,

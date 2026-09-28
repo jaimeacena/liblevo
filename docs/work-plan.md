@@ -1,11 +1,11 @@
 # Plan de trabajo y estado de calidad
 
-Este es el único plan vivo de Parsezen. Su función es decir a un agente qué está demostrado, cuál es
+Este es el único plan vivo de Liblevo. Su función es decir a un agente qué está demostrado, cuál es
 la frontera activa y qué condición permite avanzar. No sustituye la arquitectura ni la lista de
 aceptación. Se actualiza cuando cambia un estado, un gate o el orden de trabajo; no después de cada
 edición menor.
 
-Última actualización: **27 de septiembre de 2026**. Baseline histórica de esta iniciativa: `main` en
+Última actualización: **28 de septiembre de 2026**. Baseline histórica de esta iniciativa: `main` en
 `865ef2a`. El estado ejecutable se obtiene siempre del checkout y su diff actual, no de esta línea.
 
 ## Norte
@@ -69,12 +69,45 @@ aprobación del candidato actual. Las decisiones anteriores siguen vigentes.
 
 ## Ahora: estabilización para publicación y evaluación humana pendiente
 
+### Identidad Liblevo — IMPLEMENTADO; aceptación humana y actualización mediante instalador pendientes
+
+La identidad actual completa adopta Liblevo: aplicación, paquete Python `liblevo`, imports,
+identificadores propios, recursos, lanzadores, distribución, enlaces y documentación. El repositorio
+mantiene su identidad e historial bajo `jaimeacena/liblevo`; la rama de trabajo es
+`codex/liblevo-pendientes`. El checkout existente se traslada a `Developments/Liblevo` y el proyecto
+registrado en Codex apunta a esa carpeta.
+
+El perfil local y las claves de apariencia también se trasladan a Liblevo. Se recupera el trabajo
+existente y se conservan ajustes y preferencias. El GGUF conserva archivo, tamaño y SHA-256 del
+catálogo. Se actualiza una identidad de modelo en la configuración de la cola; no se procesa ni
+reescribe contenido documental. Los formatos y canales nuevos usan Liblevo. Esta migración local
+no acredita todavía una actualización mediante instalador en otros equipos. El instalador conserva
+el AppId y usa el destino actual `Programs/Liblevo`.
+
+Los commits, las versiones publicadas y las evidencias anteriores se conservan como historia por
+petición expresa de Jaime. Las construcciones antiguas locales quedan en `outputs/history/`,
+separadas del paquete actual. Los backups de recuperación contienen los metadatos anteriores.
+
+El logo, icono, Inter y la paleta mantienen el cambio visual autorizado. La corrección de contornos
+del nombre y el lema ya cuenta con comparación frente al texto nativo; sus maestros y derivados
+reproducibles son los activos actuales. Las pruebas focales del paquete, ajustes y cola pasan
+(50 casos), junto con las de los lanzadores (2 casos). Ruff check/formato, Mypy (139 módulos) y
+sincronización de versión pasan. La suite final completa pasa con **2.469 pruebas, 3 omisiones y
+cobertura 89,04 %**. El paquete 1.3.0 supera el arranque antes y después de su promoción; se
+comprueban sus 137 módulos propios, los recursos, Inter y los 9 tamaños del icono. El instalador
+local se compila con nombre y metadatos Liblevo 1.3.0. La normalización final de los SVG conserva
+byte por byte PNG e ICO; pasan sus 18 pruebas focales y el manifiesto coincide con el paquete.
+La aceptación visual humana y la actualización real mediante instalador siguen pendientes;
+este cambio no constituye una nueva validación documental.
+
+Registro y condición para reabrir: [verificación de identidad completa](../audits/2026-09-28-liblevo-02/report.md).
+
 ### Motor integrado sin Ollama — IMPLEMENTADO; validación lingüística pendiente
 
 Necesidad confirmada por Jaime: convertir un PDF largo a EPUB traducido al español para leerlo en
 Kindle, con traducción y formato cómodos; no quiere depender de Ollama. Los nuevos trabajos de la
 app usan el mismo Hy-MT2 GGUF con el motor integrado Vulkan `llama-cpp-python`. El GGUF se guarda en
-la carpeta de modelos de Parsezen y se valida por tamaño y SHA-256. El revisor LFM tiene el mismo
+la carpeta de modelos de Liblevo y se valida por tamaño y SHA-256. El revisor LFM tiene el mismo
 recorrido directo opcional; Argos permanece disponible. Las identidades directas son distintas de
 las de Ollama y quedan fijadas en cada trabajo. El catálogo puede incorporar en el futuro otro LLM
 con un perfil y una selección activa después de probar su calidad; no se habilita un proveedor
@@ -101,8 +134,8 @@ limpieza de temporales sintéticos también pasaron. Evidencia sin contenido doc
 `audits/2026-09-27-local-improvements-01/package-evidence.json`.
 
 Esto no acredita todavía una traducción completa desde el ejecutable, una instalación limpia, la
-lectura en Kindle ni la calidad editorial. El workflow remoto sigue con su configuración previa y no
-se ejecutó; el alcance de esta intervención es el paquete local.
+lectura en Kindle ni la calidad editorial. El workflow remoto no se ejecutó; el alcance de esta
+intervención es el paquete local.
 
 ### Reanudación de traducción directa — IMPLEMENTADO; interrupción brusca pendiente
 
@@ -165,7 +198,7 @@ edición se repitieron al 150 % y pasaron en 28,99 s. Las omisiones son EPUBChec
 real optativo (1). Ruff, formato, mypy sobre 137 módulos y diff correctos. La pasada instrumentada
 anterior al último pulido del encabezado del índice registró 88,95 % de cobertura y 2.447 pruebas
 superadas; el candidato final se volvió a ejecutar completo sin instrumentación.
-La evidencia está en `Documents/Codex/2026-09-22/correcciones-ux-ui-parsezen`; el informe local
+La evidencia está en `Documents/Codex/2026-09-22/correcciones-ux-ui-liblevo`; el informe local
 vincula cada corrección con sus comprobaciones y límites.
 
 Límites: renders y pruebas Qt no equivalen a aceptación humana ni a VERIFICADO EN CORPUS. El control
@@ -219,7 +252,7 @@ las omisiones son EPUBCheck externo (2) y la integración Ollama optativa, compl
 el recorrido real. El ajuste de imagen supera 91 pruebas vecinas y la comparación visual en Calibre.
 La ejecución completa está registrada en `pytest-final-css.txt`, junto al informe local.
 Ruff, formato, mypy, dependencias y diff comprobados. La evidencia y los perfiles están fuera del
-checkout en `Documents/Codex/2026-09-22/recorrido-real-parsezen`.
+checkout en `Documents/Codex/2026-09-22/recorrido-real-liblevo`.
 
 Límites: prueba de una muestra, no VERIFICADO EN CORPUS ni garantía del 100 %. La revisión bilingüe
 se abstuvo por falta de alineación y la UI mostró 0 de 6 bloques revisados semánticamente; la
@@ -273,12 +306,12 @@ Decisión: conservar los cambios locales y sus regresiones. La revisión humana 
 comprobaciones del instalador exacto siguen pendientes. Reabrir ante contenido perdido
 al editar, guardado fallido sin recuperación, estado final no durable, comparación lenta o diferencia
 OCR no explicada. Evidencia de esta ejecución: informe de correcciones y registros fuera del checkout,
-en `Documents/Codex/2026-09-22/auditoria-parsezen-segunda`.
+en `Documents/Codex/2026-09-22/auditoria-liblevo-segunda`.
 
 ### S2 — IMPLEMENTADO y comprobado automáticamente el 22 de septiembre
 
 Petición del 22 de septiembre: aplicar las correcciones de la auditoría antes de publicar.
-Se conserva el nombre Parsezen, el checkout y los cambios anteriores; no se publica ni se cambia
+Se conserva el nombre Liblevo, el checkout y los cambios anteriores; no se publica ni se cambia
 el modelo base.
 
 - Una instancia de escritorio por perfil y smoke aislado para impedir sobrescrituras de cola.
@@ -367,7 +400,7 @@ los fallos posibles del motor ni otros sistemas operativos.
 
 Solo después del gate integral, revisar si la interfaz expresa con claridad:
 
-- qué hará Parsezen;
+- qué hará Liblevo;
 - qué está haciendo;
 - qué evidencia obtuvo;
 - qué quedó sin demostrar;

@@ -3,20 +3,20 @@ from pathlib import Path
 
 import pytest
 
-import parsezen.domain.source_identity as source_identity_module
-from parsezen.application.job_execution import JobExecutionController
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.run_preparation import prepare_queue_run
-from parsezen.application.scheduler import QueueRunPlan, RunMode
-from parsezen.cancellation import CancellationToken
-from parsezen.domain.jobs import (
+import liblevo.domain.source_identity as source_identity_module
+from liblevo.application.job_execution import JobExecutionController
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.run_preparation import prepare_queue_run
+from liblevo.application.scheduler import QueueRunPlan, RunMode
+from liblevo.cancellation import CancellationToken
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentSource,
     JobConfiguration,
     OutputConfiguration,
 )
-from parsezen.domain.stages import StageKind
-from parsezen.errors import ProcessingCancelledError
+from liblevo.domain.stages import StageKind
+from liblevo.errors import ProcessingCancelledError
 
 
 def test_preparation_maps_and_validates_only_the_planned_jobs(tmp_path: Path) -> None:

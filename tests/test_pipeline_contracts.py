@@ -1,18 +1,18 @@
 from pathlib import Path
 
-from parsezen.domain.jobs import MarkdownOrganization
-from parsezen.improvement import ImprovementMode
-from parsezen.pipeline.contracts import (
+from liblevo.domain.jobs import MarkdownOrganization
+from liblevo.improvement import ImprovementMode
+from liblevo.pipeline.contracts import (
     ProcessRequest as PipelineRequest,
 )
-from parsezen.pipeline.contracts import (
+from liblevo.pipeline.contracts import (
     ProcessResult as PipelineResult,
 )
-from parsezen.pipeline.contracts import (
+from liblevo.pipeline.contracts import (
     ProcessTelemetry as PipelineTelemetry,
 )
-from parsezen.processing import ProcessRequest, ProcessResult, ProcessTelemetry
-from parsezen.workflow import OutputFormat
+from liblevo.processing import ProcessRequest, ProcessResult, ProcessTelemetry
+from liblevo.workflow import OutputFormat
 
 
 def test_processing_facade_reexports_the_pipeline_contracts() -> None:

@@ -4,10 +4,10 @@ from pathlib import Path, PurePosixPath
 
 import pytest
 
-import parsezen.output as output
-from parsezen.document_model import ConvertedResource
-from parsezen.domain.jobs import MarkdownOrganization
-from parsezen.errors import FinalIntegrityError, OutputWriteError
+import liblevo.output as output
+from liblevo.document_model import ConvertedResource
+from liblevo.domain.jobs import MarkdownOrganization
+from liblevo.errors import FinalIntegrityError, OutputWriteError
 
 
 def _resource(path: str, content: bytes = b"image") -> ConvertedResource:
@@ -187,7 +187,7 @@ def test_staging_validation_runs_before_publication_and_leaves_no_partial_result
         output.write_epub_output(source, b"candidate", validate_staged=reject)
 
     assert not destination.exists()
-    assert not tuple(tmp_path.glob(".parsezen-*.tmp"))
+    assert not tuple(tmp_path.glob(".liblevo-*.tmp"))
 
 
 def test_failed_review_validation_preserves_the_previous_result(tmp_path: Path) -> None:
@@ -204,7 +204,7 @@ def test_failed_review_validation_preserves_the_previous_result(tmp_path: Path) 
         )
 
     assert destination.read_bytes() == b"previous"
-    assert not tuple(tmp_path.glob(".parsezen-review-*.tmp"))
+    assert not tuple(tmp_path.glob(".liblevo-review-*.tmp"))
 
 
 def test_non_windows_publish_does_not_fall_back_to_an_overwriting_rename(

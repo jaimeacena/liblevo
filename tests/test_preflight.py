@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
-from parsezen.application.preflight import (
+from liblevo.application.preflight import (
     PreflightSeverity,
     analyze_preflight,
     combine_preflights,
@@ -11,8 +11,8 @@ from parsezen.application.preflight import (
     processing_metric,
     should_run_early_check,
 )
-from parsezen.domain.estimates import DurationEstimate, ProcessingMetric, WorkloadProfile
-from parsezen.domain.jobs import (
+from liblevo.domain.estimates import DurationEstimate, ProcessingMetric, WorkloadProfile
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentJob,
     DocumentSource,
@@ -22,9 +22,9 @@ from parsezen.domain.jobs import (
     TranslationConfiguration,
     TranslationMethod,
 )
-from parsezen.processing import ProcessRequest, ProcessTelemetry
-from parsezen.settings import AppSettings
-from parsezen.workflow import OutputFormat
+from liblevo.processing import ProcessRequest, ProcessTelemetry
+from liblevo.settings import AppSettings
+from liblevo.workflow import OutputFormat
 
 
 def _profile(*, units: int = 20) -> WorkloadProfile:

@@ -2,12 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.runtime_mapping import (
+from liblevo.application.runtime_mapping import (
     configuration_from_request,
     request_and_settings_from_job,
 )
-from parsezen.domain.execution_plan import ExecutionStep, compile_execution_plan
-from parsezen.domain.jobs import (
+from liblevo.domain.execution_plan import ExecutionStep, compile_execution_plan
+from liblevo.domain.jobs import (
     CoverStrategy,
     DocumentFormat,
     DocumentJob,
@@ -20,10 +20,10 @@ from parsezen.domain.jobs import (
     TranslationConfiguration,
     TranslationMethod,
 )
-from parsezen.domain.process_lifecycle import stage_kind_from_process_stage
-from parsezen.domain.stages import StageKind
-from parsezen.processing import OutputFormat, ProcessRequest, ProcessStage
-from parsezen.settings import AppSettings
+from liblevo.domain.process_lifecycle import stage_kind_from_process_stage
+from liblevo.domain.stages import StageKind
+from liblevo.processing import OutputFormat, ProcessRequest, ProcessStage
+from liblevo.settings import AppSettings
 
 
 def test_process_request_and_settings_round_trip_independent_configuration() -> None:
@@ -123,7 +123,7 @@ def test_configuration_mapping_carries_specialized_settings_without_snapshot() -
 
 
 def test_runtime_mapping_uses_snapshot_models_and_contexts_per_phase() -> None:
-    from parsezen.component_catalog import REVIEW_COMPONENT_MANIFEST, TRANSLATION_COMPONENT_MANIFEST
+    from liblevo.component_catalog import REVIEW_COMPONENT_MANIFEST, TRANSLATION_COMPONENT_MANIFEST
 
     policy = LocalAIPolicySnapshot(
         translation=LocalAIComponentSnapshot(

@@ -8,18 +8,18 @@ from zipfile import ZIP_STORED, ZipFile
 
 import pytest
 
-import parsezen.pipeline.transform as transform_module
-import parsezen.processing as processing_module
-from parsezen.document_model import ConvertedDocument
-from parsezen.improvement import ImprovementMode
-from parsezen.processing import (
+import liblevo.pipeline.transform as transform_module
+import liblevo.processing as processing_module
+from liblevo.document_model import ConvertedDocument
+from liblevo.improvement import ImprovementMode
+from liblevo.processing import (
     OutputFormat,
     ProcessRequest,
     ProcessStage,
     apply_reviewed_revision,
     process_document,
 )
-from parsezen.settings import AppSettings
+from liblevo.settings import AppSettings
 
 pytestmark = pytest.mark.acceptance
 

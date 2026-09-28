@@ -1,4 +1,4 @@
-"""Repeatable acceptance checks for Parsezen's essential MVP journeys."""
+"""Repeatable acceptance checks for Liblevo's essential MVP journeys."""
 
 from __future__ import annotations
 
@@ -7,19 +7,19 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
-import parsezen.pdf_conversion as pdf_conversion_module
-import parsezen.pipeline.transform as transform_module
-from parsezen.domain.jobs import (
+import liblevo.pdf_conversion as pdf_conversion_module
+import liblevo.pipeline.transform as transform_module
+from liblevo.domain.jobs import (
     DocumentFormat,
     JobConfiguration,
     JobStatus,
     OutputConfiguration,
 )
-from parsezen.improvement import ImprovementMode
-from parsezen.pdf_conversion import PdfPageRange
-from parsezen.presentation.main_window import ParsezenMainWindow
-from parsezen.processing import OutputFormat, ProcessRequest, ProcessStage, process_document
-from parsezen.settings import AppSettings
+from liblevo.improvement import ImprovementMode
+from liblevo.pdf_conversion import PdfPageRange
+from liblevo.presentation.main_window import LiblevoMainWindow
+from liblevo.processing import OutputFormat, ProcessRequest, ProcessStage, process_document
+from liblevo.settings import AppSettings
 
 pytestmark = pytest.mark.acceptance
 
@@ -66,7 +66,7 @@ def test_acceptance_converts_a_real_docx_through_markitdown(tmp_path: Path) -> N
 
     markdown = result.final_path.read_text(encoding="utf-8")
     assert result.final_path == output_directory / "document.md"
-    assert "# Parsezen heading" in markdown
+    assert "# Liblevo heading" in markdown
     assert "A faithful paragraph with value 2026." in markdown
     assert stages == [
         ProcessStage.VALIDATING,
@@ -94,14 +94,14 @@ def test_acceptance_converts_pdf_links_and_only_the_selected_pages(tmp_path: Pat
 
     complete_markdown = complete.final_path.read_text(encoding="utf-8")
     selected_markdown = selected.final_path.read_text(encoding="utf-8")
-    assert "# Parsezen PDF" in complete_markdown
+    assert "# Liblevo PDF" in complete_markdown
     assert "Faithful paragraph." in complete_markdown
     assert "[Official site](<https://example.com/docs>)" in complete_markdown
     assert "Second page" in complete_markdown
     assert selected.final_path == output_directory / "structured.pages-2-2.md"
     assert "Second page" in selected_markdown
     assert "More faithful content." in selected_markdown
-    assert "Parsezen PDF" not in selected_markdown
+    assert "Liblevo PDF" not in selected_markdown
 
 
 def test_acceptance_routes_a_scanned_pdf_through_selective_ocr(
@@ -180,7 +180,7 @@ def test_acceptance_keeps_paired_raw_and_mended_outputs_without_overwriting(
     ) -> str:
         calls.append((mode, target_language))
         assert "A faithful paragraph with value 2026." in markdown
-        return markdown.replace("Parsezen heading", "Encabezado Parsezen").replace(
+        return markdown.replace("Liblevo heading", "Encabezado Liblevo").replace(
             "A faithful paragraph with value 2026.",
             "Un párrafo fiel y pulido con el valor 2026.",
         )
@@ -255,7 +255,7 @@ def test_acceptance_window_processes_a_document_in_the_background(
     output_directory.mkdir()
     source = source_directory / "window.txt"
     source.write_text("# Window acceptance", encoding="utf-8")
-    window = ParsezenMainWindow(
+    window = LiblevoMainWindow(
         settings=AppSettings(output_directory=output_directory),
         auto_discover_ai=False,
         state_path=tmp_path / "workspace.sqlite3",
@@ -276,7 +276,7 @@ def test_acceptance_window_processes_a_document_in_the_background(
     )
     window._sync_workspace()
 
-    window.parsezen_workspace.primary_button.click()
+    window.liblevo_workspace.primary_button.click()
     runtime = window._queue_session.runtime_for(job.id)
     assert runtime is not None
     qtbot.waitUntil(
@@ -328,7 +328,7 @@ def _write_minimal_docx(destination: Path) -> None:
   <w:body>
     <w:p>
       <w:pPr><w:pStyle w:val="Heading1"/></w:pPr>
-      <w:r><w:t>Parsezen heading</w:t></w:r>
+      <w:r><w:t>Liblevo heading</w:t></w:r>
     </w:p>
     <w:p><w:r><w:t>A faithful paragraph with value 2026.</w:t></w:r></w:p>
     <w:sectPr/>
@@ -348,7 +348,7 @@ def _write_structured_pdf(destination: Path) -> None:
     page_one = b"""BT
 /F2 24 Tf
 72 700 Td
-(Parsezen PDF) Tj
+(Liblevo PDF) Tj
 ET
 BT
 /F1 12 Tf

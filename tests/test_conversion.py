@@ -7,18 +7,18 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
-import parsezen.conversion as conversion_module
-from parsezen.conversion import RESOURCE_REFERENCE_PREFIX, convert_document, convert_file
-from parsezen.epub_builder import EpubBookMetadata, build_epub
-from parsezen.errors import ConversionError
-from parsezen.markdown_resources import without_markdown_images
+import liblevo.conversion as conversion_module
+from liblevo.conversion import RESOURCE_REFERENCE_PREFIX, convert_document, convert_file
+from liblevo.epub_builder import EpubBookMetadata, build_epub
+from liblevo.errors import ConversionError
+from liblevo.markdown_resources import without_markdown_images
 
 
 def test_reads_markdown_directly_and_strips_utf8_bom(tmp_path: Path) -> None:
     source = tmp_path / "notes.md"
-    source.write_bytes(b"\xef\xbb\xbf# Parsezen\r\n\r\nContent")
+    source.write_bytes(b"\xef\xbb\xbf# Liblevo\r\n\r\nContent")
 
-    assert convert_file(source) == "# Parsezen\n\nContent"
+    assert convert_file(source) == "# Liblevo\n\nContent"
 
 
 def test_reads_txt_as_basic_markdown(tmp_path: Path) -> None:
@@ -54,7 +54,7 @@ def test_converts_minimal_docx_with_markitdown(tmp_path: Path) -> None:
 
     markdown = convert_file(source)
 
-    assert "Parsezen heading" in markdown
+    assert "Liblevo heading" in markdown
     assert "A faithful paragraph." in markdown
 
 
@@ -255,7 +255,7 @@ def _write_minimal_docx(destination: Path) -> None:
   <w:body>
     <w:p>
       <w:pPr><w:pStyle w:val="Heading1"/></w:pPr>
-      <w:r><w:t>Parsezen heading</w:t></w:r>
+      <w:r><w:t>Liblevo heading</w:t></w:r>
     </w:p>
     <w:p><w:r><w:t>A faithful paragraph.</w:t></w:r></w:p>
     <w:sectPr/>

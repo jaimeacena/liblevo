@@ -1,6 +1,6 @@
 from PySide6.QtCore import Qt
 
-from parsezen.presentation.components import StatusMessage, Switch
+from liblevo.presentation.components import StatusMessage, Switch
 
 
 def test_switch_is_keyboard_operable_and_exposes_its_purpose(qtbot) -> None:

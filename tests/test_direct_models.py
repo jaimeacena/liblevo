@@ -9,10 +9,10 @@ import httpx
 import pytest
 from PySide6.QtCore import QRunnable
 
-import parsezen.direct_models as direct_models
-import parsezen.presentation.local_ai_controller as controller_module
-from parsezen.component_readiness import ComponentReadiness, ReadinessStatus
-from parsezen.direct_models import (
+import liblevo.direct_models as direct_models
+import liblevo.presentation.local_ai_controller as controller_module
+from liblevo.component_readiness import ComponentReadiness, ReadinessStatus
+from liblevo.direct_models import (
     DIRECT_TRANSLATION_MODEL_ID,
     DirectModelProfile,
     active_direct_profile,
@@ -20,10 +20,10 @@ from parsezen.direct_models import (
     prepare_direct_model,
     verified_direct_model_path,
 )
-from parsezen.errors import LocalModelUnavailableError
-from parsezen.local_ai_policy import ComponentCapability
-from parsezen.local_models import LocalAISetupCancelled, OllamaStatus
-from parsezen.presentation.local_ai_controller import LocalAIController
+from liblevo.errors import LocalModelUnavailableError
+from liblevo.local_ai_policy import ComponentCapability
+from liblevo.local_models import LocalAISetupCancelled, OllamaStatus
+from liblevo.presentation.local_ai_controller import LocalAIController
 
 
 def _tiny_profile(content: bytes, *, digest: str | None = None) -> DirectModelProfile:
@@ -112,7 +112,7 @@ def test_new_active_model_does_not_replace_an_older_job_identity(monkeypatch, tm
     current_bytes = b"new synthetic model"
     current = DirectModelProfile(
         ComponentCapability.TRANSLATION,
-        "parsezen/future-translation:test",
+        "liblevo/future-translation:test",
         "future.gguf",
         hashlib.sha256(current_bytes).hexdigest(),
         len(current_bytes),

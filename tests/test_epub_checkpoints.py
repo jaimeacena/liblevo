@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-import parsezen.epub_checkpoints as checkpoints_module
-from parsezen.epub_checkpoints import (
+import liblevo.epub_checkpoints as checkpoints_module
+from liblevo.epub_checkpoints import (
     EpubTranslationCheckpoints,
     clear_epub_translation_cache,
     epub_translation_cache_stats,
@@ -66,7 +66,7 @@ def test_epub_checkpoint_reports_invalid_or_failed_writes(
 
     assert checkpoints.save("invalid", "translated text") is False
     monkeypatch.setattr(
-        "parsezen.infrastructure.protected_file.os.replace",
+        "liblevo.infrastructure.protected_file.os.replace",
         lambda *_args: (_ for _ in ()).throw(OSError("disk full")),
     )
 

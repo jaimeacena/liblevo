@@ -1,0 +1,1083 @@
+"""Discover installed Ollama models through Ollama's native local API."""
+
+from __future__ import annotations
+
+import ctypes
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from enum import StrEnum
+from pathlib import Path
+from tempfile import TemporaryDirectory, mkstemp
+
+import httpx
+
+from liblevo.errors import LocalModelUnavailableError
+from liblevo.settings import CONTEXT_WINDOW_PRESETS
+
+OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+DISCOVERY_TIMEOUT_SECONDS = 10.0
+MAX_DISCOVERED_MODELS = 200
+MAX_MODEL_ID_CHARACTERS = 200
+DEFAULT_CONTEXT_WINDOW = CONTEXT_WINDOW_PRESETS[0]
+OLLAMA_DOWNLOAD_URL = "https://ollama.com/download/OllamaSetup.exe"
+MAX_OLLAMA_INSTALLER_BYTES = 1024 * 1024 * 1024
+MAX_PULL_RESPONSE_LINE_BYTES = 64 * 1024
+OLLAMA_START_TIMEOUT_SECONDS = 45.0
+OLLAMA_INSTALL_TIMEOUT_SECONDS = 20 * 60
+OLLAMA_LIBRARY_URL = "https://ollama.com/library"
+OLLAMA_MODEL_ID_PATTERN = re.compile(
+    r"^[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._-]*)?(?::[a-z0-9][a-z0-9._-]*)?$",
+    flags=re.IGNORECASE,
+)
+
+ProgressCallback = Callable[[int | None, str], None]
+
+
+class OllamaStatus(StrEnum):
+    """User-facing availability states for the bundled Ollama workflow."""
+
+    READY = "ready"
+    NOT_INSTALLED = "not_installed"
+    STOPPED = "stopped"
+    MISSING_MODEL = "missing_model"
+    LOCAL_ONLY_REQUIRED = "local_only_required"
+    UNAVAILABLE = "unavailable"
+
+
+class HardwareComponent(StrEnum):
+    """Local processing components whose prerequisites can be checked."""
+
+    TRANSLATION = "translation"
+    REVIEW = "review"
+    VISUAL = "visual"
+
+
+class ComponentStatus(StrEnum):
+    """Result of comparing one component's requirements with local hardware."""
+
+    READY = "ready"
+    INSTALLABLE = "installable"
+    INSUFFICIENT = "insufficient"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True, slots=True)
+class LocalHardware:
+    """Numeric hardware facts collected locally; no paths or command output are retained."""
+
+    ram_total_mebibytes: int | None = None
+    ram_available_mebibytes: int | None = None
+    disk_free_bytes: int | None = None
+    nvidia_vram_total_mebibytes: int | None = None
+    nvidia_vram_available_mebibytes: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ComponentRequirements:
+    """Explicit minimum resources for one component and whether it is installed."""
+
+    min_ram_mebibytes: int | None = None
+    min_disk_free_bytes: int | None = None
+    min_vram_mebibytes: int | None = None
+    installed: bool = False
+
+    def __post_init__(self) -> None:
+        for value in (
+            self.min_ram_mebibytes,
+            self.min_disk_free_bytes,
+            self.min_vram_mebibytes,
+        ):
+            if value is not None and (
+                isinstance(value, bool) or not isinstance(value, int) or value < 0
+            ):
+                raise ValueError("Los requisitos de hardware no pueden ser negativos.")
+        if not isinstance(self.installed, bool):
+            raise ValueError("El estado de instalación debe ser booleano.")
+
+
+@dataclass(frozen=True, slots=True)
+class ComponentReadiness:
+    """Safe, UI-independent readiness result for one local component."""
+
+    component: HardwareComponent
+    status: ComponentStatus
+    reasons: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class NvidiaVram:
+    """Largest NVIDIA adapter's total and currently available memory."""
+
+    total_mebibytes: int | None = None
+    available_mebibytes: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OllamaModel:
+    """One installed model with a friendly label and safe runtime guidance."""
+
+    model_id: str
+    display_name: str
+    size_bytes: int | None = None
+    parameter_size: str | None = None
+    quantization: str | None = None
+    parent_model: str | None = None
+    max_context: int | None = None
+    recommended_context: int = DEFAULT_CONTEXT_WINDOW
+    digest: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class OllamaConnection:
+    """Current Ollama state and models available to the interface."""
+
+    status: OllamaStatus
+    models: tuple[OllamaModel, ...] = ()
+    selected_model: str | None = None
+    message: str | None = None
+
+
+class LocalAISetupCancelled(LocalModelUnavailableError):
+    """The user cancelled a model download from the guided setup."""
+
+
+class _OllamaConnectionError(LocalModelUnavailableError):
+    """Ollama did not accept a connection on its fixed loopback address."""
+
+
+class _OllamaResponseError(LocalModelUnavailableError):
+    """Ollama answered, but its native API response was not usable."""
+
+
+def list_ollama_models(
+    *,
+    transport: httpx.BaseTransport | None = None,
+    vram_mebibytes: int | None = None,
+) -> tuple[OllamaModel, ...]:
+    """Return safe model metadata announced by Ollama's native ``/api/tags`` API."""
+    try:
+        with httpx.Client(
+            timeout=DISCOVERY_TIMEOUT_SECONDS,
+            follow_redirects=False,
+            trust_env=False,
+            transport=transport,
+        ) as client:
+            response = client.get(f"{OLLAMA_BASE_URL}/api/tags")
+    except httpx.RequestError as exc:
+        raise _OllamaConnectionError(
+            "No se pudo contactar con Ollama. Comprueba que esté iniciado."
+        ) from exc
+
+    if response.is_redirect:
+        raise _OllamaResponseError("Ollama intentó redirigir la comprobación y fue bloqueado.")
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        raise _OllamaResponseError(
+            f"Ollama respondió con el estado HTTP {response.status_code}."
+        ) from exc
+
+    try:
+        data = response.json()["models"]
+    except (ValueError, KeyError, TypeError) as exc:
+        raise _OllamaResponseError("Ollama devolvió una lista de modelos incompatible.") from exc
+    if not isinstance(data, list):
+        raise _OllamaResponseError("Ollama devolvió una lista de modelos incompatible.")
+    if len(data) > MAX_DISCOVERED_MODELS:
+        raise _OllamaResponseError(
+            "Ollama anunció demasiados modelos para mostrarlos de forma segura."
+        )
+
+    detected_vram = detect_nvidia_vram_mebibytes() if vram_mebibytes is None else vram_mebibytes
+    parsed: list[OllamaModel] = []
+    seen_ids: set[str] = set()
+    for item in data:
+        model = _parse_model(item, detected_vram)
+        if model is None or model.model_id in seen_ids:
+            continue
+        parsed.append(model)
+        seen_ids.add(model.model_id)
+
+    return tuple(sorted(parsed, key=lambda model: model.display_name.casefold()))
+
+
+def discover_ollama(
+    preferred_model: str | None = None,
+    *,
+    model_loader: Callable[[], tuple[OllamaModel, ...]] | None = None,
+    installed_checker: Callable[[], bool] | None = None,
+    local_only_checker: Callable[[], bool] | None = None,
+) -> OllamaConnection:
+    """Describe Ollama without exposing addresses or provider choices to the user."""
+    loader = model_loader if model_loader is not None else list_ollama_models
+    checker = installed_checker if installed_checker is not None else is_ollama_installed
+    strict_local_checker = (
+        local_only_checker if local_only_checker is not None else is_ollama_local_only_configured
+    )
+    try:
+        models = loader()
+    except _OllamaConnectionError as exc:
+        installed = checker()
+        return OllamaConnection(
+            status=OllamaStatus.STOPPED if installed else OllamaStatus.NOT_INSTALLED,
+            message=str(exc),
+        )
+    except LocalModelUnavailableError as exc:
+        return OllamaConnection(status=OllamaStatus.UNAVAILABLE, message=str(exc))
+
+    if not strict_local_checker():
+        return OllamaConnection(
+            status=OllamaStatus.LOCAL_ONLY_REQUIRED,
+            message=(
+                "Activa el modo solo local de Ollama antes de procesar documentos. "
+                "Liblevo no usará la IA mientras Ollama pueda acceder a su nube."
+            ),
+        )
+    if not models:
+        return OllamaConnection(
+            status=OllamaStatus.MISSING_MODEL,
+            message="Ollama está preparado, pero todavía no tiene modelos instalados.",
+        )
+    return OllamaConnection(
+        status=OllamaStatus.READY,
+        models=models,
+        selected_model=choose_ollama_model(models, preferred_model),
+    )
+
+
+def choose_ollama_model(
+    models: tuple[OllamaModel, ...],
+    preferred_model: str | None,
+) -> str | None:
+    """Restore only a saved model suitable for document transformations."""
+    if not preferred_model or is_reasoning_model_id(preferred_model):
+        return None
+    preferred_canonical = _canonical_ollama_model_id(preferred_model)
+    for model in models:
+        if (
+            not is_reasoning_model_id(model.model_id)
+            and _canonical_ollama_model_id(model.model_id) == preferred_canonical
+        ):
+            return model.model_id
+    return None
+
+
+def validate_ollama_model_id(model_id: str) -> str:
+    """Validate one transient catalog name before asking local Ollama to download it."""
+    candidate = model_id.strip()
+    if not candidate:
+        raise LocalModelUnavailableError("Escribe el nombre de un modelo de Ollama.")
+    if (
+        len(candidate) > MAX_MODEL_ID_CHARACTERS
+        or OLLAMA_MODEL_ID_PATTERN.fullmatch(candidate) is None
+    ):
+        raise LocalModelUnavailableError(
+            "Usa el formato modelo:versión, por ejemplo gemma3:4b. No escribas una URL."
+        )
+    if is_cloud_model_id(candidate):
+        raise LocalModelUnavailableError(
+            "Ese nombre corresponde a un modelo cloud. Elige uno que se descargue en el equipo."
+        )
+    return candidate
+
+
+def validate_document_model_id(model_id: str) -> str:
+    """Validate an Ollama model intended to return transformed document text."""
+    candidate = validate_ollama_model_id(model_id)
+    if is_reasoning_model_id(candidate):
+        raise LocalModelUnavailableError(
+            "Ese modelo prioriza el razonamiento y no es apto para transformar documentos. "
+            "Elige una variante Instruct."
+        )
+    return candidate
+
+
+def find_ollama_executable() -> Path | None:
+    """Locate the official CLI without relying on a refreshed user ``PATH``."""
+    executable = shutil.which("ollama")
+    if executable is not None:
+        return Path(executable)
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        candidate = Path(local_app_data) / "Programs" / "Ollama" / "ollama.exe"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def is_ollama_installed() -> bool:
+    """Check common local executable locations without starting another process."""
+    return find_ollama_executable() is not None
+
+
+def configure_ollama_local_only(config_path: Path | None = None) -> bool:
+    """Atomically enable Ollama's documented local-only mode, preserving other settings."""
+    path = config_path if config_path is not None else Path.home() / ".ollama" / "server.json"
+    payload: dict[str, object] = {}
+    try:
+        if path.is_symlink():
+            raise LocalModelUnavailableError(
+                "La configuración de Ollama usa un enlace y no se modificará automáticamente."
+            )
+        if path.stat().st_size > 64 * 1024:
+            raise LocalModelUnavailableError(
+                "La configuración de Ollama es demasiado grande para actualizarla con seguridad."
+            )
+        raw_payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(raw_payload, dict):
+            raise ValueError
+        payload = raw_payload
+    except FileNotFoundError:
+        pass
+    except LocalModelUnavailableError:
+        raise
+    except (OSError, UnicodeError) as exc:
+        raise LocalModelUnavailableError(
+            "No se pudo leer la configuración de privacidad de Ollama."
+        ) from exc
+    except (json.JSONDecodeError, ValueError):
+        _backup_invalid_ollama_config(path)
+
+    if payload.get("disable_ollama_cloud") is True:
+        return False
+    payload["disable_ollama_cloud"] = True
+    temporary_path: Path | None = None
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary_name = mkstemp(
+            dir=path.parent,
+            prefix=".liblevo-ollama-",
+            suffix=".tmp",
+            text=True,
+        )
+        temporary_path = Path(temporary_name)
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as config_file:
+            json.dump(payload, config_file, ensure_ascii=False, indent=2)
+            config_file.write("\n")
+            config_file.flush()
+            os.fsync(config_file.fileno())
+        os.replace(temporary_path, path)
+        temporary_path = None
+    except (OSError, UnicodeError, TypeError) as exc:
+        raise LocalModelUnavailableError("No se pudo activar el modo privado de Ollama.") from exc
+    finally:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+    return True
+
+
+def install_ollama(on_progress: ProgressCallback | None = None) -> None:
+    """Install the official per-user Windows application without opening a browser."""
+    if is_ollama_installed():
+        return
+    if sys.platform != "win32":
+        raise LocalModelUnavailableError(
+            "La instalación guiada de Ollama está disponible en Windows."
+        )
+
+    _report_progress(on_progress, None, "Preparando la instalación de Ollama…")
+    winget = shutil.which("winget")
+    if winget is not None:
+        try:
+            subprocess.run(
+                [
+                    winget,
+                    "install",
+                    "--id",
+                    "Ollama.Ollama",
+                    "--exact",
+                    "--scope",
+                    "user",
+                    "--silent",
+                    "--accept-package-agreements",
+                    "--accept-source-agreements",
+                    "--disable-interactivity",
+                ],
+                check=False,
+                capture_output=True,
+                timeout=OLLAMA_INSTALL_TIMEOUT_SECONDS,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+        if _wait_for_ollama_install():
+            _report_progress(on_progress, 100, "Ollama está instalado.")
+            return
+
+    _install_ollama_from_official_download(on_progress)
+    if not _wait_for_ollama_install():
+        raise LocalModelUnavailableError(
+            "La instalación terminó, pero Windows todavía no encuentra Ollama."
+        )
+    _report_progress(on_progress, 100, "Ollama está instalado.")
+
+
+def start_ollama(
+    on_progress: ProgressCallback | None = None,
+    *,
+    timeout_seconds: float = OLLAMA_START_TIMEOUT_SECONDS,
+) -> None:
+    """Start Ollama's Windows background application and wait for its loopback API."""
+    if _ollama_api_is_ready():
+        if not is_ollama_local_only_configured():
+            raise LocalModelUnavailableError(
+                "Ollama ya está activo sin una configuración local verificable. "
+                "Protégelo y reinícialo antes de procesar documentos."
+            )
+        return
+    executable = find_ollama_executable()
+    if executable is None:
+        raise LocalModelUnavailableError("Ollama no está instalado.")
+
+    application = executable.with_name("ollama app.exe")
+    command = [str(application)] if application.is_file() else [str(executable), "serve"]
+    environment = os.environ.copy()
+    environment["OLLAMA_NO_CLOUD"] = "1"
+    _report_progress(on_progress, None, "Iniciando Ollama…")
+    creation_flags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(
+        subprocess, "DETACHED_PROCESS", 0
+    )
+    try:
+        subprocess.Popen(  # noqa: S603 - fixed executable discovered from trusted locations
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+            env=environment,
+            creationflags=creation_flags,
+        )
+    except OSError as exc:
+        raise LocalModelUnavailableError("Windows no pudo iniciar Ollama.") from exc
+
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if _ollama_api_is_ready():
+            _report_progress(on_progress, 100, "Ollama está preparado.")
+            return
+        time.sleep(0.5)
+    raise LocalModelUnavailableError(
+        "Ollama se abrió, pero no terminó de prepararse. Inténtalo de nuevo."
+    )
+
+
+def restart_ollama_local_only(on_progress: ProgressCallback | None = None) -> None:
+    """Apply local-only configuration and restart Ollama so it takes effect."""
+    configure_ollama_local_only()
+    _report_progress(on_progress, None, "Reiniciando Ollama en modo privado…")
+    if sys.platform == "win32":
+        creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        for process_name in ("ollama app.exe", "ollama.exe"):
+            try:
+                subprocess.run(
+                    ["taskkill", "/IM", process_name, "/T", "/F"],
+                    check=False,
+                    capture_output=True,
+                    timeout=10,
+                    creationflags=creation_flags,
+                )
+            except (OSError, subprocess.SubprocessError):
+                continue
+    time.sleep(0.5)
+    start_ollama(on_progress)
+
+
+def _backup_invalid_ollama_config(path: Path) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        suffix = 1
+        backup = path.with_name("server.invalid.json")
+        while backup.exists():
+            suffix += 1
+            backup = path.with_name(f"server.invalid-{suffix}.json")
+        shutil.copy2(path, backup)
+    except FileNotFoundError:
+        return
+    except OSError as exc:
+        raise LocalModelUnavailableError(
+            "La configuración anterior de Ollama no es válida y no pudo conservarse."
+        ) from exc
+
+
+def _wait_for_ollama_install(timeout_seconds: float = 15.0) -> bool:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if is_ollama_installed():
+            return True
+        time.sleep(0.5)
+    return is_ollama_installed()
+
+
+def _install_ollama_from_official_download(on_progress: ProgressCallback | None) -> None:
+    _report_progress(on_progress, None, "Descargando el instalador oficial de Ollama…")
+    with TemporaryDirectory(prefix="liblevo-ollama-") as temporary_directory:
+        installer = Path(temporary_directory) / "OllamaSetup.exe"
+        downloaded = 0
+        try:
+            with httpx.Client(
+                timeout=httpx.Timeout(600.0, connect=20.0),
+                follow_redirects=True,
+                trust_env=True,
+            ) as client:
+                with client.stream("GET", OLLAMA_DOWNLOAD_URL) as response:
+                    response.raise_for_status()
+                    final_host = response.url.host.casefold()
+                    allowed_hosts = (
+                        "ollama.com",
+                        "github.com",
+                        "githubusercontent.com",
+                    )
+                    if not any(
+                        final_host == host or final_host.endswith(f".{host}")
+                        for host in allowed_hosts
+                    ):
+                        raise LocalModelUnavailableError(
+                            "La descarga oficial de Ollama redirigió a un servidor inesperado."
+                        )
+                    content_length = response.headers.get("content-length")
+                    total = (
+                        int(content_length) if content_length and content_length.isdigit() else 0
+                    )
+                    if total > MAX_OLLAMA_INSTALLER_BYTES:
+                        raise LocalModelUnavailableError(
+                            "El instalador de Ollama supera el tamaño permitido."
+                        )
+                    with installer.open("wb") as installer_file:
+                        for chunk in response.iter_bytes(1024 * 1024):
+                            downloaded += len(chunk)
+                            if downloaded > MAX_OLLAMA_INSTALLER_BYTES:
+                                raise LocalModelUnavailableError(
+                                    "El instalador de Ollama supera el tamaño permitido."
+                                )
+                            installer_file.write(chunk)
+                            percent = round(downloaded * 100 / total) if total else None
+                            _report_progress(
+                                on_progress,
+                                percent,
+                                "Descargando el instalador oficial de Ollama…",
+                            )
+        except httpx.HTTPError as exc:
+            raise LocalModelUnavailableError(
+                "No se pudo descargar el instalador oficial de Ollama."
+            ) from exc
+        if downloaded < 1024 * 1024 or not _has_valid_ollama_signature(installer):
+            raise LocalModelUnavailableError(
+                "Windows no pudo verificar la firma oficial del instalador de Ollama."
+            )
+        _report_progress(on_progress, None, "Instalando Ollama…")
+        try:
+            completed = subprocess.run(
+                [
+                    str(installer),
+                    "/VERYSILENT",
+                    "/SUPPRESSMSGBOXES",
+                    "/NORESTART",
+                    "/SP-",
+                ],
+                check=False,
+                capture_output=True,
+                timeout=OLLAMA_INSTALL_TIMEOUT_SECONDS,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise LocalModelUnavailableError("Windows no pudo instalar Ollama.") from exc
+        if completed.returncode != 0:
+            raise LocalModelUnavailableError("El instalador de Ollama no pudo completarse.")
+
+
+def _has_valid_ollama_signature(path: Path) -> bool:
+    environment = os.environ.copy()
+    environment["LIBLEVO_OLLAMA_INSTALLER"] = str(path)
+    command = (
+        "$signature = Get-AuthenticodeSignature -LiteralPath "
+        "$env:LIBLEVO_OLLAMA_INSTALLER; "
+        "if ($signature.Status -ne 'Valid' -or "
+        "$signature.SignerCertificate.Subject -notlike '*Ollama Inc.*') { exit 1 }"
+    )
+    try:
+        completed = subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                command,
+            ],
+            check=False,
+            capture_output=True,
+            timeout=30,
+            env=environment,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return completed.returncode == 0
+
+
+def _ollama_api_is_ready() -> bool:
+    try:
+        with httpx.Client(
+            timeout=1.0,
+            follow_redirects=False,
+            trust_env=False,
+        ) as client:
+            response = client.get(f"{OLLAMA_BASE_URL}/api/version")
+    except httpx.RequestError:
+        return False
+    return response.status_code == 200 and not response.is_redirect
+
+
+def _report_progress(
+    callback: ProgressCallback | None,
+    percent: int | None,
+    message: str,
+) -> None:
+    if callback is not None:
+        callback(percent, message)
+
+
+def is_ollama_local_only_configured(
+    *,
+    config_path: Path | None = None,
+) -> bool:
+    """Return whether Ollama's persistent server configuration disables cloud features."""
+
+    path = config_path if config_path is not None else Path.home() / ".ollama" / "server.json"
+    try:
+        if path.is_symlink() or path.stat().st_size > 64 * 1024:
+            return False
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, UnicodeError, json.JSONDecodeError):
+        return False
+    return isinstance(payload, dict) and payload.get("disable_ollama_cloud") is True
+
+
+def detect_local_hardware(*, storage_path: Path | None = None) -> LocalHardware:
+    """Collect conservative local hardware facts without retaining sensitive details."""
+    ram_total, ram_available = detect_system_memory_mebibytes()
+    vram = detect_nvidia_vram_memory_mebibytes()
+    return LocalHardware(
+        ram_total_mebibytes=ram_total,
+        ram_available_mebibytes=ram_available,
+        disk_free_bytes=detect_disk_free_bytes(storage_path=storage_path),
+        nvidia_vram_total_mebibytes=vram.total_mebibytes,
+        nvidia_vram_available_mebibytes=vram.available_mebibytes,
+    )
+
+
+def detect_system_memory_mebibytes() -> tuple[int | None, int | None]:
+    """Return total and available physical RAM, preferring Windows' native API."""
+    if sys.platform == "win32":
+        windows_memory = _detect_windows_memory_mebibytes()
+        if windows_memory != (None, None):
+            return windows_memory
+
+    memory = _detect_sysconf_memory_mebibytes()
+    if memory != (None, None):
+        return memory
+    return _detect_proc_memory_mebibytes()
+
+
+def detect_disk_free_bytes(*, storage_path: Path | None = None) -> int | None:
+    """Return free bytes on the model storage volume, without exposing its path."""
+    configured = os.environ.get("OLLAMA_MODELS")
+    model_root = (
+        storage_path
+        if storage_path is not None
+        else (Path(configured) if configured else Path.home() / ".ollama" / "models")
+    )
+    existing_root = model_root
+    try:
+        while not existing_root.exists() and existing_root != existing_root.parent:
+            existing_root = existing_root.parent
+        return max(0, shutil.disk_usage(existing_root).free)
+    except (OSError, TypeError, ValueError):
+        return None
+
+
+def detect_nvidia_vram_memory_mebibytes() -> NvidiaVram:
+    """Return total/free memory for the largest NVIDIA adapter, if queryable."""
+    rows = _query_nvidia_memory("memory.total,memory.free")
+    if not rows:
+        return NvidiaVram()
+
+    usable = [(total, free) for total, free in rows if total is not None]
+    if not usable:
+        return NvidiaVram()
+    total, available = max(usable, key=lambda item: item[0])
+    if available is not None:
+        available = min(total, available)
+    return NvidiaVram(total_mebibytes=total, available_mebibytes=available)
+
+
+def detect_nvidia_vram_available_mebibytes() -> int | None:
+    """Return free memory on the largest NVIDIA adapter, or ``None``."""
+    return detect_nvidia_vram_memory_mebibytes().available_mebibytes
+
+
+def calculate_component_readiness(
+    component: HardwareComponent | str,
+    hardware: LocalHardware,
+    requirements: ComponentRequirements,
+) -> ComponentReadiness:
+    """Purely compare explicit requirements with a hardware snapshot."""
+    try:
+        normalized_component = (
+            component if isinstance(component, HardwareComponent) else HardwareComponent(component)
+        )
+    except ValueError as exc:
+        raise ValueError(f"Componente desconocido: {component!r}") from exc
+
+    missing: list[str] = []
+    insufficient: list[str] = []
+    checks = (
+        (
+            requirements.min_ram_mebibytes,
+            hardware.ram_available_mebibytes,
+            "RAM disponible",
+        ),
+        (
+            requirements.min_disk_free_bytes,
+            hardware.disk_free_bytes,
+            "espacio libre",
+        ),
+        (
+            requirements.min_vram_mebibytes,
+            hardware.nvidia_vram_available_mebibytes,
+            "VRAM NVIDIA disponible",
+        ),
+    )
+    for required, actual, label in checks:
+        if required is None or required == 0:
+            continue
+        if actual is None:
+            missing.append(label)
+        elif actual < required:
+            insufficient.append(label)
+
+    if insufficient:
+        status = ComponentStatus.INSUFFICIENT
+        reasons = tuple(f"{label} insuficiente" for label in insufficient)
+    elif missing:
+        status = ComponentStatus.UNKNOWN
+        reasons = tuple(f"{label} no disponible" for label in missing)
+    elif requirements.installed:
+        status = ComponentStatus.READY
+        reasons = ()
+    else:
+        status = ComponentStatus.INSTALLABLE
+        reasons = ("Requisitos locales compatibles; falta instalar el componente.",)
+    return ComponentReadiness(normalized_component, status, reasons)
+
+
+def calculate_hardware_readiness(
+    hardware: LocalHardware,
+    requirements: Mapping[HardwareComponent | str, ComponentRequirements],
+) -> dict[HardwareComponent, ComponentReadiness]:
+    """Calculate independent readiness for each explicitly requested component."""
+    return {
+        component
+        if isinstance(component, HardwareComponent)
+        else HardwareComponent(component): calculate_component_readiness(
+            component,
+            hardware,
+            component_requirements,
+        )
+        for component, component_requirements in requirements.items()
+    }
+
+
+def detect_nvidia_vram_mebibytes() -> int | None:
+    """Return the largest NVIDIA GPU memory size, or ``None`` on unsupported systems."""
+    rows = _query_nvidia_memory("memory.total")
+    return max((total for total, _available in rows if total is not None), default=None)
+
+
+def _query_nvidia_memory(query: str) -> list[tuple[int | None, int | None]]:
+    """Query numeric NVIDIA memory values while keeping command output private."""
+    creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    try:
+        completed = subprocess.run(
+            [
+                "nvidia-smi",
+                f"--query-gpu={query}",
+                "--format=csv,noheader,nounits",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=3,
+            creationflags=creation_flags,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+
+    columns = len(query.split(","))
+    rows: list[tuple[int | None, int | None]] = []
+    stdout = completed.stdout if isinstance(completed.stdout, str) else ""
+    for line in stdout.splitlines():
+        values = [_parse_memory_mebibytes(value) for value in line.split(",")]
+        if not values or all(value is None for value in values):
+            continue
+        total = values[0]
+        available = values[1] if columns > 1 and len(values) > 1 else None
+        rows.append((total, available))
+    return rows
+
+
+def _parse_memory_mebibytes(value: str) -> int | None:
+    match = re.fullmatch(r"\s*(\d+)(?:\.\d+)?\s*(?:mib)?\s*", value, flags=re.IGNORECASE)
+    if match is None:
+        return None
+    parsed = int(match.group(1))
+    return parsed if parsed > 0 else None
+
+
+class _MemoryStatusEx(ctypes.Structure):
+    _fields_ = [
+        ("dwLength", ctypes.c_ulong),
+        ("dwMemoryLoad", ctypes.c_ulong),
+        ("ullTotalPhys", ctypes.c_ulonglong),
+        ("ullAvailPhys", ctypes.c_ulonglong),
+        ("ullTotalPageFile", ctypes.c_ulonglong),
+        ("ullAvailPageFile", ctypes.c_ulonglong),
+        ("ullTotalVirtual", ctypes.c_ulonglong),
+        ("ullAvailVirtual", ctypes.c_ulonglong),
+        ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+    ]
+
+
+def _detect_windows_memory_mebibytes() -> tuple[int | None, int | None]:
+    try:
+        kernel32 = ctypes.windll.kernel32
+        status = _MemoryStatusEx()
+        status.dwLength = ctypes.sizeof(_MemoryStatusEx)
+        if not kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+            return (None, None)
+        total = _bytes_to_mebibytes(status.ullTotalPhys)
+        available = _bytes_to_mebibytes(status.ullAvailPhys)
+        if total is not None and available is not None:
+            available = min(total, available)
+        return total, available
+    except (AttributeError, OSError, TypeError, ValueError):
+        return (None, None)
+
+
+def _detect_sysconf_memory_mebibytes() -> tuple[int | None, int | None]:
+    sysconf = getattr(os, "sysconf", None)
+    if sysconf is None:
+        return (None, None)
+    try:
+        page_size = int(sysconf("SC_PAGE_SIZE"))
+        total_pages = int(sysconf("SC_PHYS_PAGES"))
+        available_pages = int(sysconf("SC_AVPHYS_PAGES"))
+    except (AttributeError, OSError, ValueError, TypeError):
+        return (None, None)
+    total = _bytes_to_mebibytes(page_size * total_pages)
+    available = _bytes_to_mebibytes(page_size * available_pages)
+    if total is not None and available is not None:
+        available = min(total, available)
+    return total, available
+
+
+def _detect_proc_memory_mebibytes() -> tuple[int | None, int | None]:
+    values: dict[str, int] = {}
+    try:
+        with open("/proc/meminfo", encoding="utf-8") as memory_info:
+            for line in memory_info:
+                key, separator, raw_value = line.partition(":")
+                if not separator:
+                    continue
+                match = re.search(r"(\d+)\s*kB", raw_value, flags=re.IGNORECASE)
+                if match is not None:
+                    values[key] = int(match.group(1)) * 1024
+    except (OSError, UnicodeError):
+        return (None, None)
+    total = _bytes_to_mebibytes(values.get("MemTotal"))
+    available = _bytes_to_mebibytes(values.get("MemAvailable", values.get("MemFree")))
+    if total is not None and available is not None:
+        available = min(total, available)
+    return total, available
+
+
+def _bytes_to_mebibytes(value: int | None) -> int | None:
+    if value is None or isinstance(value, bool) or value <= 0:
+        return None
+    return value // (1024 * 1024)
+
+
+def context_for_model(models: tuple[OllamaModel, ...], model_id: str | None) -> int:
+    """Return the automatic recommendation for the selected model."""
+    for model in models:
+        if model.model_id == model_id:
+            return model.recommended_context
+    return DEFAULT_CONTEXT_WINDOW
+
+
+def friendly_model_name(model_id: str, details: dict[str, object] | None = None) -> str:
+    """Turn an Ollama identifier into a short name suitable for non-technical users."""
+    details = details if details is not None else {}
+    family = details.get("family")
+    parameter_size = details.get("parameter_size")
+    quantization = details.get("quantization_level")
+    if isinstance(family, str) and family.strip():
+        family_name = _friendly_family(family)
+        parts = [family_name]
+        if isinstance(parameter_size, str) and parameter_size.strip():
+            parts.append(re.sub(r"\.0(?=[A-Z]$)", "", parameter_size.strip().upper()))
+        lowered_id = model_id.casefold()
+        if "instruct" in lowered_id:
+            parts.append("Instruct")
+        if isinstance(quantization, str) and quantization.strip():
+            parts.append(_friendly_quantization(quantization))
+        name = " ".join(dict.fromkeys(parts))
+    else:
+        raw, _separator, tag = model_id.partition(":")
+        raw = raw.replace("_", " ").replace("-", " ")
+        name = " ".join(part.capitalize() for part in raw.split()) or "Modelo local"
+        if re.fullmatch(r"\d+(?:\.\d+)?b", tag, flags=re.IGNORECASE):
+            name = f"{name} {tag.upper()}"
+
+    return name
+
+
+def is_cloud_model_id(model_id: str) -> bool:
+    """Reject Ollama's documented cloud tags even when reached through the local API."""
+    _name, separator, tag = model_id.casefold().rpartition(":")
+    return bool(separator) and (tag == "cloud" or tag.endswith("-cloud"))
+
+
+def is_reasoning_model_id(model_id: str) -> bool:
+    """Identify model variants that may spend the response budget on hidden reasoning."""
+    normalized = model_id.strip().casefold()
+    repository, separator, _tag = normalized.rpartition(":")
+    model_name = (repository if separator else normalized).rsplit("/", 1)[-1]
+    instruction_variant = any(
+        marker in normalized for marker in ("instruct", "instruction", "chat")
+    )
+    if re.match(r"^qwen3(?:$|[_-])", model_name):
+        return not instruction_variant
+    return bool(
+        re.search(
+            r"(?:^|[/_.:-])(?:deepseek-r1|r1|qwq|reasoning|thinking|magistral)"
+            r"(?:$|[/_.:-])",
+            normalized,
+        )
+    )
+
+
+def _canonical_ollama_model_id(model_id: str) -> str:
+    normalized = model_id.strip().casefold()
+    final_segment = normalized.rsplit("/", 1)[-1]
+    return normalized if ":" in final_segment else f"{normalized}:latest"
+
+
+def _parse_model(item: object, vram_mebibytes: int | None) -> OllamaModel | None:
+    if not isinstance(item, dict):
+        return None
+    raw_id = item.get("model", item.get("name"))
+    if not isinstance(raw_id, str):
+        return None
+    model_id = raw_id.strip()
+    if (
+        not model_id
+        or len(model_id) > MAX_MODEL_ID_CHARACTERS
+        or any(character in model_id for character in "\r\n\0")
+        or is_cloud_model_id(model_id)
+    ):
+        return None
+
+    raw_details = item.get("details")
+    details = raw_details if isinstance(raw_details, dict) else {}
+    raw_digest = item.get("digest")
+    digest = (
+        raw_digest.casefold()
+        if isinstance(raw_digest, str) and re.fullmatch(r"[0-9a-fA-F]{64}", raw_digest)
+        else None
+    )
+    size = item.get("size")
+    size_bytes = size if isinstance(size, int) and not isinstance(size, bool) and size > 0 else None
+    parent = details.get("parent_model")
+    parent_model = parent.strip() if isinstance(parent, str) and parent.strip() else None
+    max_context_value = details.get("context_length")
+    max_context = (
+        max_context_value
+        if isinstance(max_context_value, int)
+        and not isinstance(max_context_value, bool)
+        and max_context_value > 0
+        else None
+    )
+    recommendation = recommend_context_window(
+        size_bytes=size_bytes,
+        vram_mebibytes=vram_mebibytes,
+        max_context=max_context,
+    )
+    parameter_size = details.get("parameter_size")
+    quantization = details.get("quantization_level")
+    return OllamaModel(
+        model_id=model_id,
+        display_name=friendly_model_name(model_id, details),
+        digest=digest,
+        size_bytes=size_bytes,
+        parameter_size=parameter_size if isinstance(parameter_size, str) else None,
+        quantization=quantization if isinstance(quantization, str) else None,
+        parent_model=parent_model,
+        max_context=max_context,
+        recommended_context=recommendation,
+    )
+
+
+def recommend_context_window(
+    *,
+    size_bytes: int | None,
+    vram_mebibytes: int | None,
+    max_context: int | None,
+) -> int:
+    """Choose a conservative preset from available GPU memory and model size."""
+    recommendation = DEFAULT_CONTEXT_WINDOW
+    if size_bytes is not None and vram_mebibytes is not None:
+        model_mebibytes = size_bytes / (1024 * 1024)
+        free_after_weights = vram_mebibytes - model_mebibytes
+        if free_after_weights >= 6_000:
+            recommendation = 16_384
+        elif free_after_weights >= 3_000:
+            recommendation = 8_192
+
+    if max_context is not None:
+        recommendation = min(recommendation, max_context)
+    return recommendation
+
+
+def _friendly_family(family: str) -> str:
+    compact = re.sub(r"[^a-z0-9]+", "", family.casefold())
+    known = {
+        "qwen3": "Qwen3",
+        "qwen2": "Qwen2",
+        "llama": "Llama",
+        "llama3": "Llama 3",
+        "gemma": "Gemma",
+        "gemma2": "Gemma 2",
+        "gemma3": "Gemma 3",
+        "mistral": "Mistral",
+        "phi3": "Phi-3",
+        "phi4": "Phi-4",
+    }
+    return known.get(compact, family.strip().title())
+
+
+def _friendly_quantization(quantization: str) -> str:
+    value = quantization.strip().upper()
+    match = re.fullmatch(r"(Q\d+)(?:_[A-Z0-9_]+)?", value)
+    return match.group(1) if match else value.replace("_", "-")

@@ -12,19 +12,19 @@ from time import perf_counter
 import pytest
 from PIL import Image
 
-from parsezen.application.queue_persistence import QueuePersistenceCoordinator
-from parsezen.cover_images import read_cover_image, validate_cover_image
-from parsezen.errors import ConversionError
-from parsezen.infrastructure.state_store import StateStore
-from parsezen.presentation.desktop_instance import DesktopInstance
-from parsezen.revision import RevisionKind, build_revision_draft
+from liblevo.application.queue_persistence import QueuePersistenceCoordinator
+from liblevo.cover_images import read_cover_image, validate_cover_image
+from liblevo.errors import ConversionError
+from liblevo.infrastructure.state_store import StateStore
+from liblevo.presentation.desktop_instance import DesktopInstance
+from liblevo.revision import RevisionKind, build_revision_draft
 
 
 def test_identical_repeated_document_needs_no_quadratic_alignment(monkeypatch) -> None:
     def unexpected_matcher(*args, **kwargs):
         raise AssertionError("Identical documents need no alignment")
 
-    monkeypatch.setattr("parsezen.revision.SequenceMatcher", unexpected_matcher)
+    monkeypatch.setattr("liblevo.revision.SequenceMatcher", unexpected_matcher)
     text = "A repeated paragraph.\n\n" * 4_000
     draft = build_revision_draft(text, text, kinds=frozenset({RevisionKind.CONTENT}))
     assert draft.render() == text
@@ -63,7 +63,7 @@ def test_cover_rejects_a_disguised_image_and_oversize_before_read(tmp_path, monk
         validate_cover_image("cover.png", b"not an image")
     path = tmp_path / "large.png"
     path.write_bytes(b"123456")
-    monkeypatch.setattr("parsezen.cover_images.MAX_COVER_BYTES", 5)
+    monkeypatch.setattr("liblevo.cover_images.MAX_COVER_BYTES", 5)
     monkeypatch.setattr(Path, "open", lambda *args, **kwargs: pytest.fail("Unbounded file read"))
     with pytest.raises(ValueError, match="20 MB"):
         read_cover_image(path)
@@ -92,13 +92,13 @@ def test_cover_accepts_passive_svg() -> None:
 
 
 def test_epub_physical_bound_precedes_zip_parsing(tmp_path, monkeypatch) -> None:
-    from parsezen.epub_conversion import read_editable_epub_package
+    from liblevo.epub_conversion import read_editable_epub_package
 
     path = tmp_path / "oversized.epub"
     path.write_bytes(b"123456")
-    monkeypatch.setattr("parsezen.epub_conversion.MAX_EPUB_FILE_BYTES", 5)
+    monkeypatch.setattr("liblevo.epub_conversion.MAX_EPUB_FILE_BYTES", 5)
     monkeypatch.setattr(
-        "parsezen.epub_conversion.is_zipfile", lambda _: pytest.fail("Parsed oversized ZIP")
+        "liblevo.epub_conversion.is_zipfile", lambda _: pytest.fail("Parsed oversized ZIP")
     )
     with pytest.raises(ConversionError, match="512 MB"):
         read_editable_epub_package(path)
@@ -133,7 +133,7 @@ def test_profile_lock_is_recovered_after_owner_process_crashes(qapp, tmp_path) -
 import os, sys
 from pathlib import Path
 from PySide6.QtCore import QCoreApplication
-from parsezen.presentation.desktop_instance import DesktopInstance
+from liblevo.presentation.desktop_instance import DesktopInstance
 app = QCoreApplication([])
 instance = DesktopInstance(Path(sys.argv[1]))
 assert instance.acquire()

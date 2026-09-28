@@ -2,27 +2,27 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.job_execution import JobExecutionController
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.review_finalization import (
+from liblevo.application.job_execution import JobExecutionController
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.review_finalization import (
     ReviewFinalizationCoordinator,
     ReviewFinalizationWarning,
 )
-from parsezen.domain.jobs import (
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentSource,
     JobConfiguration,
     JobStatus,
     ProcessingPlan,
 )
-from parsezen.domain.reviews import (
+from liblevo.domain.reviews import (
     ReviewChoice,
     ReviewKind,
     ReviewSession,
     ReviewStatus,
     ReviewUnit,
 )
-from parsezen.domain.stages import StageKind
+from liblevo.domain.stages import StageKind
 
 
 class ReviewRepository:

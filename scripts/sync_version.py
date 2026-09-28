@@ -9,8 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSIONED_FILES = (
-    Path("src/parsezen/__init__.py"),
-    Path("distribution/windows/Parsezen.iss"),
+    Path("src/liblevo/__init__.py"),
+    Path("distribution/windows/Liblevo.iss"),
     Path("distribution/windows/version_info.txt"),
     Path("README.md"),
     Path("docs/user-guide.md"),
@@ -37,9 +37,9 @@ def validate_release_tag(tag: str, version: str) -> None:
 def synchronized_text(path: Path, text: str, version: str) -> str:
     """Render one known generated file without touching the filesystem."""
     relative = path.as_posix()
-    if relative == "src/parsezen/__init__.py":
+    if relative == "src/liblevo/__init__.py":
         return re.sub(r'^__version__ = "[^"]+"$', f'__version__ = "{version}"', text, flags=re.M)
-    if relative == "distribution/windows/Parsezen.iss":
+    if relative == "distribution/windows/Liblevo.iss":
         return re.sub(
             r'^#define AppVersion "[^"]+"$',
             f'#define AppVersion "{version}"',
@@ -62,7 +62,7 @@ def synchronized_text(path: Path, text: str, version: str) -> str:
         return re.sub(r"\*\*Versión [^ ·*]+", f"**Versión {version}", text, count=1)
     if relative == "docs/user-guide.md":
         return re.sub(
-            r"(Esta guía describe Parsezen )\d+\.\d+\.\d+",
+            r"(Esta guía describe Liblevo )\d+\.\d+\.\d+",
             rf"\g<1>{version}",
             text,
             count=1,

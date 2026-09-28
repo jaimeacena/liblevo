@@ -3,13 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from parsezen.application.queue_persistence import (
+from liblevo.application.queue_persistence import (
     QueuePersistenceCoordinator,
     QueuePersistenceStatus,
 )
-from parsezen.domain.job_events import JobEvent, JobEventKind
-from parsezen.domain.jobs import DocumentJob, DocumentSource, JobConfiguration
-from parsezen.domain.stages import StageKind, StageStatus
+from liblevo.domain.job_events import JobEvent, JobEventKind
+from liblevo.domain.jobs import DocumentJob, DocumentSource, JobConfiguration
+from liblevo.domain.stages import StageKind, StageStatus
 
 
 @dataclass

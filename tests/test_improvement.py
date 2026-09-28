@@ -7,18 +7,18 @@ import re
 import httpx
 import pytest
 
-import parsezen.ai_markdown_safety as markdown_safety_module
-import parsezen.improvement as improvement_module
-import parsezen.local_ai_transport as transport_module
-import parsezen.translation_review_patches as review_patches_module
-from parsezen.cancellation import CancellationToken
-from parsezen.errors import (
+import liblevo.ai_markdown_safety as markdown_safety_module
+import liblevo.improvement as improvement_module
+import liblevo.local_ai_transport as transport_module
+import liblevo.translation_review_patches as review_patches_module
+from liblevo.cancellation import CancellationToken
+from liblevo.errors import (
     ImprovementError,
     LocalModelUnavailableError,
     ProcessingCancelledError,
     SettingsError,
 )
-from parsezen.improvement import (
+from liblevo.improvement import (
     MAX_CONSERVED_VALUES_PER_CHUNK,
     MAX_DOCUMENT_CHARACTERS,
     MAX_INPUT_CHARACTERS,
@@ -30,9 +30,9 @@ from parsezen.improvement import (
     improve_markdown,
     review_translation_markdown,
 )
-from parsezen.local_ai_client import LocalAiClient
-from parsezen.settings import AppSettings
-from parsezen.translation_quality import (
+from liblevo.local_ai_client import LocalAiClient
+from liblevo.settings import AppSettings
+from liblevo.translation_quality import (
     TranslationIssueKind,
     TranslationQualityIssue,
     TranslationQualityReport,
@@ -40,7 +40,7 @@ from parsezen.translation_quality import (
 )
 
 LOCAL_SETTINGS = AppSettings(
-    model="parsezen-local",
+    model="liblevo-local",
     context_window=8_192,
     timeout_seconds=30,
 )
@@ -2200,7 +2200,7 @@ def test_locked_value_fallback_translates_a_short_numeric_label() -> None:
     with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         translated = improvement_module._improve_translation_with_locked_values(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             build_instructions(ImprovementMode.TRANSLATE, "Español"),
             "Table 1 / 2 / 3",
@@ -2285,7 +2285,7 @@ def test_segmented_list_fallback_reuses_aligned_batching() -> None:
     with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         result = improvement_module._improve_translation_segments(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             build_instructions(ImprovementMode.TRANSLATE, "Español"),
             source,
@@ -2315,7 +2315,7 @@ def test_segmented_short_titles_receive_bounded_neighbor_context() -> None:
     with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         result = improvement_module._improve_translation_segments(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             build_instructions(ImprovementMode.TRANSLATE, "Español"),
             source,
@@ -2406,7 +2406,7 @@ def test_translation_expands_unambiguous_english_yo_possessive_only_for_the_mode
 def test_empty_private_image_reference_never_reaches_the_translation_model() -> None:
     source = (
         "This complete paragraph needs a faithful translation.\n\n"
-        "![](<__parsezen_resources__/pdf/page-0001-image-01.jpg>)"
+        "![](<__liblevo_resources__/pdf/page-0001-image-01.jpg>)"
     )
     calls = 0
 
@@ -2432,7 +2432,7 @@ def test_empty_private_image_reference_never_reaches_the_translation_model() -> 
 
     assert calls == 1
     assert "Este párrafo completo" in result
-    assert "![](<__parsezen_resources__/pdf/page-0001-image-01.jpg>)" in result
+    assert "![](<__liblevo_resources__/pdf/page-0001-image-01.jpg>)" in result
 
 
 def test_uppercase_normalization_does_not_change_protected_link_destinations() -> None:
@@ -3006,7 +3006,7 @@ def test_translation_segment_fallback_recurses_into_a_list_paragraph(
     with LocalAiClient() as client:
         translated = improvement_module._improve_translation_segments(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -3967,7 +3967,7 @@ def test_translation_fallback_recursively_splits_dense_protected_emphasis() -> N
     with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         translated = improvement_module._improve_translation_segments(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             build_instructions(ImprovementMode.TRANSLATE, "Español"),
             source,
@@ -4462,8 +4462,8 @@ def test_translation_validation_rejects_a_cached_instruction_placeholder_tag() -
 
 def test_translation_allows_private_image_alt_text_to_be_translated() -> None:
     improvement_module._validate_mode_output(
-        "![Cover](__parsezen_resources__/pdf/cover.jpg)",
-        "![Portada](__parsezen_resources__/pdf/cover.jpg)",
+        "![Cover](__liblevo_resources__/pdf/cover.jpg)",
+        "![Portada](__liblevo_resources__/pdf/cover.jpg)",
         ImprovementMode.TRANSLATE,
     )
 
@@ -4471,8 +4471,8 @@ def test_translation_allows_private_image_alt_text_to_be_translated() -> None:
 def test_translation_cannot_turn_a_private_image_into_a_link() -> None:
     with pytest.raises(ImprovementError, match="imagen privada"):
         improvement_module._validate_mode_output(
-            "![Cover](__parsezen_resources__/pdf/cover.jpg)",
-            "[Portada](__parsezen_resources__/pdf/cover.jpg)",
+            "![Cover](__liblevo_resources__/pdf/cover.jpg)",
+            "[Portada](__liblevo_resources__/pdf/cover.jpg)",
             ImprovementMode.TRANSLATE,
         )
 
@@ -4510,7 +4510,7 @@ def test_combined_mode_uses_one_operation_per_safe_fragment() -> None:
     assert all(request.url == "http://127.0.0.1:11434/api/chat" for request in requests)
     heading_payload = json.loads(requests[0].content)
     payload = json.loads(requests[1].content)
-    assert payload["model"] == "parsezen-local"
+    assert payload["model"] == "liblevo-local"
     assert payload["stream"] is True
     assert payload["think"] is False
     assert payload["options"] == {
@@ -4722,7 +4722,7 @@ def test_long_document_is_improved_in_ordered_structural_chunks() -> None:
 
 def test_tables_are_never_split_between_model_requests() -> None:
     long_paragraph = "palabra " * 995
-    table = "| Nombre | Estado |\n| --- | --- |\n| Parsezen | Listo |"
+    table = "| Nombre | Estado |\n| --- | --- |\n| Liblevo | Listo |"
     source = f"{long_paragraph}\n\n{table}\n\nTexto posterior."
     requests: list[str] = []
 
@@ -5077,7 +5077,7 @@ def test_translates_markdown_table_cells_without_changing_its_envelope(
     with LocalAiClient() as client:
         translated = improvement_module._translate_safe_markdown_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -5448,7 +5448,7 @@ def test_translation_preserves_a_failing_chunk_instead_of_losing_the_document() 
 
 
 def test_rejects_changes_to_inline_code() -> None:
-    source = "Ejecuta `python -m parsezen` localmente."
+    source = "Ejecuta `python -m liblevo` localmente."
 
     def respond(_request: httpx.Request) -> httpx.Response:
         changed = "Ejecuta `python app.py` localmente."
@@ -5480,7 +5480,7 @@ def test_rejects_an_html_document_wrapper_added_by_the_model(mode: ImprovementMo
     ("source", "changed", "expected_error"),
     [
         (
-            "| Nombre | Estado |\n| --- | --- |\n| Parsezen | Listo |",
+            "| Nombre | Estado |\n| --- | --- |\n| Liblevo | Listo |",
             "| Nombre | Estado |\n| --- | --- |",
             "tabla",
         ),
@@ -5558,12 +5558,12 @@ def test_translation_retries_when_the_first_response_stays_in_the_source_languag
     source = (
         "This deliberately long English paragraph contains enough natural language to verify "
         "that every passage reaches the requested language. It also confirms that the local "
-        "model gets one careful retry before Parsezen rejects an unsafe translation."
+        "model gets one careful retry before Liblevo rejects an unsafe translation."
     )
     spanish = (
         "Este párrafo deliberadamente largo contiene suficiente lenguaje natural para comprobar "
         "que cada pasaje llega al idioma solicitado. También confirma que el modelo local recibe "
-        "un reintento cuidadoso antes de que Parsezen rechace una traducción insegura."
+        "un reintento cuidadoso antes de que Liblevo rechace una traducción insegura."
     )
     requests: list[dict[str, object]] = []
 
@@ -6127,7 +6127,7 @@ def test_focused_table_cell_retries_one_damaged_protected_marker() -> None:
     with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         translated = improvement_module._translate_table_text_batch(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             build_instructions(ImprovementMode.TRANSLATE, "Español"),
             "73. Interpretation in houses 8-12",
@@ -6176,7 +6176,7 @@ def test_table_batch_keeps_numbering_outside_the_model_request() -> None:
     with LocalAiClient(transport=httpx.MockTransport(respond)) as client:
         translated = improvement_module._translate_table_text_batch(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             build_instructions(ImprovementMode.TRANSLATE, "Español"),
             source,
@@ -6205,7 +6205,7 @@ def test_table_batch_preserves_only_an_unaccepted_cell_for_focused_review(
     with LocalAiClient() as client:
         translated = improvement_module._translate_table_text_batch(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             build_instructions(ImprovementMode.TRANSLATE, "Español"),
             source,
@@ -6624,7 +6624,7 @@ def test_established_table_cells_do_not_repeat_a_whole_table_language_check(
     ) as client:
         translated = improvement_module._translate_safe_html_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -6657,7 +6657,7 @@ def test_table_translation_preserves_numeric_html_entities_byte_for_byte(
     with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -6690,7 +6690,7 @@ def test_html_table_keeps_a_source_internal_linebreak_without_false_failure(
     with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -6720,7 +6720,7 @@ def test_html_table_rejects_a_linebreak_added_to_a_single_line_cell(
     with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -6763,7 +6763,7 @@ def test_table_does_not_retry_a_translated_cell_on_a_short_language_false_positi
     with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -6822,7 +6822,7 @@ def test_focused_table_retry_removes_an_added_markup_wrapper(
     with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -6870,7 +6870,7 @@ def test_table_residual_uses_bilingual_single_cell_repair(
     with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -6940,7 +6940,7 @@ def test_split_html_table_nodes_receive_the_complete_parent_cell_as_context(
     with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -6977,7 +6977,7 @@ def test_table_residual_is_preserved_when_bilingual_repair_still_has_source_lang
     with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,
@@ -7007,7 +7007,7 @@ def test_table_keeps_and_escapes_source_angle_brackets(
     with LocalAiClient() as client:
         translated = improvement_module._translate_safe_html_table(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Translate",
             source,

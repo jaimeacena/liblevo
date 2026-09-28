@@ -9,8 +9,8 @@ py -3.12 -m venv .venv
 .venv/Scripts/python.exe -m pip check
 .venv/Scripts/python.exe -m ruff check .
 .venv/Scripts/python.exe -m ruff format --check .
-.venv/Scripts/python.exe -m mypy src/parsezen
-.venv/Scripts/python.exe -m pytest --cov=parsezen --cov-report=term-missing
+.venv/Scripts/python.exe -m mypy src/liblevo
+.venv/Scripts/python.exe -m pytest --cov=liblevo --cov-report=term-missing
 ```
 
 Para distribución Windows usar un entorno separado con `requirements-windows-cpu.lock`, siguiendo
@@ -41,8 +41,8 @@ segundo crea y prueba el ejecutable sin instalar la aplicación ni descargar un 
 ```
 
 El script construye primero en una carpeta candidata de `outputs/package`. Solo después del smoke
-mueve el candidato a `outputs/package/Parsezen`; si existía un paquete anterior, lo conserva como
-`Parsezen.previous-<identificador>`. Un fallo previo deja el paquete anterior en su lugar y conserva
+mueve el candidato a `outputs/package/Liblevo`; si existía un paquete anterior, lo conserva como
+`Liblevo.previous-<identificador>`. Un fallo previo deja el paquete anterior en su lugar y conserva
 los archivos temporales para diagnóstico. Tras un resultado correcto, limpia solo las carpetas
 temporales creadas por esa ejecución; la caché de PyInstaller se dirige a esas carpetas, no a la
 caché compartida de Windows. La opción `-InstallInnoSetup` requiere que Inno Setup ya esté

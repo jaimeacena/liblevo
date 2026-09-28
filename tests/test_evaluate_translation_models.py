@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 from scripts import evaluate_translation_models as evaluator
 
-from parsezen.glossary import protect_glossary
-from parsezen.local_models import OllamaConnection, OllamaModel, OllamaStatus
-from parsezen.settings import AppSettings
+from liblevo.glossary import protect_glossary
+from liblevo.local_models import OllamaConnection, OllamaModel, OllamaStatus
+from liblevo.settings import AppSettings
 
 
 @pytest.fixture

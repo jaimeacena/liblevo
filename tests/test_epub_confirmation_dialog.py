@@ -2,9 +2,9 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QDialog, QLabel
 
-from parsezen.domain.books import BookDocument, BookMetadata, BookSection
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.presentation.epub_confirmation_dialog import EpubConfirmationDialog
+from liblevo.domain.books import BookDocument, BookMetadata, BookSection
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.presentation.epub_confirmation_dialog import EpubConfirmationDialog
 
 
 def _book(tmp_path: Path) -> tuple[BookDocument, ArtifactStore]:

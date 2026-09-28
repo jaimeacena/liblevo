@@ -20,14 +20,14 @@ from tempfile import mkstemp
 from time import monotonic
 from typing import Any
 
-from parsezen.improvement import ImprovementMode, improve_markdown, review_translation_markdown
-from parsezen.local_models import (
+from liblevo.improvement import ImprovementMode, improve_markdown, review_translation_markdown
+from liblevo.local_models import (
     DEFAULT_CONTEXT_WINDOW,
     list_ollama_models,
     validate_ollama_model_id,
 )
-from parsezen.processing_metrics import BatchTelemetry, capture_batch_telemetry
-from parsezen.settings import MAX_CONTEXT_WINDOW, MIN_CONTEXT_WINDOW, AppSettings
+from liblevo.processing_metrics import BatchTelemetry, capture_batch_telemetry
+from liblevo.settings import MAX_CONTEXT_WINDOW, MIN_CONTEXT_WINDOW, AppSettings
 
 CORPUS_REVISION = "review-precision-synthetic-v1"
 BILINGUAL_CORPUS_REVISION = "bilingual-review-precision-synthetic-v1"
@@ -66,8 +66,8 @@ CORPUS: tuple[ReviewCase, ...] = (
     ReviewCase(
         "rps-v1-001",
         "clean",
-        "# Registro\n\nEl archivo conserva `parsezen:1` y el enlace [local](https://example.test).",
-        "# Registro\n\nEl archivo conserva `parsezen:1` y el enlace [local](https://example.test).",
+        "# Registro\n\nEl archivo conserva `liblevo:1` y el enlace [local](https://example.test).",
+        "# Registro\n\nEl archivo conserva `liblevo:1` y el enlace [local](https://example.test).",
     ),
     ReviewCase(
         "rps-v1-002",

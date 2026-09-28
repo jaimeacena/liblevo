@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from parsezen.pdf_conversion import convert_pdf_document
+from liblevo.pdf_conversion import convert_pdf_document
 from pdf_canaries import write_canary_suite
 
 

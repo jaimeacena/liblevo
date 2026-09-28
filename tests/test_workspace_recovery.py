@@ -5,15 +5,15 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
-from parsezen.application.job_execution import JobExecutionController
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.workspace_recovery import (
+from liblevo.application.job_execution import JobExecutionController
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.workspace_recovery import (
     SOURCE_UNAVAILABLE_MESSAGE,
     recover_workspace,
     source_is_unchanged,
 )
-from parsezen.document_model import ConvertedResource
-from parsezen.domain.jobs import (
+from liblevo.document_model import ConvertedResource
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentJob,
     DocumentSource,
@@ -21,13 +21,13 @@ from parsezen.domain.jobs import (
     JobStatus,
     OutputConfiguration,
 )
-from parsezen.domain.source_identity import sha256_file
-from parsezen.domain.stages import StageKind
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.infrastructure.result_snapshots import ResultSnapshotStore
-from parsezen.infrastructure.state_store import StateStore
-from parsezen.processing import ProcessResult
-from parsezen.settings import AppSettings
+from liblevo.domain.source_identity import sha256_file
+from liblevo.domain.stages import StageKind
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.infrastructure.result_snapshots import ResultSnapshotStore
+from liblevo.infrastructure.state_store import StateStore
+from liblevo.processing import ProcessResult
+from liblevo.settings import AppSettings
 
 
 @dataclass

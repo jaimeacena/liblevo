@@ -6,17 +6,17 @@ from threading import Event
 
 from PySide6.QtCore import QTimer
 
-import parsezen.presentation.preflight_runner as runner_module
-from parsezen.application.run_preparation import PreparedQueueRun
-from parsezen.application.scheduler import QueueRunPlan, RunMode
-from parsezen.cancellation import CancellationToken
-from parsezen.domain.jobs import (
+import liblevo.presentation.preflight_runner as runner_module
+from liblevo.application.run_preparation import PreparedQueueRun
+from liblevo.application.scheduler import QueueRunPlan, RunMode
+from liblevo.cancellation import CancellationToken
+from liblevo.domain.jobs import (
     AIProfileConfiguration,
     DocumentJob,
     DocumentSource,
     JobConfiguration,
 )
-from parsezen.presentation.preflight_runner import ForecastBatch, PreflightRunner
+from liblevo.presentation.preflight_runner import ForecastBatch, PreflightRunner
 
 
 def test_forecast_cache_key_distinguishes_specialized_ai_profiles(tmp_path: Path) -> None:

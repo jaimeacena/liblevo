@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from PySide6.QtCore import QRunnable
 
-import parsezen.presentation.local_ai_controller as controller_module
-from parsezen.component_readiness import ReadinessStatus
-from parsezen.errors import LocalModelUnavailableError
-from parsezen.local_ai_policy import ComponentCapability
-from parsezen.local_models import LocalAISetupCancelled, OllamaConnection, OllamaStatus
-from parsezen.presentation.local_ai_controller import LocalAIAction, LocalAIController
+import liblevo.presentation.local_ai_controller as controller_module
+from liblevo.component_readiness import ReadinessStatus
+from liblevo.errors import LocalModelUnavailableError
+from liblevo.local_ai_policy import ComponentCapability
+from liblevo.local_models import LocalAISetupCancelled, OllamaConnection, OllamaStatus
+from liblevo.presentation.local_ai_controller import LocalAIAction, LocalAIController
 
 
 class ImmediatePool:

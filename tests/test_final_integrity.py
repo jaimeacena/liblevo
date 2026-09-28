@@ -6,10 +6,10 @@ from zipfile import ZipFile
 
 import pytest
 
-from parsezen.document_model import ConvertedResource
-from parsezen.epub_builder import EpubBookMetadata, build_epub, iter_epub_text_documents
-from parsezen.errors import FinalIntegrityError
-from parsezen.final_integrity import (
+from liblevo.document_model import ConvertedResource
+from liblevo.epub_builder import EpubBookMetadata, build_epub, iter_epub_text_documents
+from liblevo.errors import FinalIntegrityError
+from liblevo.final_integrity import (
     IntegrityLedger,
     binary_integrity_capture,
     text_integrity_capture,
@@ -49,7 +49,7 @@ def test_markdown_capture_allows_only_expected_publication_rewrites(
 ) -> None:
     expected = (
         "<!-- PZDOC EPUB ANCHOR section-one -->\n\n"
-        "![Figura](__parsezen_resources__/images/figure.png)\n\n"
+        "![Figura](__liblevo_resources__/images/figure.png)\n\n"
         "![Remota](https://example.com/original.png)\n"
     )
     staged = tmp_path / "result.md"
@@ -99,7 +99,7 @@ def test_binary_capture_checks_bytes_and_the_container_before_publication(
 def test_epub_payload_report_detects_a_resource_changed_after_rendering() -> None:
     resource = ConvertedResource(PurePosixPath("figure.png"), b"image", "image/png")
     built = build_epub(
-        "# Capítulo\n\n![Figura](__parsezen_resources__/figure.png)\n",
+        "# Capítulo\n\n![Figura](__liblevo_resources__/figure.png)\n",
         (resource,),
         EpubBookMetadata("Libro", "es"),
     )

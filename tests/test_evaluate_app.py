@@ -106,8 +106,8 @@ def test_empty_catalog_never_adopts_existing_corpus(tmp_path):
 
 
 def test_ai_evaluation_requires_local_privacy_before_model_metadata(monkeypatch):
-    import parsezen.local_ai_policy as policy
-    import parsezen.local_models as models
+    import liblevo.local_ai_policy as policy
+    import liblevo.local_models as models
 
     monkeypatch.setattr(models, "is_ollama_local_only_configured", lambda: False)
 
@@ -120,9 +120,9 @@ def test_ai_evaluation_requires_local_privacy_before_model_metadata(monkeypatch)
 
 
 def test_ai_evaluation_uses_only_the_verified_fixed_component(monkeypatch):
-    import parsezen.local_ai_policy as policy
-    import parsezen.local_models as models
-    from parsezen.component_catalog import PRODUCT_COMPONENT_CATALOG
+    import liblevo.local_ai_policy as policy
+    import liblevo.local_models as models
+    from liblevo.component_catalog import PRODUCT_COMPONENT_CATALOG
 
     monkeypatch.setattr(models, "is_ollama_local_only_configured", lambda: True)
     inspected = []

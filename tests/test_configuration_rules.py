@@ -2,12 +2,12 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.configuration_rules import (
+from liblevo.application.configuration_rules import (
     ConfigurationSection,
     configuration_issues,
     requires_ai,
 )
-from parsezen.domain.jobs import (
+from liblevo.domain.jobs import (
     AIProfileConfiguration,
     CoverStrategy,
     DocumentFormat,
@@ -95,7 +95,7 @@ def test_ai_translation_requires_the_global_model_even_in_standard_plan() -> Non
 
 
 def test_fixed_component_snapshots_satisfy_phase_specific_models() -> None:
-    from parsezen.component_catalog import (
+    from liblevo.component_catalog import (
         REVIEW_COMPONENT_MANIFEST,
         TRANSLATION_COMPONENT_MANIFEST,
     )
@@ -130,7 +130,7 @@ def test_tampered_component_snapshot_is_rejected() -> None:
             components=LocalAIPolicySnapshot(
                 translation=LocalAIComponentSnapshot(
                     "local-ai-policy-v1",
-                    "parsezen/hymt-translation:Q4_K_M",
+                    "liblevo/hymt-translation:Q4_K_M",
                     "0" * 64,
                     8_192,
                 )

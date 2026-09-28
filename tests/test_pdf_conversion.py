@@ -9,11 +9,11 @@ from types import SimpleNamespace
 
 import pytest
 
-import parsezen.pdf_conversion as pdf_conversion_module
-from parsezen.cancellation import CancellationToken
-from parsezen.conversion import convert_file
-from parsezen.errors import ConversionError, ProcessingCancelledError
-from parsezen.pdf_conversion import (
+import liblevo.pdf_conversion as pdf_conversion_module
+from liblevo.cancellation import CancellationToken
+from liblevo.conversion import convert_file
+from liblevo.errors import ConversionError, ProcessingCancelledError
+from liblevo.pdf_conversion import (
     PdfPageRange,
     PdfProgressPhase,
     PdfQualityReport,
@@ -22,7 +22,7 @@ from parsezen.pdf_conversion import (
     render_pdf_page_cover,
     resolve_pdf_page_range,
 )
-from parsezen.pdf_layout import _PdfLine
+from liblevo.pdf_layout import _PdfLine
 
 
 def _margin_line(page_number: int, text: str, *, top: float = 20.0) -> _PdfLine:
@@ -493,7 +493,7 @@ def test_preserves_a_meaningful_pdf_image_as_a_portable_resource(tmp_path: Path)
     assert resource.media_type == "image/jpeg"
     assert resource.relative_path.as_posix() == "pdf/page-0001-image-01.jpg"
     assert resource.content.startswith(b"\xff\xd8")
-    assert "__parsezen_resources__/pdf/page-0001-image-01.jpg" in converted.markdown
+    assert "__liblevo_resources__/pdf/page-0001-image-01.jpg" in converted.markdown
     assert (PdfProgressPhase.IMAGES, 1, 1) in progress
 
 
@@ -515,7 +515,7 @@ def test_preserves_a_full_page_table_image_beside_its_ocr_text(tmp_path: Path) -
 
     assert len(converted.resources) == 1
     assert ocr_table in converted.markdown
-    assert "__parsezen_resources__/pdf/page-0001-image-01.jpg" in converted.markdown
+    assert "__liblevo_resources__/pdf/page-0001-image-01.jpg" in converted.markdown
 
 
 def test_does_not_duplicate_a_reliable_reflow_table_as_a_full_page_image() -> None:
@@ -593,7 +593,7 @@ def test_preserves_a_curve_based_pdf_illustration_as_a_portable_resource(
 
     assert len(converted.resources) == 1
     assert converted.resources[0].content.startswith(b"\xff\xd8")
-    assert "__parsezen_resources__/pdf/page-0001-image-01.jpg" in converted.markdown
+    assert "__liblevo_resources__/pdf/page-0001-image-01.jpg" in converted.markdown
 
 
 def test_extracts_pdf_headings_text_and_links(tmp_path: Path) -> None:
@@ -603,7 +603,7 @@ def test_extracts_pdf_headings_text_and_links(tmp_path: Path) -> None:
     reports: list[PdfQualityReport] = []
     markdown = convert_pdf_document(source, on_quality_report=reports.append).markdown
 
-    assert "# Parsezen PDF" in markdown
+    assert "# Liblevo PDF" in markdown
     assert "Faithful paragraph." in markdown
     assert "All letters remain." in markdown
     assert "history continues." in markdown
@@ -679,7 +679,7 @@ def test_extracts_only_the_selected_pdf_pages_and_keeps_original_page_numbers(
 
     assert "Second page" in markdown
     assert "More faithful content." in markdown
-    assert "Parsezen PDF" not in markdown
+    assert "Liblevo PDF" not in markdown
     assert "Faithful paragraph." not in markdown
 
 
@@ -765,7 +765,7 @@ def test_pdf_native_extraction_resumes_from_encrypted_page_payloads(
 
     assert extracted_pages == 1
     assert set(checkpoints) == {1, 2}
-    assert "# Parsezen PDF" in markdown
+    assert "# Liblevo PDF" in markdown
     assert "Second page" in markdown
     assert "Official site" in markdown
 
@@ -1038,7 +1038,7 @@ def test_forced_ocr_analyzes_all_selected_pages_as_full_images(
 
     assert requested == [({2}, {2})]
     assert "Second page" in markdown
-    assert "Parsezen PDF" not in markdown
+    assert "Liblevo PDF" not in markdown
 
 
 def test_forced_ocr_returns_a_reviewable_warning_for_a_decorative_page(
@@ -3876,7 +3876,7 @@ def test_fragmented_graphic_labels_are_not_reflowed_beside_the_page_image() -> N
 
     assert "A0" not in markdown
     assert "A9" not in markdown
-    assert "__parsezen_resources__/pdf/page-0001-image-01.jpg" in markdown
+    assert "__liblevo_resources__/pdf/page-0001-image-01.jpg" in markdown
 
 
 def test_sparse_raster_cover_uses_its_image_instead_of_unverified_ocr() -> None:
@@ -3909,7 +3909,7 @@ def test_sparse_raster_cover_uses_its_image_instead_of_unverified_ocr() -> None:
     )
 
     assert "BROKEN COVER OCR" not in markdown
-    assert "__parsezen_resources__/pdf/page-0001-image-01.jpg" in markdown
+    assert "__liblevo_resources__/pdf/page-0001-image-01.jpg" in markdown
 
 
 def test_unresolved_raster_table_uses_the_scan_instead_of_losing_a_diacritic() -> None:
@@ -3953,7 +3953,7 @@ def test_unresolved_raster_table_uses_the_scan_instead_of_losing_a_diacritic() -
     )
 
     assert "sunaph" not in markdown.casefold()
-    assert "__parsezen_resources__/pdf/page-0001-image-01.jpg" in markdown
+    assert "__liblevo_resources__/pdf/page-0001-image-01.jpg" in markdown
     assert any("grafía" in issue.message for issue in issues)
 
 
@@ -4004,7 +4004,7 @@ def test_unresolved_text_line_uses_its_visual_crop_and_keeps_reliable_prose() ->
     assert "sunaphê" not in markdown
     assert "sunaphe" not in markdown
     assert "Reliable prose remains reflowable." in markdown
-    assert "__parsezen_resources__/pdf/page-0001-image-01.jpg" in markdown
+    assert "__liblevo_resources__/pdf/page-0001-image-01.jpg" in markdown
     assert any("recortes visuales" in issue.message for issue in issues)
 
 
@@ -4195,7 +4195,7 @@ def test_unresolved_raster_table_accepts_plain_ocr_as_disagreement_evidence() ->
 
     assert "sunaph" not in markdown.casefold()
     assert "Reliable prose outside the table." in markdown
-    assert "__parsezen_resources__/pdf/page-0001-image-01.jpg" in markdown
+    assert "__liblevo_resources__/pdf/page-0001-image-01.jpg" in markdown
     assert any("grafía" in issue.message for issue in issues)
 
 
@@ -4358,7 +4358,7 @@ def test_complex_raster_table_keeps_outside_prose_and_uses_only_its_visual_crop(
 
     assert "Unreliable row association" not in markdown
     assert "Reliable prose after the table." in markdown
-    assert "__parsezen_resources__/pdf/page-0001-image-01.jpg" in markdown
+    assert "__liblevo_resources__/pdf/page-0001-image-01.jpg" in markdown
     assert any("asociación o grafía" in issue.message for issue in issues)
 
 
@@ -4392,7 +4392,7 @@ def test_final_sparse_raster_uses_the_preserved_back_cover_as_authority() -> Non
     )
 
     assert "uncertain OCR" not in markdown
-    assert "__parsezen_resources__/pdf/page-0704-image-01.jpg" in markdown
+    assert "__liblevo_resources__/pdf/page-0704-image-01.jpg" in markdown
 
 
 def test_places_a_discrete_image_between_the_heading_and_following_body() -> None:
@@ -4439,7 +4439,7 @@ def test_places_a_discrete_image_between_the_heading_and_following_body() -> Non
         page_images={1: (resource,)},
     )
 
-    image_marker = "![](<__parsezen_resources__/pdf/page-0001-image-01.jpg>)"
+    image_marker = "![](<__liblevo_resources__/pdf/page-0001-image-01.jpg>)"
     assert markdown.index("ARIES I: THE AXE") < markdown.index(image_marker)
     assert markdown.index(image_marker) < markdown.index("The body begins")
 
@@ -6964,17 +6964,17 @@ def _write_structured_pdf(destination: Path) -> None:
     page_one_content = b"""BT
 /F2 24 Tf
 72 700 Td
-(Parsezen PDF) Tj
+(Liblevo PDF) Tj
 ET
 BT
 /F2 24 Tf
 72.4 700.2 Td
-(Parsezen PDF) Tj
+(Liblevo PDF) Tj
 ET
 BT
 /F2 24 Tf
 72.8 700.4 Td
-(Parsezen PDF) Tj
+(Liblevo PDF) Tj
 ET
 BT
 /F1 12 Tf

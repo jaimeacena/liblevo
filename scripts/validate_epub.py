@@ -104,7 +104,7 @@ def run_epubcheck(
         raise ValueError(f"No se encontró EPUBCheck en {jar_path}.")
 
     _require_pinned_version(java_path, jar_path, timeout_seconds)
-    with tempfile.TemporaryDirectory(prefix="parsezen-epubcheck-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="liblevo-epubcheck-") as temporary:
         report_path = Path(temporary) / "report.json"
         command = [
             str(java_path),
@@ -168,7 +168,7 @@ def _configured_jar_path(argument: str | None) -> Path | None:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description=("Comprueba que los EPUB generados por Parsezen no introduzcan errores nuevos.")
+        description=("Comprueba que los EPUB generados por Liblevo no introduzcan errores nuevos.")
     )
     parser.add_argument("original", type=Path, help="EPUB original usado como referencia")
     parser.add_argument("generated", type=Path, nargs="+", help="EPUB generado que se comprobará")

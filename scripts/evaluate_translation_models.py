@@ -22,19 +22,19 @@ from typing import Any
 
 import httpx
 
-from parsezen.errors import ParsezenError
-from parsezen.glossary import GlossaryEntry, protect_glossary, validate_glossary
-from parsezen.improvement import ImprovementMode, improve_markdown
-from parsezen.local_models import (
+from liblevo.errors import LiblevoError
+from liblevo.glossary import GlossaryEntry, protect_glossary, validate_glossary
+from liblevo.improvement import ImprovementMode, improve_markdown
+from liblevo.local_models import (
     DEFAULT_CONTEXT_WINDOW,
     OllamaConnection,
     OllamaStatus,
     discover_ollama,
     is_cloud_model_id,
 )
-from parsezen.processing_metrics import BatchTelemetry, capture_batch_telemetry
-from parsezen.settings import MAX_CONTEXT_WINDOW, MIN_CONTEXT_WINDOW, AppSettings, validate_settings
-from parsezen.translation_quality import (
+from liblevo.processing_metrics import BatchTelemetry, capture_batch_telemetry
+from liblevo.settings import MAX_CONTEXT_WINDOW, MIN_CONTEXT_WINDOW, AppSettings, validate_settings
+from liblevo.translation_quality import (
     TranslationQualityError,
     build_translation_quality_report,
     find_untranslated_source_sentences,
@@ -45,7 +45,7 @@ from parsezen.translation_quality import (
 
 CORPUS_PATH = Path(__file__).with_name("translation_evaluation_corpus_v1.json")
 REPORT_SCHEMA_VERSION = 1
-CORPUS_VERSION = "parsezen-translation-en-es-v1"
+CORPUS_VERSION = "liblevo-translation-en-es-v1"
 MAX_MODELS = 16
 MAX_REPETITIONS = 10
 TARGET_LANGUAGE = "Español"
@@ -257,7 +257,7 @@ def write_report(destination: Path, report: dict[str, Any]) -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         descriptor, temporary_name = mkstemp(
             dir=destination.parent,
-            prefix=".parsezen-translation-evaluation-",
+            prefix=".liblevo-translation-evaluation-",
             suffix=".tmp",
             text=True,
         )
@@ -548,7 +548,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             timeout_seconds=arguments.timeout,
         )
         write_report(arguments.report, report)
-    except (ParsezenError, OSError, RuntimeError, ValueError) as exc:
+    except (LiblevoError, OSError, RuntimeError, ValueError) as exc:
         print(f"Evaluación no ejecutada: {type(exc).__name__}", file=sys.stderr)
         return 2
     print("Informe comparativo local creado.")
