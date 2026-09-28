@@ -6,7 +6,7 @@ import json
 import httpx
 import pytest
 
-from parsezen.local_ai_policy import (
+from liblevo.local_ai_policy import (
     POLICY_VERSION,
     ComponentCapability,
     ComponentManifest,

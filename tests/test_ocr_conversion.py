@@ -6,11 +6,11 @@ from types import SimpleNamespace
 import pytest
 from PIL import Image
 
-import parsezen.ocr_conversion as ocr_module
-import parsezen.ocr_executor as executor_module
-from parsezen.cancellation import CancellationToken
-from parsezen.errors import ConversionError, ProcessingCancelledError
-from parsezen.ocr_conversion import (
+import liblevo.ocr_conversion as ocr_module
+import liblevo.ocr_executor as executor_module
+from liblevo.cancellation import CancellationToken
+from liblevo.errors import ConversionError, ProcessingCancelledError
+from liblevo.ocr_conversion import (
     OCR_LANGUAGES,
     _clean_ocr_markdown,
     _convert_pdf_pages_in_process,
@@ -363,7 +363,7 @@ def test_uses_an_ascii_file_path_for_unicode_pdf_paths(
     result = _convert_pdf_pages_in_process(source, {1})
 
     assert result == {1: "Texto reconocido."}
-    assert received_sources == [("parsezen.pdf", b"%PDF-local-content")]
+    assert received_sources == [("liblevo.pdf", b"%PDF-local-content")]
 
 
 def test_recovers_missing_ocr_pages_from_rendered_images(

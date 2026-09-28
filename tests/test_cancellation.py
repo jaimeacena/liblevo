@@ -1,7 +1,7 @@
 import pytest
 
-from parsezen.cancellation import CancellationToken, check_cancelled
-from parsezen.errors import ProcessingCancelledError
+from liblevo.cancellation import CancellationToken, check_cancelled
+from liblevo.errors import ProcessingCancelledError
 
 
 def test_cancellation_token_is_thread_safe_and_idempotent() -> None:

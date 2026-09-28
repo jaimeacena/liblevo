@@ -5,7 +5,7 @@ from typing import cast
 
 import pytest
 
-from parsezen.component_catalog import (
+from liblevo.component_catalog import (
     PRODUCT_COMPONENT_CATALOG,
     REVIEW_ARTIFACT_SIZE_BYTES,
     REVIEW_COMPONENT_ENTRY,
@@ -30,13 +30,13 @@ from parsezen.component_catalog import (
     TRANSLATION_UPSTREAM_SIZE_BYTES,
     product_component_catalog,
 )
-from parsezen.component_readiness import (
+from liblevo.component_readiness import (
     ComponentCatalogEntry,
     ReadinessStatus,
     evaluate_component_catalog,
 )
-from parsezen.local_ai_policy import ComponentCapability, ComponentVerification
-from parsezen.local_models import HardwareComponent, LocalHardware
+from liblevo.local_ai_policy import ComponentCapability, ComponentVerification
+from liblevo.local_models import HardwareComponent, LocalHardware
 
 _READINESS_CATALOG = cast(
     "Mapping[ComponentCapability | HardwareComponent | str, ComponentCatalogEntry]",
@@ -57,7 +57,7 @@ def test_product_catalog_contains_the_frozen_translation_and_review_components()
 def test_review_manifest_identity_is_frozen_without_private_corpus_content() -> None:
     manifest = REVIEW_COMPONENT_MANIFEST
     assert manifest.capability is ComponentCapability.REVIEW
-    assert manifest.model_name == "parsezen/lfm-review:Q6_K"
+    assert manifest.model_name == "liblevo/lfm-review:Q6_K"
     assert manifest.ollama_digest == (
         "9cb653ed8242477adeefaf25923540efdd29a45942a8c001b76bbfedb1422e80"
     )
@@ -130,7 +130,7 @@ def test_review_hardware_gate_is_conservative_and_cpu_compatible() -> None:
 def test_translation_manifest_identity_and_generation_contract_are_frozen() -> None:
     manifest = TRANSLATION_COMPONENT_MANIFEST
     assert manifest.capability is ComponentCapability.TRANSLATION
-    assert manifest.model_name == TRANSLATION_MODEL_NAME == "parsezen/hymt-translation:Q4_K_M"
+    assert manifest.model_name == TRANSLATION_MODEL_NAME == "liblevo/hymt-translation:Q4_K_M"
     assert manifest.ollama_digest == (
         "bb608502d6eb617216e27f34d16662f121be32af3ea5c0854333d2d5908ca12c"
     )

@@ -3,8 +3,8 @@ requires = ["setuptools==83.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "parsezen"
-version = "1.2.0"
+name = "liblevo"
+version = "1.3.0"
 description = "Aplicación local para convertir, revisar y traducir documentos en Markdown y EPUB"
 readme = "README.md"
 license = "MIT"
@@ -42,24 +42,24 @@ packaging = [
 ]
 
 [project.gui-scripts]
-parsezen = "parsezen.__main__:main"
+liblevo = "liblevo.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-"parsezen.licenses" = ["*.txt"]
+"liblevo.licenses" = ["*.txt"]
 
 [tool.setuptools.data-files]
-"share/parsezen/assets/branding/generated" = [
-    "assets/branding/generated/parsezen-logo-light.png",
-    "assets/branding/generated/parsezen-logo-light@2x.png",
-    "assets/branding/generated/parsezen-logo-dark.png",
-    "assets/branding/generated/parsezen-logo-dark@2x.png",
-    "assets/branding/generated/parsezen-symbol-1024.png",
-    "assets/branding/generated/parsezen-app-icon.ico",
+"share/liblevo/assets/branding/generated" = [
+    "assets/branding/generated/liblevo-logo-light.png",
+    "assets/branding/generated/liblevo-logo-light@2x.png",
+    "assets/branding/generated/liblevo-logo-dark.png",
+    "assets/branding/generated/liblevo-logo-dark@2x.png",
+    "assets/branding/generated/liblevo-symbol-1024.png",
+    "assets/branding/generated/liblevo-app-icon.ico",
 ]
-"share/parsezen/assets/fonts" = [
+"share/liblevo/assets/fonts" = [
     "assets/fonts/Inter.ttf",
     "assets/fonts/Inter-OFL.txt",
 ]
@@ -98,7 +98,7 @@ warn_unreachable = true
 warn_unused_ignores = true
 
 [tool.coverage.run]
-source = ["parsezen"]
+source = ["liblevo"]
 
 [tool.coverage.report]
 fail_under = 88

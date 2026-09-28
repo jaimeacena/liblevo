@@ -2,7 +2,7 @@ from uuid import uuid4
 
 import pytest
 
-from parsezen.domain.books import (
+from liblevo.domain.books import (
     BookDocument,
     BookMetadata,
     BookResource,

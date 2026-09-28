@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from parsezen.domain.stages import (
+from liblevo.domain.stages import (
     InvalidStageTransitionError,
     StageAvailability,
     StageKind,

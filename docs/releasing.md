@@ -1,4 +1,4 @@
-# Publicar una versión de Parsezen
+# Publicar una versión de Liblevo
 
 Este documento describe la entrega gratuita mediante GitHub Releases. El instalador no utiliza
 firma Authenticode y Windows puede mostrar `Editor desconocido`; el checksum y la atestación de
@@ -21,13 +21,13 @@ GitHub permiten comprobar integridad y procedencia, pero no eliminan ese aviso.
 python scripts/sync_version.py --check
 python -m ruff check .
 python -m ruff format --check .
-python -m mypy src/parsezen
-python -m pytest --cov=parsezen --cov-report=term-missing --cov-fail-under=88
+python -m mypy src/liblevo
+python -m pytest --cov=liblevo --cov-report=term-missing --cov-fail-under=88
 python -m pip check
 python scripts/audit_dependencies.py requirements.lock --ignore-vuln CVE-2026-54499 --allow-blocked-accelerate
 ```
 
-La excepción `CVE-2026-54499` corresponde a la versión de Stanza fijada por Argos 1.11.0. Parsezen
+La excepción `CVE-2026-54499` corresponde a la versión de Stanza fijada por Argos 1.11.0. Liblevo
 fuerza MiniSBD antes de cargar cualquier paquete y no usa ese segmentador, pero la excepción debe
 revisarse en cada release y retirarse en cuanto Argos permita una versión corregida compatible.
 La opción de Accelerate verifica su versión y ejecuta el rechazo de los cargadores desactivados;
@@ -43,8 +43,8 @@ incluidos instalación, arranque, actualización, desinstalación y conservació
 El workflow `Paquete de Windows` instala únicamente `requirements-windows-cpu.lock`, genera
 `THIRD-PARTY-NOTICES.txt`, construye el paquete PyInstaller, ejecuta `--package-smoke` y crea:
 
-- `Parsezen-Setup-X.Y.Z.exe`;
-- `Parsezen-Setup-X.Y.Z.exe.sha256`;
+- `Liblevo-Setup-X.Y.Z.exe`;
+- `Liblevo-Setup-X.Y.Z.exe.sha256`;
 - `python-environment.json`.
 
 Una ejecución manual crea un candidato. Una etiqueta `vX.Y.Z` solo se acepta si su commit pertenece

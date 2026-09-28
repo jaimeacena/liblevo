@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.domain.job_events import (
+from liblevo.domain.job_events import (
     JOB_EVENT_PAYLOAD_VERSION,
     JobEvent,
     JobEventKind,
 )
-from parsezen.domain.jobs import DocumentJob, DocumentSource, JobConfiguration
-from parsezen.domain.stages import StageKind, StageStatus
-from parsezen.infrastructure.state_store import StateStore
+from liblevo.domain.jobs import DocumentJob, DocumentSource, JobConfiguration
+from liblevo.domain.stages import StageKind, StageStatus
+from liblevo.infrastructure.state_store import StateStore
 
 
 def _job(tmp_path: Path) -> DocumentJob:

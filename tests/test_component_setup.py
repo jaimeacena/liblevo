@@ -4,10 +4,10 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QScrollArea
 
-from parsezen.component_readiness import ComponentReadiness, ReadinessStatus
-from parsezen.local_ai_policy import ComponentCapability
-from parsezen.local_models import LocalHardware
-from parsezen.presentation.component_setup import ComponentSetupDialog
+from liblevo.component_readiness import ComponentReadiness, ReadinessStatus
+from liblevo.local_ai_policy import ComponentCapability
+from liblevo.local_models import LocalHardware
+from liblevo.presentation.component_setup import ComponentSetupDialog
 
 
 def test_component_setup_renders_only_the_two_fixed_capabilities(qtbot) -> None:
@@ -100,9 +100,9 @@ def test_component_setup_stacks_status_without_clipping_at_320px(qtbot) -> None:
 
 
 def test_component_setup_fits_the_internal_page_at_320px(qtbot) -> None:
-    from parsezen.presentation.workspace import ParsezenWorkspace
+    from liblevo.presentation.workspace import LiblevoWorkspace
 
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     setup = ComponentSetupDialog(states={})
     qtbot.addWidget(workspace)
     workspace.resize(320, 720)
@@ -133,8 +133,8 @@ def test_injected_states_are_replaced_without_accepting_unknown_capabilities(qtb
 
 
 def test_catalog_injection_uses_the_pure_evaluator_without_network_or_download(qtbot) -> None:
-    from parsezen.component_catalog import REVIEW_COMPONENT_ENTRY
-    from parsezen.local_ai_policy import ComponentVerification
+    from liblevo.component_catalog import REVIEW_COMPONENT_ENTRY
+    from liblevo.local_ai_policy import ComponentVerification
 
     dialog = ComponentSetupDialog(
         catalog={ComponentCapability.REVIEW: REVIEW_COMPONENT_ENTRY},
@@ -159,7 +159,7 @@ def test_catalog_injection_uses_the_pure_evaluator_without_network_or_download(q
 
 
 def test_component_setup_presentation_has_no_model_recommendation_or_manual_tag_flow() -> None:
-    source = Path("src/parsezen/presentation/component_setup.py").read_text(encoding="utf-8")
+    source = Path("src/liblevo/presentation/component_setup.py").read_text(encoding="utf-8")
 
     assert "model_recommendations" not in source
     assert "llmfit" not in source
@@ -167,11 +167,11 @@ def test_component_setup_presentation_has_no_model_recommendation_or_manual_tag_
 
 
 def test_local_ai_workflow_opens_the_fixed_component_view(qtbot, tmp_path) -> None:
-    from parsezen.presentation.component_setup import ComponentSetupDialog
-    from parsezen.presentation.main_window import ParsezenMainWindow
-    from parsezen.settings import AppSettings
+    from liblevo.presentation.component_setup import ComponentSetupDialog
+    from liblevo.presentation.main_window import LiblevoMainWindow
+    from liblevo.settings import AppSettings
 
-    window = ParsezenMainWindow(
+    window = LiblevoMainWindow(
         settings=AppSettings(),
         auto_discover_ai=False,
         state_path=tmp_path / "workspace.sqlite3",
@@ -190,11 +190,11 @@ def test_local_ai_workflow_opens_the_fixed_component_view(qtbot, tmp_path) -> No
 def test_prepared_component_readiness_propagates_verified_manifest_identity(
     qtbot, tmp_path
 ) -> None:
-    from parsezen.component_catalog import TRANSLATION_COMPONENT_MANIFEST
-    from parsezen.presentation.main_window import ParsezenMainWindow
-    from parsezen.settings import AppSettings
+    from liblevo.component_catalog import TRANSLATION_COMPONENT_MANIFEST
+    from liblevo.presentation.main_window import LiblevoMainWindow
+    from liblevo.settings import AppSettings
 
-    window = ParsezenMainWindow(
+    window = LiblevoMainWindow(
         settings=AppSettings(),
         auto_discover_ai=False,
         state_path=tmp_path / "workspace.sqlite3",
@@ -217,7 +217,7 @@ def test_prepared_component_readiness_propagates_verified_manifest_identity(
     snapshot = window._local_ai_policy.translation  # noqa: SLF001
     assert snapshot is not None
     assert snapshot.policy_version == TRANSLATION_COMPONENT_MANIFEST.policy_version
-    assert snapshot.model == "parsezen/hymt-gguf:Q4_K_M"
+    assert snapshot.model == "liblevo/hymt-gguf:Q4_K_M"
     assert snapshot.digest == TRANSLATION_COMPONENT_MANIFEST.upstream_sha256
     assert snapshot.context_window == TRANSLATION_COMPONENT_MANIFEST.context_window
     assert window._local_ai_policy.review is None  # noqa: SLF001

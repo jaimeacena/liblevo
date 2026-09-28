@@ -301,10 +301,10 @@ def runtime_identity() -> dict[str, Any]:
 def _ai_settings(enabled: bool) -> tuple[Any, dict[str, Any]]:
     if not enabled:
         return None, {}
-    from parsezen.component_catalog import PRODUCT_COMPONENT_CATALOG
-    from parsezen.local_ai_policy import ComponentCapability, verify_component_manifest
-    from parsezen.local_models import is_ollama_local_only_configured
-    from parsezen.settings import AppSettings
+    from liblevo.component_catalog import PRODUCT_COMPONENT_CATALOG
+    from liblevo.local_ai_policy import ComponentCapability, verify_component_manifest
+    from liblevo.local_models import is_ollama_local_only_configured
+    from liblevo.settings import AppSettings
 
     if not is_ollama_local_only_configured():
         raise EvaluationError("Ollama necesita su protección local antes de evaluar documentos.")
@@ -366,11 +366,11 @@ def _inventory(root: Path) -> dict[str, str]:
 
 
 def _process(case: dict[str, Any], output: Path, checkpoints: Path) -> Any:
-    from parsezen.improvement_contracts import ImprovementMode
-    from parsezen.pdf_conversion import PdfPageRange
-    from parsezen.pipeline.contracts import ProcessRequest
-    from parsezen.processing import process_document
-    from parsezen.workflow import OutputFormat
+    from liblevo.improvement_contracts import ImprovementMode
+    from liblevo.pdf_conversion import PdfPageRange
+    from liblevo.pipeline.contracts import ProcessRequest
+    from liblevo.processing import process_document
+    from liblevo.workflow import OutputFormat
 
     options = case["options"]
     settings, _ = _ai_settings(bool(options["translate_to"]))
@@ -819,7 +819,7 @@ def write_report(path: Path, summary: dict[str, Any]) -> None:
     document = (
         '<!doctype html><html lang="es"><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        "<title>Parsezen · Informe de evaluación</title><style>"
+        "<title>Liblevo · Informe de evaluación</title><style>"
         "body{font:16px/1.5 system-ui;max-width:1100px;margin:30px auto;padding:16px}"
         "table{border-collapse:collapse}td,th{padding:10px;border:1px solid #bac7ce}"
         ".table{overflow:auto}</style><h1>Evaluación comparativa</h1>"

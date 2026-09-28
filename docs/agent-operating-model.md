@@ -1,6 +1,6 @@
 # Modelo operativo para agentes
 
-Este documento es la puerta de entrada para trabajar en Parsezen. No describe cada detalle del
+Este documento es la puerta de entrada para trabajar en Liblevo. No describe cada detalle del
 producto: explica cómo reconstruir su estado, decidir con evidencia, realizar el cambio mínimo y
 dejar el sistema más comprensible que antes. El estado y el orden de trabajo actuales viven en
 [`work-plan.md`](work-plan.md); el diseño implementado, en [`architecture.md`](architecture.md).
@@ -61,7 +61,7 @@ solo la arquitectura implementada.
 
 ## Torre de abstracciones
 
-Parsezen se entiende de arriba abajo como una única cadena de compromisos:
+Liblevo se entiende de arriba abajo como una única cadena de compromisos:
 
 ```text
 Misión y prioridades

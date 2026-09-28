@@ -2,9 +2,9 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
-from parsezen.application.outcome_summary import build_outcome_summary
-from parsezen.domain.estimates import DurationEstimate
-from parsezen.domain.jobs import (
+from liblevo.application.outcome_summary import build_outcome_summary
+from liblevo.domain.estimates import DurationEstimate
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentJob,
     DocumentSource,
@@ -14,18 +14,18 @@ from parsezen.domain.jobs import (
     ReviewSignal,
     TranslationConfiguration,
 )
-from parsezen.domain.outcomes import EarlyCheckReport
-from parsezen.domain.reviews import (
+from liblevo.domain.outcomes import EarlyCheckReport
+from liblevo.domain.reviews import (
     ReviewChoice,
     ReviewKind,
     ReviewSession,
     ReviewUnit,
 )
-from parsezen.domain.stages import StageKind
-from parsezen.final_integrity import FinalIntegrityReport, IntegrityLedger
-from parsezen.pdf_conversion import PdfQualityReport, PdfReviewIssue
-from parsezen.processing import ProcessResult
-from parsezen.translation_quality import LinguisticReviewCoverage, LinguisticReviewMode
+from liblevo.domain.stages import StageKind
+from liblevo.final_integrity import FinalIntegrityReport, IntegrityLedger
+from liblevo.pdf_conversion import PdfQualityReport, PdfReviewIssue
+from liblevo.processing import ProcessResult
+from liblevo.translation_quality import LinguisticReviewCoverage, LinguisticReviewMode
 
 
 def test_outcome_summary_keeps_integrity_incidents_and_review_separate() -> None:

@@ -1,13 +1,13 @@
 from PySide6.QtWidgets import QMessageBox
 
-from parsezen.presentation.local_ai_controller import LocalAIController
-from parsezen.presentation.local_ai_workflow import LocalAIWorkflow
-from parsezen.presentation.workspace import ParsezenWorkspace
-from parsezen.settings import AppSettings
+from liblevo.presentation.local_ai_controller import LocalAIController
+from liblevo.presentation.local_ai_workflow import LocalAIWorkflow
+from liblevo.presentation.workspace import LiblevoWorkspace
+from liblevo.settings import AppSettings
 
 
 def test_setup_failure_reaches_the_person_and_restores_workflow_state(qtbot, monkeypatch) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     controller = LocalAIController(workspace)
     workflow = LocalAIWorkflow(
@@ -36,10 +36,10 @@ def test_setup_failure_reaches_the_person_and_restores_workflow_state(qtbot, mon
 
 
 def test_stopped_runtime_can_be_started_from_component_page(qtbot, monkeypatch) -> None:
-    from parsezen.local_models import OllamaConnection, OllamaStatus
-    from parsezen.presentation.local_ai_controller import LocalAIAction
+    from liblevo.local_models import OllamaConnection, OllamaStatus
+    from liblevo.presentation.local_ai_controller import LocalAIAction
 
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     controller = LocalAIController(workspace)
     monkeypatch.setattr(controller, "discover", lambda _model: False)
@@ -73,11 +73,11 @@ def test_stopped_runtime_can_be_started_from_component_page(qtbot, monkeypatch) 
 
 
 def test_preparing_ai_preserves_pending_choices_and_updates_open_editor(qtbot, tmp_path):
-    from parsezen.component_catalog import TRANSLATION_COMPONENT_MANIFEST as manifest
-    from parsezen.domain.jobs import LocalAIComponentSnapshot, LocalAIPolicySnapshot
-    from parsezen.presentation.main_window import ParsezenMainWindow
+    from liblevo.component_catalog import TRANSLATION_COMPONENT_MANIFEST as manifest
+    from liblevo.domain.jobs import LocalAIComponentSnapshot, LocalAIPolicySnapshot
+    from liblevo.presentation.main_window import LiblevoMainWindow
 
-    window = ParsezenMainWindow(auto_discover_ai=False, state_path=tmp_path / "state.sqlite3")
+    window = LiblevoMainWindow(auto_discover_ai=False, state_path=tmp_path / "state.sqlite3")
     qtbot.addWidget(window)
     source = tmp_path / "sample.txt"
     source.write_text("Example document.", encoding="utf-8")

@@ -21,22 +21,22 @@ from scripts.validate_real_workflows import (
     write_synthetic_pdf,
 )
 
-from parsezen.direct_models import DIRECT_TRANSLATION_MODEL_ID
-from parsezen.glossary import GlossaryEntry
-from parsezen.improvement import ImprovementMode
-from parsezen.local_models import OllamaConnection, OllamaModel, OllamaStatus
-from parsezen.pdf_conversion import PdfPageRange, PdfQualityReport, PdfReviewIssue, convert_pdf
-from parsezen.processing import (
+from liblevo.direct_models import DIRECT_TRANSLATION_MODEL_ID
+from liblevo.glossary import GlossaryEntry
+from liblevo.improvement import ImprovementMode
+from liblevo.local_models import OllamaConnection, OllamaModel, OllamaStatus
+from liblevo.pdf_conversion import PdfPageRange, PdfQualityReport, PdfReviewIssue, convert_pdf
+from liblevo.processing import (
     OutputFormat,
     ProcessResult,
     ProcessStage,
     ProcessTelemetry,
     StageTelemetry,
 )
-from parsezen.processing_metrics import AiOperationTelemetry, BatchTelemetry
-from parsezen.revision import RevisionKind, build_revision_draft
-from parsezen.settings import AppSettings
-from parsezen.translation_quality import (
+from liblevo.processing_metrics import AiOperationTelemetry, BatchTelemetry
+from liblevo.revision import RevisionKind, build_revision_draft
+from liblevo.settings import AppSettings
+from liblevo.translation_quality import (
     TranslationIssueKind,
     TranslationQualityIssue,
     TranslationQualityReport,

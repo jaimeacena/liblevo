@@ -8,16 +8,16 @@ from zipfile import ZipFile
 
 import pytest
 
-from parsezen.application.book_editor import BookEditor, book_source_fingerprint
-from parsezen.application.job_execution import JobExecutionController
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.review_finalization import (
+from liblevo.application.book_editor import BookEditor, book_source_fingerprint
+from liblevo.application.job_execution import JobExecutionController
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.review_finalization import (
     FinalizedReview,
     ReviewFinalizationCoordinator,
 )
-from parsezen.application.review_publication import ReviewPublicationCoordinator
-from parsezen.domain.books import BookDocument
-from parsezen.domain.jobs import (
+from liblevo.application.review_publication import ReviewPublicationCoordinator
+from liblevo.domain.books import BookDocument
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentSource,
     JobConfiguration,
@@ -25,11 +25,11 @@ from parsezen.domain.jobs import (
     OutputConfiguration,
     ProcessingPlan,
 )
-from parsezen.domain.reviews import ReviewSession
-from parsezen.domain.stages import StageKind
-from parsezen.epub_builder import EpubBookMetadata, build_epub
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.processing import ProcessResult
+from liblevo.domain.reviews import ReviewSession
+from liblevo.domain.stages import StageKind
+from liblevo.epub_builder import EpubBookMetadata, build_epub
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.processing import ProcessResult
 
 
 def reversible(payload: bytes) -> bytes:

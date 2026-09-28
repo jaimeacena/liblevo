@@ -1,4 +1,4 @@
-# Aceptación antes de publicar Parsezen
+# Aceptación antes de publicar Liblevo
 
 Esta lista es el contrato de publicación, no el estado del proyecto ni una narración de desarrollo.
 El orden actual de trabajo vive en [`work-plan.md`](work-plan.md) y el protocolo de evidencia en
@@ -110,15 +110,15 @@ un borrador no equivale a una inspección confirmada.
 ```powershell
 python -m ruff check .
 python -m ruff format --check .
-python -m mypy src/parsezen
+python -m mypy src/liblevo
 python -m pytest
 python -m pytest -m acceptance
-python -m pytest --cov=parsezen --cov-report=term-missing --cov-fail-under=88
+python -m pytest --cov=liblevo --cov-report=term-missing --cov-fail-under=88
 python -m pytest tests/test_visual_regressions.py
 python scripts/sync_version.py --check
 ```
 
-`Validar Parsezen.cmd` ejecuta la aceptación corta sin documentos privados ni IA real.
+`Validar Liblevo.cmd` ejecuta la aceptación corta sin documentos privados ni IA real.
 
 - Markdown dividido conserva todo el preámbulo, incluidos rótulos como `Advertencia: ...`, y no
   corta dentro de bloques de código ni citas. La prueba incluye referencias de página y metadatos.
@@ -299,7 +299,7 @@ python scripts/sync_version.py --check
   cancelados; ofrece actividad cuando existen resultados, errores o cancelaciones consultables.
 - Los avisos largos crecen sin recortar texto; una pausa y una interrupción usan copias distintas. Al
   retirar trabajos, el aviso se recalcula con los supervivientes y desaparece con el último.
-- Las notificaciones de Windows aparecen al terminar o requerir atención solo con Parsezen
+- Las notificaciones de Windows aparecen al terminar o requerir atención solo con Liblevo
   minimizado o inactivo.
 - Actividad reciente conserva como máximo 20 intentos, no contiene texto documental, puede abrir
   resultado o carpeta y se borra sin eliminar ningún documento. En escritorio distribuye lista y
@@ -416,7 +416,7 @@ python scripts/sync_version.py --check
   según el contexto. El adverbio inglés `once` no se confunde con el número español y la prosa puede
   reformular cantidades sin activar una falsa alarma global.
 - La retraducción enfocada protege el cardinal de un rótulo mediante un marcador ligado a ambos
-  idiomas: el modelo recibe una cantidad opaca y Parsezen restaura `SEVEN` como `SIETE`, no como la
+  idiomas: el modelo recibe una cantidad opaca y Liblevo restaura `SEVEN` como `SIETE`, no como la
   palabra inglesa original ni como otro valor.
 - Una duración numérica de un título conserva la concordancia: `30 DAY CHALLENGE` puede traducirse como
   `DESAFÍO DE 30 DÍAS`, pero no como `DESAFÍO DE 30 DÍA`, incluso con énfasis Markdown intermedio.
@@ -540,7 +540,7 @@ python scripts/sync_version.py --check
   reparto fijo.
 - El progreso global cuenta sesiones materializadas: fases anteriores completas, fase actual parcial
   y fases futuras a cero; a 320 px usa una etiqueta corta sin recorte.
-- Guardar y cerrar Parsezen recupera la misma unidad y edición al volver.
+- Guardar y cerrar Liblevo recupera la misma unidad y edición al volver.
 - Reabrir una revisión salta las decisiones ya guardadas, empieza en el primer caso pendiente e
   indica por separado cuántas prioridades críticas o altas quedan.
 - `Alt+O`, `Alt+P` y `Ctrl+Intro` permiten decidir y avanzar sin abandonar el teclado.
@@ -630,7 +630,7 @@ python scripts/sync_version.py --check
    demás siguen procesándose.
 3. Configura un EPUB Revisado cuya propuesta estructural no cambie el texto y comprueba que aparece
    la confirmación ligera sin forzar el editor completo.
-4. Guarda el editor para continuar después, reinicia Parsezen y verifica que conserva estructura,
+4. Guarda el editor para continuar después, reinicia Liblevo y verifica que conserva estructura,
    metadatos, contenido e imágenes.
 5. Genera el EPUB definitivo y comprueba que la fila solo pasa a completada después de que el
    archivo pueda abrirse.
@@ -705,10 +705,16 @@ el mismo intervalo y terminar con EPUBCheck 5.3.0 sin errores nuevos.
 
 ## Distribución
 
-- Recursos generados coinciden con el manifiesto de branding.
+- Recursos generados coinciden con el manifiesto de branding; los logos tienen transparencia
+  y maestros SVG reproducibles. Los iconos de Windows incluyen tamaños de 16 a 256 px.
+- Claro conserva papel `#F7F4EE`, tinta `#172E36`, teal `#176B63` y selección menta `#DDEFE8`;
+  oscuro usa la adaptación contrastada. Texto y botones mantienen 4,5:1; borde y foco, 3:1.
+- Al actualizar desde Liblevo se reutilizan perfil y preferencia de tema; se conserva el AppId
+  del instalador y la carpeta anterior. Los lanzadores antiguos siguen abriendo Liblevo.
 - El ejecutable usa el símbolo, y la cabecera/README el logo completo.
-- Metadatos, accesos directos e instalador dicen `Parsezen`.
-- No quedan nombres, módulos, URLs ni recursos de identidades anteriores.
+- Ventanas, avisos, metadatos, accesos nuevos e instalador dicen `Liblevo`.
+- La identidad visible es Liblevo. Los identificadores de perfil, cifrado, marcadores, paquete
+  Python y URLs reales de `liblevo` permanecen estables por compatibilidad.
 - El paquete x64 arranca en un perfil limpio de Windows.
 - Un paquete local con el motor GGUF integrado comprueba primero Python, versiones y Vulkan;
   construye aparte, supera `--package-smoke` antes de sustituir el candidato visible y conserva el

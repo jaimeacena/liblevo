@@ -25,7 +25,7 @@ def test_runtime_benchmark_uses_only_synthetic_content(
         benchmark_module,
         "ArtifactStore",
         lambda root: __import__(
-            "parsezen.infrastructure.artifact_store",
+            "liblevo.infrastructure.artifact_store",
             fromlist=["ArtifactStore"],
         ).ArtifactStore(root, protect=lambda payload: payload, unprotect=lambda payload: payload),
     )

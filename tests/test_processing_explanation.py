@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from parsezen.application.processing_explanation import (
+from liblevo.application.processing_explanation import (
     HumanReviewPolicy,
     linguistic_review_summary,
     processing_flow,
     processing_flow_steps,
     processing_pass_summary,
 )
-from parsezen.domain.jobs import (
+from liblevo.domain.jobs import (
     DocumentFormat,
     JobConfiguration,
     OutputConfiguration,
@@ -17,8 +17,8 @@ from parsezen.domain.jobs import (
     TranslationConfiguration,
     TranslationMethod,
 )
-from parsezen.domain.stages import StageKind
-from parsezen.translation_quality import LinguisticReviewCoverage, LinguisticReviewMode
+from liblevo.domain.stages import StageKind
+from liblevo.translation_quality import LinguisticReviewCoverage, LinguisticReviewMode
 
 
 @pytest.mark.parametrize(

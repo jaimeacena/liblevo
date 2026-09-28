@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
-import parsezen.ocr_executor as executor_module
-import parsezen.ocr_protocol as protocol_module
-from parsezen.cancellation import CancellationToken
-from parsezen.errors import ConversionError, ProcessingCancelledError
-from parsezen.ocr_protocol import (
+import liblevo.ocr_executor as executor_module
+import liblevo.ocr_protocol as protocol_module
+from liblevo.cancellation import CancellationToken
+from liblevo.errors import ConversionError, ProcessingCancelledError
+from liblevo.ocr_protocol import (
     PROTOCOL_VERSION,
     OcrProtocolError,
     normalized_page_numbers,

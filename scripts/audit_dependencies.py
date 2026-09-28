@@ -220,8 +220,8 @@ def validate_accelerate_mitigation(versions: dict[str, str]) -> None:
 
     if versions.get("accelerate") != "1.14.0" or version("accelerate") != "1.14.0":
         raise ValueError("La excepción de Accelerate requiere revalidar esta versión.")
-    from parsezen.errors import ConversionError
-    from parsezen.ocr_dependency_guard import protect_accelerate_loaders
+    from liblevo.errors import ConversionError
+    from liblevo.ocr_dependency_guard import protect_accelerate_loaders
 
     protect_accelerate_loaders()
     import accelerate

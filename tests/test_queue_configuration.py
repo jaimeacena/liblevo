@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.queue_configuration import QueueConfigurationService
-from parsezen.domain.jobs import (
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.queue_configuration import QueueConfigurationService
+from liblevo.domain.jobs import (
     AIProfileConfiguration,
     CoverStrategy,
     DocumentFormat,
@@ -15,7 +15,7 @@ from parsezen.domain.jobs import (
     OutputConfiguration,
     PageRangeConfiguration,
 )
-from parsezen.domain.stages import StageKind, StageStatus
+from liblevo.domain.stages import StageKind, StageStatus
 
 
 def _job(path: Path, job_id: str, order: int) -> DocumentJob:

@@ -72,11 +72,11 @@ def _license_texts(distribution: metadata.Distribution) -> list[tuple[str, str]]
 
 def render_notices() -> str:
     sections = [
-        "Parsezen — avisos de software de terceros",
+        "Liblevo — avisos de software de terceros",
         "=" * 48,
         "",
         "Generado automáticamente desde el entorno exacto de empaquetado.",
-        "Este documento no concede una licencia sobre el código propio de Parsezen.",
+        "Este documento no concede una licencia sobre el código propio de Liblevo.",
     ]
     installed = sorted(
         metadata.distributions(),

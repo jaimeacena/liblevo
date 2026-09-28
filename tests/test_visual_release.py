@@ -8,21 +8,21 @@ from PySide6.QtCore import QPoint, QRect, Qt
 from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import QApplication, QLabel
 
-from parsezen.application.book_editor import create_book_from_markdown
-from parsezen.component_readiness import ReadinessStatus
-from parsezen.domain.jobs import DocumentJob, DocumentSource, JobConfiguration
-from parsezen.domain.outcomes import OutcomeSummary
-from parsezen.epub_builder import EpubBookMetadata
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.local_ai_policy import ComponentCapability
-from parsezen.local_models import OllamaStatus
-from parsezen.presentation.activity_view import ActivityView
-from parsezen.presentation.component_setup import ComponentSetupDialog
-from parsezen.presentation.design_system import ThemeMode, apply_parsezen_theme, contrast_ratio
-from parsezen.presentation.epub_confirmation_dialog import EpubConfirmationDialog
-from parsezen.presentation.job_configuration_dialog import JobConfigurationDialog
-from parsezen.presentation.workspace import ParsezenWorkspace
-from parsezen.recent_activity import RecentJob, RecentJobStatus
+from liblevo.application.book_editor import create_book_from_markdown
+from liblevo.component_readiness import ReadinessStatus
+from liblevo.domain.jobs import DocumentJob, DocumentSource, JobConfiguration
+from liblevo.domain.outcomes import OutcomeSummary
+from liblevo.epub_builder import EpubBookMetadata
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.local_ai_policy import ComponentCapability
+from liblevo.local_models import OllamaStatus
+from liblevo.presentation.activity_view import ActivityView
+from liblevo.presentation.component_setup import ComponentSetupDialog
+from liblevo.presentation.design_system import ThemeMode, apply_liblevo_theme, contrast_ratio
+from liblevo.presentation.epub_confirmation_dialog import EpubConfirmationDialog
+from liblevo.presentation.job_configuration_dialog import JobConfigurationDialog
+from liblevo.presentation.workspace import LiblevoWorkspace
+from liblevo.recent_activity import RecentJob, RecentJobStatus
 
 
 def _confirmation(tmp_path: Path, *, warning: bool = True, language: str = "es"):
@@ -40,7 +40,7 @@ def _confirmation(tmp_path: Path, *, warning: bool = True, language: str = "es")
 
 
 def _embed(qtbot, view, width, height):
-    shell = ParsezenWorkspace()
+    shell = LiblevoWorkspace()
     qtbot.addWidget(shell)
     view.setWindowFlags(Qt.WindowType.Widget)
     shell.resize(width, height)
@@ -53,7 +53,7 @@ def _embed(qtbot, view, width, height):
 @pytest.mark.parametrize("theme", [ThemeMode.LIGHT, ThemeMode.DARK])
 @pytest.mark.parametrize("size", [(320, 520), (320, 720), (768, 600), (911, 520)])
 def test_confirmation_keeps_readable_actions_and_scrollable_fields(qtbot, tmp_path, theme, size):
-    apply_parsezen_theme(QApplication.instance(), theme)
+    apply_liblevo_theme(QApplication.instance(), theme)
     view = _confirmation(tmp_path)
     shell = _embed(qtbot, view, *size)
     buttons = (view.save_later_button, view.editor_button, view.publish_button)
@@ -80,10 +80,10 @@ def test_open_confirmation_remains_legible_after_live_theme_change(
     qtbot, tmp_path, initial, target
 ):
     app = QApplication.instance()
-    apply_parsezen_theme(app, initial)
+    apply_liblevo_theme(app, initial)
     view = _confirmation(tmp_path)
     shell = _embed(qtbot, view, 1000, 700)
-    apply_parsezen_theme(app, target)
+    apply_liblevo_theme(app, target)
     for widget in app.allWidgets():
         refresh = getattr(widget, "apply_theme", None)
         if callable(refresh):
@@ -159,7 +159,7 @@ def test_language_selector_preserves_existing_regional_tag(qtbot, tmp_path):
 def test_short_configuration_and_setup_scroll_without_overlapping_cards(
     qtbot, tmp_path, kind, theme
 ):
-    apply_parsezen_theme(QApplication.instance(), theme)
+    apply_liblevo_theme(QApplication.instance(), theme)
     if kind == "configuration":
         source = tmp_path / "document.pdf"
         source.write_bytes(b"test")

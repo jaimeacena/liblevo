@@ -7,15 +7,15 @@ from zipfile import ZipFile
 
 import pytest
 
-import parsezen.output as output_module
-import parsezen.pipeline.prepare as prepare_module
-import parsezen.pipeline.transform as transform_module
-import parsezen.processing as processing_module
-from parsezen.cancellation import CancellationToken
-from parsezen.document_model import ConvertedDocument, ConvertedResource
-from parsezen.domain.jobs import ReviewRecommendation, ReviewSignal
-from parsezen.epub_builder import EPUB_CHAPTER_MARKER, EpubBookMetadata, build_epub
-from parsezen.errors import (
+import liblevo.output as output_module
+import liblevo.pipeline.prepare as prepare_module
+import liblevo.pipeline.transform as transform_module
+import liblevo.processing as processing_module
+from liblevo.cancellation import CancellationToken
+from liblevo.document_model import ConvertedDocument, ConvertedResource
+from liblevo.domain.jobs import ReviewRecommendation, ReviewSignal
+from liblevo.epub_builder import EPUB_CHAPTER_MARKER, EpubBookMetadata, build_epub
+from liblevo.errors import (
     ConversionError,
     ImprovementError,
     OutputWriteError,
@@ -24,16 +24,16 @@ from parsezen.errors import (
     SettingsError,
     UnexpectedProcessingError,
 )
-from parsezen.glossary import GlossaryEntry, glossary_fingerprint
-from parsezen.improvement import ImprovementMode
-from parsezen.pdf_conversion import (
+from liblevo.glossary import GlossaryEntry, glossary_fingerprint
+from liblevo.improvement import ImprovementMode
+from liblevo.pdf_conversion import (
     PdfPageRange,
     PdfProgressPhase,
     PdfQualityReport,
     PdfReviewIssue,
 )
-from parsezen.pipeline.transform import review_scope_fingerprint
-from parsezen.processing import (
+from liblevo.pipeline.transform import review_scope_fingerprint
+from liblevo.processing import (
     OutputFormat,
     ProcessRequest,
     ProcessResult,
@@ -43,16 +43,16 @@ from parsezen.processing import (
     review_completed_result,
     validate_process_request,
 )
-from parsezen.revision import RevisionDecision
-from parsezen.semantic_blocks import (
+from liblevo.revision import RevisionDecision
+from liblevo.semantic_blocks import (
     DocumentTerm,
     SemanticBlock,
     SemanticDocument,
     SemanticRole,
     terminology_fingerprint,
 )
-from parsezen.settings import AppSettings
-from parsezen.translation_quality import (
+from liblevo.settings import AppSettings
+from liblevo.translation_quality import (
     LinguisticReviewMode,
     TranslationIssueKind,
     TranslationQualityReport,
@@ -470,7 +470,7 @@ def test_each_processing_stage_is_logged_only_once(
     source.write_text("Local notes.", encoding="utf-8")
     stages: list[ProcessStage] = []
 
-    with caplog.at_level(logging.INFO, logger="parsezen.processing"):
+    with caplog.at_level(logging.INFO, logger="liblevo.processing"):
         process_document(
             ProcessRequest(
                 source,
@@ -497,7 +497,7 @@ def test_process_document_propagates_one_opaque_attempt_id_to_lifecycle_logs(
     source.write_text("Local notes.", encoding="utf-8")
     attempt_id = "c" * 32
 
-    with caplog.at_level(logging.INFO, logger="parsezen.processing"):
+    with caplog.at_level(logging.INFO, logger="liblevo.processing"):
         process_document(
             ProcessRequest(source, convert_to_markdown=True),
             attempt_id=attempt_id,
@@ -689,7 +689,7 @@ def test_unexpected_failures_get_a_private_diagnostic_reference(
 
     logged = caplog.text
     assert "incident=" in logged
-    assert "module=parsezen.processing" in logged
+    assert "module=liblevo.processing" in logged
     assert "function=process_document" in logged
     assert "line=" in logged
     assert private_sentinel not in logged
@@ -698,7 +698,7 @@ def test_unexpected_failures_get_a_private_diagnostic_reference(
 
 def test_processes_txt_and_reports_real_stages(tmp_path: Path) -> None:
     source = tmp_path / "document.txt"
-    source.write_text("Parsezen content", encoding="utf-8")
+    source.write_text("Liblevo content", encoding="utf-8")
     stages: list[ProcessStage] = []
 
     result = process_document(
@@ -707,7 +707,7 @@ def test_processes_txt_and_reports_real_stages(tmp_path: Path) -> None:
     )
 
     assert result.final_path == tmp_path / "document.md"
-    assert result.final_path.read_text(encoding="utf-8") == "Parsezen content"
+    assert result.final_path.read_text(encoding="utf-8") == "Liblevo content"
     assert result.raw_markdown_path is None
     assert result.review_original_path is None
     assert result.final_integrity_report is not None
@@ -1218,7 +1218,7 @@ def test_offline_translation_applies_and_restores_the_glossary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     source = tmp_path / "notes.txt"
-    source.write_text("Parsezen", encoding="utf-8")
+    source.write_text("Liblevo", encoding="utf-8")
     captured: list[str] = []
 
     def translate(text: str, *_args: object, **_kwargs: object) -> str:
@@ -1236,12 +1236,12 @@ def test_offline_translation_applies_and_restores_the_glossary(
             source,
             convert_to_markdown=True,
             offline_translation_language="Español",
-            glossary=(GlossaryEntry("Parsezen", "Parsezen revisado"),),
+            glossary=(GlossaryEntry("Liblevo", "Liblevo revisado"),),
         )
     )
 
     assert "PZDOCGLOSSARY" in captured[0]
-    assert result.final_path.read_text(encoding="utf-8") == "Parsezen revisado"
+    assert result.final_path.read_text(encoding="utf-8") == "Liblevo revisado"
 
 
 def test_offline_translation_content_review_compares_source_and_target(
@@ -1662,7 +1662,7 @@ def test_avoids_overwriting_and_keeps_existing_output(tmp_path: Path) -> None:
     assert result.final_path == tmp_path / "document-2.md"
     assert existing.read_text(encoding="utf-8") == "Existing content"
     assert result.final_path.read_text(encoding="utf-8") == "New content"
-    assert list(tmp_path.glob(".parsezen-*.tmp")) == []
+    assert list(tmp_path.glob(".liblevo-*.tmp")) == []
 
 
 def test_markdown_source_is_never_overwritten(tmp_path: Path) -> None:
@@ -1769,7 +1769,7 @@ def test_pdf_can_produce_a_reflowable_epub_with_preserved_images(
         callback = kwargs["on_pdf_progress"]
         callback(PdfProgressPhase.IMAGES, 1, 1)
         return ConvertedDocument(
-            "# Illustrated book\n\n![Figure](__parsezen_resources__/pdf/figure.jpg)",
+            "# Illustrated book\n\n![Figure](__liblevo_resources__/pdf/figure.jpg)",
             (image,),
         )
 
@@ -1982,9 +1982,9 @@ def test_pdf_first_selected_page_can_become_the_epub_cover(
         "convert_document",
         lambda *_args, **_kwargs: ConvertedDocument(
             "# Book\n\n"
-            "![](<__parsezen_resources__/pdf/page-0007-image-01.jpg>)\n\n"
+            "![](<__liblevo_resources__/pdf/page-0007-image-01.jpg>)\n\n"
             "Content\n\n"
-            "![](<__parsezen_resources__/pdf/page-0008-image-01.jpg>)\n",
+            "![](<__liblevo_resources__/pdf/page-0008-image-01.jpg>)\n",
             (
                 ConvertedResource(
                     PurePosixPath("pdf/page-0007-image-01.jpg"),
@@ -2049,9 +2049,9 @@ def test_pdf_first_page_cover_remains_removed_after_applying_review(
         "convert_document",
         lambda *_args, **_kwargs: ConvertedDocument(
             "# Book\n\n"
-            "![](<__parsezen_resources__/pdf/page-0007-image-01.jpg>)\n\n"
+            "![](<__liblevo_resources__/pdf/page-0007-image-01.jpg>)\n\n"
             "Content\n\n"
-            "![](<__parsezen_resources__/pdf/page-0008-image-01.jpg>)\n",
+            "![](<__liblevo_resources__/pdf/page-0008-image-01.jpg>)\n",
             (
                 ConvertedResource(
                     PurePosixPath("pdf/page-0007-image-01.jpg"),
@@ -3112,7 +3112,7 @@ def test_direct_epub_translation_does_not_publish_before_review_preparation_succ
 
     assert writer_calls == 0
     assert not (tmp_path / "book.es.epub").exists()
-    assert not tuple(tmp_path.glob(".parsezen-epub-prepare-*.epub"))
+    assert not tuple(tmp_path.glob(".liblevo-epub-prepare-*.epub"))
 
 
 def test_direct_epub_translation_can_remove_content_images_but_keep_the_cover(
@@ -3158,7 +3158,7 @@ def test_direct_epub_translation_can_remove_content_images_but_keep_the_cover(
         processing_module,
         "convert_epub",
         lambda *_args, **_kwargs: ConvertedDocument(
-            "# Libro\n\n![Figura](__parsezen_resources__/images/figure.png)\n",
+            "# Libro\n\n![Figura](__liblevo_resources__/images/figure.png)\n",
             (resource,),
         ),
     )
@@ -3244,7 +3244,7 @@ def test_direct_epub_translation_can_normalize_styles_while_retaining_images(
         processing_module,
         "convert_epub",
         lambda *_args, **_kwargs: ConvertedDocument(
-            "# Libro\n\n![Figura](__parsezen_resources__/images/figure.png)\n",
+            "# Libro\n\n![Figura](__liblevo_resources__/images/figure.png)\n",
             (resource,),
         ),
     )
@@ -3596,13 +3596,13 @@ def test_pdf_ocr_checkpoint_encoding_preserves_empty_results() -> None:
 
 
 def test_pdf_ocr_checkpoint_rejects_a_stale_tagged_version() -> None:
-    stale = "\x1eParsezen PDF OCR v2\x1fRecognized"
+    stale = "\x1eLiblevo PDF OCR v2\x1fRecognized"
 
     assert prepare_module.decode_pdf_ocr_checkpoint(stale) is None
 
 
 def test_pdf_ocr_retries_old_empty_results_but_retains_valid_text() -> None:
-    old_header = "\x1eParsezen PDF OCR v4\x1f"
+    old_header = "\x1eLiblevo PDF OCR v4\x1f"
     assert prepare_module.decode_pdf_ocr_checkpoint(old_header) is None
     assert prepare_module.decode_pdf_ocr_checkpoint("") is None
     assert (
@@ -3805,7 +3805,7 @@ def test_cancellation_after_conversion_never_publishes_an_output(
         )
 
     assert list(tmp_path.glob("*.md")) == []
-    assert list(tmp_path.glob(".parsezen-*.tmp")) == []
+    assert list(tmp_path.glob(".liblevo-*.tmp")) == []
 
 
 def test_cleans_temporary_output_when_atomic_publish_fails(
@@ -3825,7 +3825,7 @@ def test_cleans_temporary_output_when_atomic_publish_fails(
         process_document(ProcessRequest(source, convert_to_markdown=True))
 
     assert not (tmp_path / "document.md").exists()
-    assert list(tmp_path.glob(".parsezen-*.tmp")) == []
+    assert list(tmp_path.glob(".liblevo-*.tmp")) == []
 
 
 def test_atomic_publish_never_exposes_an_empty_reservation(tmp_path: Path) -> None:

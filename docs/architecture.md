@@ -1,8 +1,8 @@
-# Arquitectura de Parsezen
+# Arquitectura de Liblevo
 
 ## Objetivos
 
-Parsezen es una aplicación local de escritorio, orientada a una sola persona. La arquitectura
+Liblevo es una aplicación local de escritorio, orientada a una sola persona. La arquitectura
 prioriza:
 
 1. no perder ni corromper documentos;
@@ -38,7 +38,7 @@ de la de Ollama para que sus checkpoints nunca se mezclen.
 `direct_ai_runtime.py` carga únicamente GGUF con digest verificado, limita tiempo y salida, transmite
 fragmentos al procesador y libera el modelo al terminar cada fase. La preparación puede copiar un
 blob local previamente instalado con Ollama o descargar el artefacto público fijo; valida tamaño y
-SHA-256 antes de publicar el archivo en la carpeta de modelos de Parsezen. Solo se transmite una
+SHA-256 antes de publicar el archivo en la carpeta de modelos de Liblevo. Solo se transmite una
 petición de descarga del modelo público, nunca contenido documental. `improvement.py` elige el motor
 por la identidad guardada en el trabajo; la ruta Ollama se conserva para trabajos antiguos, pero no
 es una dependencia de los nuevos. Argos y OCR siguen siendo locales. La ruta directa no usa por ahora
@@ -63,7 +63,7 @@ arquitectura y sus pruebas se actualizan en el mismo incremento.
 
 ## Columna vertebral del sistema
 
-Parsezen no es una colección de conversores. Es una cadena de evidencia que transforma una intención
+Liblevo no es una colección de conversores. Es una cadena de evidencia que transforma una intención
 inmutable en una publicación autorizada:
 
 ```text
@@ -406,7 +406,7 @@ bloques realmente revisados. La recomendación posterior limita el coste a seña
 recorrido normal sin pretender que ambos flujos sean equivalentes.
 
 `TranslationMethod` ofrece exactamente dos motores locales: `OFFLINE` usa Argos y `LOCAL_AI` usa el
-componente local de traducción preparado por Parsezen. IA local es la opción inicial y contextual;
+componente local de traducción preparado por Liblevo. IA local es la opción inicial y contextual;
 Argos es la alternativa manual, ligera y predecible. No existe degradación automática del documento
 completo de IA local a Argos: elegirlo como motor exige una acción explícita y la validación integral
 solo lo prueba al recibir `--translation-engine argos`. Hay una excepción de reparación estrecha: si
@@ -443,7 +443,7 @@ sustituirla localmente. Cambiarla actualiza todos los trabajos editables. Págin
 el rango ya elegido; OCR muestra `Automático` o `Todas las páginas`.
 
 La configuración persistida v6 es un corte limpio. Al abrir una base con un esquema anterior se
-descarta solo el estado reconstruible de Parsezen (cola, revisiones, libros, instantáneas, eventos y
+descarta solo el estado reconstruible de Liblevo (cola, revisiones, libros, instantáneas, eventos y
 métricas); los documentos de origen y resultados del usuario nunca se eliminan ni migran.
 
 Las fases son:
@@ -576,7 +576,7 @@ siguen teniendo una única fuente de verdad mientras los consumidores migran pro
 
 Cada trabajador recibe directamente su `PreparedRunItem`. La proyección temporal que conserva la
 interfaz antigua ya no almacena otra copia de `ProcessRequest` ni de `AppSettings` en la ventana de
-Parsezen. Las operaciones que necesitan esos datos —lanzamiento, cancelación, limpieza de
+Liblevo. Las operaciones que necesitan esos datos —lanzamiento, cancelación, limpieza de
 checkpoints y reanudación— los obtienen de la instantánea activa o los reconstruyen desde el
 `DocumentJob` persistido.
 
@@ -606,7 +606,7 @@ posterior de reintento vuelve a elegirlo.
 `application.queue_session.QueueSession` posee el estado efímero de esa ejecución secuencial: plan
 preparado, runtimes por trabajo, documento activo, conjunto iniciado, revisión dirigida, petición de
 pausa y motivo terminal. Sus transiciones de inicio, selección, continuación y cierre no dependen de
-Qt. `ParsezenMainWindow` conserva la composición y la presentación de avisos, pero ya no mantiene
+Qt. `LiblevoMainWindow` conserva la composición y la presentación de avisos, pero ya no mantiene
 copias de `_is_processing`, `_batch_running`, `_pause_requested` o `_current_job_id`.
 
 Tres fachadas de aplicación mantienen la coordinación fuera de Qt: `QueueRunCoordinator` reclama el
@@ -1151,7 +1151,7 @@ que caracteres como `ß` no desplacen ni recorten los límites de sustitución.
 
 Cada propuesta se valida contra el estado inmediatamente anterior y el ensamblado completo vuelve
 a validarse contra la traducción base del motor elegido. Si varias mejoras seguras sobre un mismo bloque superan de
-forma acumulativa el límite de reescritura, Parsezen revierte solo ese bloque y vuelve a validar el
+forma acumulativa el límite de reescritura, Liblevo revierte solo ese bloque y vuelve a validar el
 documento completo. Un único bloque acumulativamente inseguro no descarta ya cientos de correcciones
 independientes, y las guardas de estructura, cifras, enlaces, idioma y cobertura siguen siendo
 globales antes de publicar.
@@ -1164,7 +1164,7 @@ En documentos PDF, el informe conserva todos los tramos delimitados por marcador
 los que no contienen texto natural en uno de los dos lados. Así una portada gráfica, una página vacía
 o una adición anómala no desplazan el emparejamiento de las incidencias posteriores.
 
-Cuando dos respuestas bilingües consecutivas no superan las guardas, Parsezen conserva únicamente la
+Cuando dos respuestas bilingües consecutivas no superan las guardas, Liblevo conserva únicamente la
 traducción ya validada y nunca persiste la respuesta rechazada como una revisión completada. Una
 reanudación puede volver a intentar ese fragmento: así no confunde una preservación defensiva con una
 verificación semántica satisfactoria. Los checkpoints de respuestas válidas siguen ligados al mismo
@@ -1184,7 +1184,7 @@ si conserva su envoltura, valores protegidos, cobertura e idioma y reduce la rep
 grupo bilingüe permanece byte por byte fuera de esa reparación. Un salto de línea blando de hasta
 tres líneas se recompone como un único título antes de validar solo si las líneas intermedias terminan
 en un separador de subtítulo. Las explicaciones, las repeticiones, los párrafos adicionales y una
-segunda línea con cierre de frase se rechazan. Si el modelo repite el delimitador exacto que Parsezen creó para esa petición, se retira
+segunda línea con cierre de frase se rechazan. Si el modelo repite el delimitador exacto que Liblevo creó para esa petición, se retira
 únicamente ese eco; cualquier marcador distinto continúa siendo un rechazo duro.
 
 La ruta de producto conserva Argos y añade IA local como alternativas explícitas. La interfaz no
@@ -1237,7 +1237,7 @@ verifican que el ensamblado no altere cifras, enlaces, jerarquía o distribució
 conservan sus recuperaciones específicas.
 
 Si todos los fragmentos traducidos son válidos por separado pero su ensamblado completo incumple una
-guarda estructural, Parsezen localiza de forma incremental la combinación incompatible. Conserva el
+guarda estructural, Liblevo localiza de forma incremental la combinación incompatible. Conserva el
 original únicamente en esos fragmentos, mantiene las traducciones que siguen siendo demostrablemente
 seguras y obliga a revisar el residuo, en vez de perder todo el trabajo o publicar una estructura rota.
 
@@ -1281,7 +1281,7 @@ candidatas con su nivel actual, página, rol semántico y coincidencia con el í
 160 candidatas fuertes para mantener el inventario dentro del contexto local; tienen preferencia los
 encabezados existentes, las coincidencias del índice y los bloques ya clasificados como título. El
 modelo recibe ese inventario conjunto una sola vez y solo puede devolver pares línea-nivel; nunca se
-acepta un bloque documental reescrito. Parsezen reconstruye cada cambio con las palabras exactas de
+acepta un bloque documental reescrito. Liblevo reconstruye cada cambio con las palabras exactas de
 la línea original, limita a un nivel los movimientos de encabezados existentes y solo permite niveles
 1–3 para candidatos nuevos. La propuesta completa vuelve a superar las guardas estructurales; una
 respuesta inválida conserva el documento completo y no se guarda como trabajo correcto. Una respuesta
@@ -1299,7 +1299,7 @@ fragmentos posteriores cuyo contenido no cambió.
 ## Conversión PDF
 
 Antes de cargar Docling, `ocr_dependency_guard.py` desactiva las dos entradas de Accelerate que
-cargan checkpoints arbitrarios y todos sus alias públicos conocidos. El pipeline OCR de Parsezen
+cargan checkpoints arbitrarios y todos sus alias públicos conocidos. El pipeline OCR de Liblevo
 no las utiliza. La protección también se instala en la comprobación del paquete; su alcance y la
 excepción temporal versionada se definen en [seguridad de dependencias](dependency-security.md).
 
@@ -1358,14 +1358,14 @@ rechazan su pérdida igual que la de cualquier otra cifra visible.
 
 Un cero final pequeño y elevado delante del nombre inequívoco de un signo zodiacal puede restaurarse
 como símbolo de grado, porque su geometría demuestra el signo pero no el valor. Un grado de 30 a 99
-dentro de un signo es físicamente imposible y activa el contraste local; Parsezen no transforma, por
+dentro de un signo es físicamente imposible y activa el contraste local; Liblevo no transforma, por
 ejemplo, `75°` en `15°` por mera plausibilidad. Si las lecturas independientes no resuelven la cifra y
 la capa nativa sigue siendo útil, el OCR de esa página queda fuera del renderizado estructural. Aún
 puede orientar conciliación, conservación de imágenes e informe de calidad, pero no originar texto,
 listas o rótulos visibles. La página conserva su lámina y una incidencia de revisión.
 
 En series astrológicas explícitas, ciertos mapas de fuente pueden exponer el romano visual `II`/`III`
-como `n`, `it`, `in` o `ui`, y `II:` como `IE`. Parsezen no traduce esos glifos por parecido: exige un
+como `n`, `it`, `in` o `ui`, y `II:` como `IE`. Liblevo no traduce esos glifos por parecido: exige un
 rótulo centrado con estilo de encabezado y la evidencia estructural del mismo signo. Dos hermanos
 próximos pueden confirmar una colocación, o los títulos I/II/III del decano delimitan el valor de sus
 rótulos planetarios. Un título `IE` solo se repara si los otros dos miembros dejan exactamente un
@@ -1455,7 +1455,7 @@ fiable.
 
 Al construir un EPUB, ese HTML tabular pasa por un analizador XML local que exige exactamente
 `table/thead/tbody/tr/th/td/br`. Las tablas documentales ordinarias no admiten atributos; el índice
-solo admite las clases exactas generadas por Parsezen, `strong`/`em` y enlaces locales `#page-N`.
+solo admite las clases exactas generadas por Liblevo, `strong`/`em` y enlaces locales `#page-N`.
 Las filas deben ser rectangulares y el texto estar escapado. Los bloques que cumplen el contrato se
 insertan como XHTML semántico después de CommonMark; todo el demás HTML permanece desactivado. Así las
 celdas multilínea no aparecen como etiquetas visibles y la excepción no abre una vía para scripts,
@@ -1775,7 +1775,7 @@ reparación de texto residual se ejecuta sobre cada unidad antes de guardar el c
 frase breve sin traducir no queda diluida entre metadatos, navegación y atributos ya traducidos.
 Las etiquetas, atributos, espacios de nombres y enlaces se sustituyen por marcadores de código
 obligatorios antes de cualquier traducción o reparación con IA. Ollama recibe solo el texto visible;
-Parsezen restaura el XML original en el mismo orden y vuelve a validar firma estructural y XHTML.
+Liblevo restaura el XML original en el mismo orden y vuelve a validar firma estructural y XHTML.
 Cada subfragmento de Ollama validado se cifra además en el espacio general de trabajo antes de
 completar la unidad semántica; una pausa dentro de un capítulo grande reutiliza esas respuestas sin
 esperar a que termine el lote exterior. La intención del plan forma parte de ambas claves para
@@ -1874,7 +1874,7 @@ La ventana agrega los resultados del conjunto iniciado en un único resumen de l
 notificaciones del sistema se emiten solo si la ventana está minimizada o no está activa, y el icono
 de bandeja se oculta después; no se crea un proceso residente.
 
-Al abrir Parsezen se recupera exactamente la revisión. Al publicar el resultado se eliminan el libro,
+Al abrir Liblevo se recupera exactamente la revisión. Al publicar el resultado se eliminan el libro,
 las revisiones y sus artefactos temporales.
 
 La sustitución completa de la cola ocurre dentro de una sola transacción. Los órdenes existentes se
@@ -1886,7 +1886,7 @@ hermanos.
 
 Una revisión solo se recupera si tamaño y fecha de modificación del original coinciden con los que
 tenía al prepararse. Si el archivo cambió, la propuesta se invalida y el trabajo vuelve a un punto
-seguro; Parsezen nunca mezcla una revisión antigua con una versión nueva del documento.
+seguro; Liblevo nunca mezcla una revisión antigua con una versión nueva del documento.
 
 Un error de lectura de SQLite crea primero una copia consistente del estado ilegible y mueve los
 artefactos cifrados relacionados a una carpeta de recuperación asociada. Solo después inicia una
@@ -1963,17 +1963,36 @@ El sistema visual se centraliza en `presentation/design_system.py`:
 - logo y símbolo derivados de maestros oficiales mediante
   `scripts/generate_brand_assets.py`.
 
-El icono oficial conserva su contorno protector blanco y solo elimina el fondo negro exterior
-conectado al lienzo. Ese mismo símbolo se compone con los wordmarks claro y oscuro existentes. Los
-derivados reproducibles y transparentes cubren las dos variantes de cabecera, README, icono PNG e
-ICO multirresolución; por tanto, ventana, barra de tareas, instalador y documentación comparten una
-única identidad visible sobre fondos claros y oscuros.
+El símbolo vectorial se compone con contornos de Inter en los wordmarks claro y oscuro. El relleno
+por orientación conserva los trazos superpuestos sin abrir cortes en las letras; el símbolo declara
+explícitamente que no lleva borde. Los derivados reproducibles y transparentes cubren cabecera,
+README, icono PNG e ICO multirresolución. El icono de Windows muestra el libro blanco sobre un
+cuadrado verde redondeado, con las esquinas exteriores transparentes; ventana, barra de tareas,
+instalador y documentación comparten esa identidad.
 
 ## Compatibilidad y migración
 
-Parsezen es la primera identidad pública de este repositorio. La primera instalación usa una única
-ruta `%LOCALAPPDATA%\Parsezen`; no importa sesiones ni checkpoints de prototipos anteriores. Los
-documentos originales y resultados existentes son archivos normales y no requieren migración.
+### Identidad Liblevo y continuidad del perfil
+
+La identidad visible es **Liblevo** (`APP_DISPLAY_NAME`), con el lema «Convierte. Traduce. Lee.».
+El logo es una L con forma de libro y una página abierta; los maestros vectoriales y sus derivados
+reproducibles están en `assets/branding/`. Inter sigue siendo la tipografía. La paleta y sus
+adaptaciones claro/oscuro pertenecen únicamente a `presentation/design_system.py`.
+
+La identidad técnica también es **Liblevo** (`APP_STORAGE_NAME`): perfil en
+`%LOCALAPPDATA%\Liblevo`, claves Qt `Liblevo/Liblevo`, paquete e imports Python `liblevo`,
+comando `liblevo` y recursos compartidos `share/liblevo`. Los identificadores de modelos, marcadores,
+canales de trabajadores y logs nuevos usan esa identidad. La conversión del perfil existente en
+este entorno traslada los archivos y actualiza únicamente referencias de configuración y rutas;
+se comprueban SQLite, el trabajo guardado y los modelos. Los documentos originales y resultados
+publicados siguen siendo archivos normales. Los commits, versiones y evidencias anteriores se
+conservan como historia, por decisión de la persona.
+
+Windows distribuye `Liblevo.exe` y `Liblevo-Setup-<versión>.exe`. El instalador conserva el `AppId`
+anterior. El destino actual es `%LOCALAPPDATA%\Programs\Liblevo`; la actualización real desde una
+instalación anterior requiere su comprobación específica antes de publicar el instalador.
+El constructor local guarda el paquete anterior antes de sustituirlo. La migración local de este
+entorno no equivale a una actualización del instalador comprobada en otros equipos.
 
 ## Pruebas
 
@@ -2038,4 +2057,4 @@ nombre de esa etiqueta debe coincidir exactamente con `v` y la versión de `pypr
 compilación conserva permisos de solo lectura; escritura de contenido, OIDC y atestaciones se
 habilitan únicamente en el job posterior que publica una etiqueta validada. El
 instalador conserva el `AppId` entre versiones, limpia el runtime `_internal` anterior
-antes de actualizar y no toca `%LOCALAPPDATA%\Parsezen`, los originales ni los resultados.
+antes de actualizar y no toca `%LOCALAPPDATA%\Liblevo`, los originales ni los resultados.

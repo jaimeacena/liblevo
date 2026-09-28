@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.planner import activate_next_stage, invalidate_after
-from parsezen.application.scheduler import (
+from liblevo.application.planner import activate_next_stage, invalidate_after
+from liblevo.application.scheduler import (
     prepare_runnable_jobs,
     select_next_stage,
     start_selected_stage,
 )
-from parsezen.domain.jobs import (
+from liblevo.domain.jobs import (
     AIProfileConfiguration,
     DocumentFormat,
     DocumentJob,
@@ -23,8 +23,8 @@ from parsezen.domain.jobs import (
     ProcessingPlan,
     TranslationConfiguration,
 )
-from parsezen.domain.source_identity import SourceIdentity
-from parsezen.domain.stages import StageAvailability, StageKind, StageStatus
+from liblevo.domain.source_identity import SourceIdentity
+from liblevo.domain.stages import StageAvailability, StageKind, StageStatus
 
 
 def source(path: str = "book.pdf") -> DocumentSource:

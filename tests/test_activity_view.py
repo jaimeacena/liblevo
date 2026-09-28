@@ -5,7 +5,7 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QLabel
 
-from parsezen.domain.attempt_activity import (
+from liblevo.domain.attempt_activity import (
     AttemptEvent,
     AttemptEventStatus,
     AttemptPhase,
@@ -13,13 +13,13 @@ from parsezen.domain.attempt_activity import (
     FailureSnapshot,
     ReusableWork,
 )
-from parsezen.domain.outcomes import OutcomeSummary
-from parsezen.presentation.activity_view import (
+from liblevo.domain.outcomes import OutcomeSummary
+from liblevo.presentation.activity_view import (
     ActivityView,
     build_failure_diagnostic,
     outcome_summary_lines,
 )
-from parsezen.recent_activity import RecentJob, RecentJobStatus
+from liblevo.recent_activity import RecentJob, RecentJobStatus
 
 
 def _failed_job(source: Path, *, finished_at: datetime | None = None) -> RecentJob:

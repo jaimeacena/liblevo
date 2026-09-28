@@ -7,30 +7,30 @@ from zipfile import ZipFile
 import pytest
 from PySide6.QtWidgets import QMessageBox
 
-from parsezen.application.book_editor import BookEditor
-from parsezen.application.job_execution import JobExecutionController
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.review_finalization import ReviewFinalizationCoordinator
-from parsezen.application.review_publication import ReviewPublicationCoordinator
-from parsezen.application.workspace_recovery import recover_workspace
-from parsezen.domain.jobs import (
+from liblevo.application.book_editor import BookEditor
+from liblevo.application.job_execution import JobExecutionController
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.review_finalization import ReviewFinalizationCoordinator
+from liblevo.application.review_publication import ReviewPublicationCoordinator
+from liblevo.application.workspace_recovery import recover_workspace
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentSource,
     JobConfiguration,
     JobStatus,
     OutputConfiguration,
 )
-from parsezen.domain.source_identity import SourceIdentity
-from parsezen.domain.stages import StageKind
-from parsezen.epub_builder import EpubBookMetadata, build_epub, validate_epub_file
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.infrastructure.result_snapshots import ResultSnapshotStore
-from parsezen.infrastructure.state_store import StateStore, StateStoreError
-from parsezen.pipeline.contracts import ProcessResult
-from parsezen.presentation.book_editor_dialog import BookEditorDialog
-from parsezen.presentation.epub_confirmation_dialog import EpubConfirmationDialog
-from parsezen.presentation.main_window import ParsezenMainWindow
-from parsezen.settings import AppSettings
+from liblevo.domain.source_identity import SourceIdentity
+from liblevo.domain.stages import StageKind
+from liblevo.epub_builder import EpubBookMetadata, build_epub, validate_epub_file
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.infrastructure.result_snapshots import ResultSnapshotStore
+from liblevo.infrastructure.state_store import StateStore, StateStoreError
+from liblevo.pipeline.contracts import ProcessResult
+from liblevo.presentation.book_editor_dialog import BookEditorDialog
+from liblevo.presentation.epub_confirmation_dialog import EpubConfirmationDialog
+from liblevo.presentation.main_window import LiblevoMainWindow
+from liblevo.settings import AppSettings
 
 
 def _setup(tmp_path):
@@ -264,7 +264,7 @@ def test_cleanup_observes_durable_completed_job(tmp_path, monkeypatch):
 
 def test_close_checks_unsaved_completed_jobs(qtbot, tmp_path, monkeypatch):
     state, artifacts, queue, snapshots, flow, result = _setup(tmp_path)
-    window = ParsezenMainWindow(
+    window = LiblevoMainWindow(
         settings=AppSettings(),
         state_path=state.path,
         history_path=tmp_path / "history.json",
@@ -322,7 +322,7 @@ def test_publication_keeps_editor_open_if_draft_cannot_be_saved(
 def test_closing_main_window_saves_active_editor_before_exit(qtbot, tmp_path, monkeypatch):
     state, artifacts, queue, snapshots, flow, result = _setup(tmp_path)
     book = flow.prepare_book("job", result, result.review_markdown)
-    window = ParsezenMainWindow(
+    window = LiblevoMainWindow(
         settings=AppSettings(),
         state_path=state.path,
         history_path=tmp_path / "history.json",

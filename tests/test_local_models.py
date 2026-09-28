@@ -10,9 +10,9 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-import parsezen.local_models as local_models_module
-from parsezen.errors import LocalModelUnavailableError
-from parsezen.local_models import (
+import liblevo.local_models as local_models_module
+from liblevo.errors import LocalModelUnavailableError
+from liblevo.local_models import (
     OLLAMA_BASE_URL,
     ComponentRequirements,
     ComponentStatus,

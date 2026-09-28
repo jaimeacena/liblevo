@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-import parsezen.work_checkpoints as checkpoints_module
-from parsezen.work_checkpoints import (
+import liblevo.work_checkpoints as checkpoints_module
+from liblevo.work_checkpoints import (
     WorkCheckpoints,
     checkpoint_key,
     clear_work_checkpoint_cache,
@@ -174,7 +174,7 @@ def test_failed_atomic_replace_removes_its_temporary_file(
     _disable_platform_encryption(monkeypatch)
     checkpoints = WorkCheckpoints(tmp_path / ("c" * 64))
     monkeypatch.setattr(
-        "parsezen.infrastructure.protected_file.os.replace",
+        "liblevo.infrastructure.protected_file.os.replace",
         lambda *_args: (_ for _ in ()).throw(OSError("disk full")),
     )
 

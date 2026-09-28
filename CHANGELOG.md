@@ -1,7 +1,14 @@
 # Historial de cambios
 
-## Próxima versión
+## Próxima versión (1.3.0)
 
+- La identidad visible pasa a **Liblevo**: logo de libro en forma de L, icono de Windows, Inter y
+  paleta teal/tinta/papel/menta en claro y oscuro. El lema es «Convierte. Traduce. Lee.». Ventanas,
+  avisos, lanzadores y distribución usan el nuevo nombre. El paquete Python, los comandos, el perfil
+  local, las claves de apariencia y los enlaces actuales adoptan también Liblevo. La migración del
+  entorno de desarrollo conserva su cola, ajustes y modelos; el historial y las versiones anteriores
+  se mantienen. La actualización mediante instalador requiere su comprobación específica.
+  Los contornos del nombre y el lema conservan trazos continuos sin cortes transparentes accidentales.
 - EPUB→EPUB conserva ahora texto visible situado junto a `code`, fórmulas, SVG u otros nodos
   protegidos sin enviar ese marcado al traductor. La selección cubre también texto XHTML seguro que
   no estaba dentro de las etiquetas de bloque habituales.
@@ -77,7 +84,7 @@
   no revisados e incidencias pendientes sin persistir contenido documental.
 - La revisión estructural planifica el esquema con un inventario global de índice, páginas,
   geometría, encabezados y roles semánticos. Ollama solo devuelve directivas de nivel; la revisión
-  muestra los árboles actual y propuesto y Parsezen conserva literalmente el texto.
+  muestra los árboles actual y propuesto y Liblevo conserva literalmente el texto.
 - La configuración del traductor explica dinámicamente el recorrido real, las pasadas, la
   independencia de la verificación y el coste cualitativo según motor, plan y formato.
 - Los documentos nuevos quedan ligados a un SHA-256 local. La preparación rechaza cualquier cambio
@@ -159,7 +166,7 @@
 - Las tablas PDF se publican como Markdown, HTML o texto estructurado según su complejidad; los
   casos inseguros generan revisión y un recorte visual de respaldo cuando se conservan imágenes.
 - Las tablas HTML generadas para celdas multilínea llegan ahora al EPUB como tablas XHTML reales.
-  Solo se admite la estructura cerrada, sin atributos y saneada que produce Parsezen; cualquier
+  Solo se admite la estructura cerrada, sin atributos y saneada que produce Liblevo; cualquier
   HTML arbitrario continúa desactivado y se muestra como texto inerte.
 - La traducción y la revisión comparan además la secuencia ordenada de etiquetas de cada tabla HTML.
   Una propuesta no puede eliminar una columna cuya primera celda esté vacía ni compensar esa
@@ -229,7 +236,7 @@
   posición, aunque conserve todas las cifras.
 - Argos conserva también la caja de los números romanos en encabezados, sin proteger por error el
   pronombre `I` de la prosa normal.
-- Si una sustitución parcial introduce una frase repetida en un título bilingüe, Parsezen vuelve a
+- Si una sustitución parcial introduce una frase repetida en un título bilingüe, Liblevo vuelve a
   evaluar únicamente el título completo y acepta la reparación solo si supera las mismas guardas de
   fidelidad, estructura e idioma.
 - La restauración de títulos conservados en un tercer idioma vuelve a comprobar todas las cifras del
@@ -246,7 +253,7 @@
 - En las primeras páginas, un título OCR con un único término corto espurio puede recuperar la
   variante nativa repetida solo cuando existe un donante tipográfico fiable y único; cualquier
   ambigüedad conserva el OCR para revisión.
-- Si el OCR une el rótulo `Tabla n` con la primera fila, Parsezen vuelve a separarlo antes de evaluar
+- Si el OCR une el rótulo `Tabla n` con la primera fila, Liblevo vuelve a separarlo antes de evaluar
   la tabla para conservar el título y generar celdas XHTML reales.
 - Los encabezados generados en EPUB evitan partirse internamente entre dos páginas compatibles con
   paginación CSS, mantienen una separación superior no colapsable al abrir un capítulo y ajustan
@@ -313,7 +320,7 @@
   de sesiones anteriores. El gestor prioriza modelos instalados, muestra el alcance del
   predeterminado y protege modelos usados por trabajos sin terminar.
 - Las variantes de razonamiento conocidas no se pueden seleccionar, recomendar ni ejecutar para
-  transformar documentos; Parsezen exige una variante Instruct y mantiene visible cualquier modelo
+  transformar documentos; Liblevo exige una variante Instruct y mantiene visible cualquier modelo
   incompatible ya instalado únicamente para poder eliminarlo.
 - Navegación interna para configuración, modelos, glosario, revisiones, diagnóstico y editor EPUB;
   cada flujo usa su propio pie y vuelve a la cola sin abrir ventanas auxiliares.
@@ -342,7 +349,7 @@
   y evita tratar nombres o etiquetas breves como texto sin traducir salvo que contengan señales
   claras del idioma de origen.
 - Las citas en un tercer idioma pueden permanecer intactas cuando el texto que las rodea sí se ha
-  traducido; si el modelo deforma un encabezado claramente escrito en ese tercer idioma, Parsezen
+  traducido; si el modelo deforma un encabezado claramente escrito en ese tercer idioma, Liblevo
   restaura automáticamente su texto y conserva el nivel estructural propuesto.
 - El informe de traducción señala términos repetidos traducidos con cognados incompatibles para que
   la revisión detecte errores semánticos silenciosos sin imponer una sustitución heurística.
@@ -367,7 +374,7 @@
 - La traducción directa de EPUB repara residuos de idioma por unidad semántica antes de guardar el
   checkpoint agrupado, para que los marcadores internos y otros bloques ya traducidos no oculten
   una frase breve conservada en el idioma de origen.
-- Si una propuesta de corrección falla solo al reensamblar el documento, Parsezen recupera los
+- Si una propuesta de corrección falla solo al reensamblar el documento, Liblevo recupera los
   fragmentos que siguen siendo seguros y mantiene el original donde sea necesario.
 - Extracción PDF mejorada para palabras con espaciado artificial, páginas a varias columnas,
   separadores de ancho completo e ilustraciones vectoriales, conservando todos los marcadores de
@@ -429,7 +436,7 @@
 
 ## 1.0.0
 
-Primera versión pública de Parsezen.
+Primera versión pública de Liblevo.
 
 - Cola secuencial de documentos con configuración y estado independientes.
 - Conversión local entre TXT, Markdown, DOCX, PDF y EPUB según las capacidades del formato.
@@ -438,5 +445,5 @@ Primera versión pública de Parsezen.
 - Editor EPUB normalizado con capítulos, jerarquía, contenido y formato básico.
 - Pausa, checkpoints, recuperación e instantáneas cifradas por documento.
 - Publicación atómica, originales inmutables y logs sanitizados.
-- Interfaz clara basada en la identidad oficial de Parsezen.
+- Interfaz clara basada en la identidad oficial de Liblevo.
 - Aplicación, ejecutable e instalador para Windows x64.

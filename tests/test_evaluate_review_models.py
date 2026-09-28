@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 import scripts.evaluate_review_models as evaluation
 
-from parsezen.improvement import ImprovementMode
-from parsezen.processing_metrics import (
+from liblevo.improvement import ImprovementMode
+from liblevo.processing_metrics import (
     record_local_ai_request,
     record_retry,
     record_validation_rejection,

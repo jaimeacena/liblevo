@@ -10,8 +10,8 @@ from zipfile import BadZipFile
 
 import pytest
 
-import parsezen.docx_conversion as docx_module
-from parsezen.errors import ConversionError
+import liblevo.docx_conversion as docx_module
+from liblevo.errors import ConversionError
 
 
 class _Image:

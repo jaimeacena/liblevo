@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from parsezen.review_projection import private_review_content, project_review_text
+from liblevo.review_projection import private_review_content, project_review_text
 
 
 def test_review_projection_hides_complete_private_images_and_restores_exact_source() -> None:
     source = (
         "Antes.\n\n"
         "<!-- PZDOC PDF PAGE 3 -->\n\n"
-        "![](<__parsezen_resources__/pdf/page-0003-image-01.jpg>)\n\n"
+        "![](<__liblevo_resources__/pdf/page-0003-image-01.jpg>)\n\n"
         "Después.\n"
         "<!-- Comentario interno: conservar la imagen -->\n"
         "PZDOC: 123...\n"
@@ -19,7 +19,7 @@ def test_review_projection_hides_complete_private_images_and_restores_exact_sour
     assert "![]" not in projection.visible_text
     assert "()" not in projection.visible_text
     assert "PZDOC" not in projection.visible_text
-    assert "__parsezen_resources__" not in projection.visible_text
+    assert "__liblevo_resources__" not in projection.visible_text
     assert "Comentario interno" not in projection.visible_text
     assert "(" not in projection.visible_text
     assert ")" not in projection.visible_text
@@ -32,7 +32,7 @@ def test_review_projection_hides_complete_private_images_and_restores_exact_sour
 def test_review_projection_restores_private_fragments_after_visible_edit() -> None:
     source = (
         "Texto original.\n\n"
-        "![Figura](__parsezen_resources__/images/figure.png)\n\n"
+        "![Figura](__liblevo_resources__/images/figure.png)\n\n"
         "<!-- PZDOC EPUB ANCHOR section-one -->\n"
     )
     projection = project_review_text(source)
@@ -41,7 +41,7 @@ def test_review_projection_restores_private_fragments_after_visible_edit() -> No
 
     assert restored == (
         "Texto corregido.\n\n"
-        "![Figura](__parsezen_resources__/images/figure.png)\n\n"
+        "![Figura](__liblevo_resources__/images/figure.png)\n\n"
         "<!-- PZDOC EPUB ANCHOR section-one -->\n"
     )
 

@@ -13,16 +13,16 @@ from pathlib import Path
 from tempfile import TemporaryDirectory, mkstemp
 from time import monotonic
 
-from parsezen.application.job_queue import JobQueue
-from parsezen.domain.jobs import DocumentSource, JobConfiguration
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.infrastructure.result_snapshots import ResultSnapshotStore
-from parsezen.infrastructure.state_store import StateStore
-from parsezen.infrastructure.user_data_protection import (
+from liblevo.application.job_queue import JobQueue
+from liblevo.domain.jobs import DocumentSource, JobConfiguration
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.infrastructure.result_snapshots import ResultSnapshotStore
+from liblevo.infrastructure.state_store import StateStore
+from liblevo.infrastructure.user_data_protection import (
     protect_for_current_user,
     unprotect_for_current_user,
 )
-from parsezen.pipeline.contracts import ProcessResult
+from liblevo.pipeline.contracts import ProcessResult
 
 SCHEMA_VERSION = 1
 MAX_PAYLOAD_MIB = 64
@@ -76,7 +76,7 @@ def measure_runtime(
     if restored != payload:
         raise RuntimeError("La protección local no recuperó el payload sintético.")
 
-    with TemporaryDirectory(prefix="parsezen-runtime-benchmark-") as temporary_name:
+    with TemporaryDirectory(prefix="liblevo-runtime-benchmark-") as temporary_name:
         temporary_root = Path(temporary_name)
         snapshot_write, snapshot_recovery, snapshot_disk, temporary_peak = _measure_snapshot(
             temporary_root,
@@ -106,7 +106,7 @@ def measure_cold_start(runs: int = 1) -> float:
     command = [sys.executable, "-c", _STARTUP_PROBE]
     samples: list[float] = []
     for _index in range(runs):
-        with TemporaryDirectory(prefix="parsezen-startup-benchmark-") as temporary_name:
+        with TemporaryDirectory(prefix="liblevo-startup-benchmark-") as temporary_name:
             environment = os.environ.copy()
             inherited_path = environment.get("PYTHONPATH")
             environment["PYTHONPATH"] = (
@@ -115,7 +115,7 @@ def measure_cold_start(runs: int = 1) -> float:
                 else str(source_root)
             )
             environment["QT_QPA_PLATFORM"] = "offscreen"
-            environment["PARSEZEN_BENCHMARK_ROOT"] = temporary_name
+            environment["LIBLEVO_BENCHMARK_ROOT"] = temporary_name
             started = monotonic()
             completed = subprocess.run(
                 command,
@@ -162,7 +162,7 @@ def write_profile(path: Path, metrics: RuntimeMetrics) -> None:
 def _measure_snapshot(root: Path, review_text: str) -> tuple[float, float, int, int]:
     state_path = root / "state.db"
     source_path = root / "synthetic.pdf"
-    source_path.write_bytes(b"%PDF-1.7\n% Parsezen synthetic benchmark\n")
+    source_path.write_bytes(b"%PDF-1.7\n% Liblevo synthetic benchmark\n")
     state = StateStore(state_path)
     queue = JobQueue()
     source = DocumentSource.inspect(source_path)
@@ -237,7 +237,7 @@ def _tree_size(root: Path) -> int:
 
 
 def _synthetic_payload(size: int) -> bytes:
-    pattern = b"Parsezen synthetic runtime payload.\n"
+    pattern = b"Liblevo synthetic runtime payload.\n"
     return (pattern * ((size + len(pattern) - 1) // len(pattern)))[:size]
 
 
@@ -245,11 +245,11 @@ _STARTUP_PROBE = """
 import os
 from pathlib import Path
 from PySide6.QtWidgets import QApplication
-from parsezen.presentation.main_window import ParsezenMainWindow
+from liblevo.presentation.main_window import LiblevoMainWindow
 
-root = Path(os.environ["PARSEZEN_BENCHMARK_ROOT"])
+root = Path(os.environ["LIBLEVO_BENCHMARK_ROOT"])
 application = QApplication.instance() or QApplication([])
-window = ParsezenMainWindow(
+window = LiblevoMainWindow(
     auto_discover_ai=False,
     history_path=root / "recent.json",
     work_checkpoint_root=root / "checkpoints",

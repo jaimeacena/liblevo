@@ -6,24 +6,24 @@ from PySide6.QtCore import QMimeData, QPointF, Qt, QUrl
 from PySide6.QtGui import QDropEvent
 from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QScrollArea
 
-from parsezen.application.planner import activate_next_stage
-from parsezen.application.preflight import DocumentPreflight, combine_preflights
-from parsezen.domain.estimates import DurationEstimate
-from parsezen.domain.jobs import (
+from liblevo.application.planner import activate_next_stage
+from liblevo.application.preflight import DocumentPreflight, combine_preflights
+from liblevo.domain.estimates import DurationEstimate
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentJob,
     DocumentSource,
     JobConfiguration,
     OutputConfiguration,
 )
-from parsezen.domain.stages import StageKind, StageStatus
-from parsezen.failure_recovery import RecoveryAction, RecoveryPlan
-from parsezen.final_integrity import FinalIntegrityReport, IntegrityLedger
-from parsezen.local_models import OllamaStatus
-from parsezen.presentation.activity_view import ActivityView
-from parsezen.presentation.design_system import COLORS, SPACING
-from parsezen.presentation.job_table import CELL_PRESENTATION_ROLE
-from parsezen.presentation.workspace import ParsezenWorkspace
+from liblevo.domain.stages import StageKind, StageStatus
+from liblevo.failure_recovery import RecoveryAction, RecoveryPlan
+from liblevo.final_integrity import FinalIntegrityReport, IntegrityLedger
+from liblevo.local_models import OllamaStatus
+from liblevo.presentation.activity_view import ActivityView
+from liblevo.presentation.design_system import COLORS, SPACING
+from liblevo.presentation.job_table import CELL_PRESENTATION_ROLE
+from liblevo.presentation.workspace import LiblevoWorkspace
 
 
 def make_job(identifier: str, order: int) -> DocumentJob:
@@ -52,7 +52,7 @@ def make_review_job(identifier: str, order: int = 0) -> DocumentJob:
 
 
 def test_workspace_header_reflects_running_document(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     one = make_job("one", 0)
     running = one.replace_stage(
@@ -76,7 +76,7 @@ def test_workspace_header_reflects_running_document(qtbot) -> None:
 
 
 def test_document_drop_area_is_neutral_until_dragging(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
 
     stylesheet = workspace.styleSheet()
@@ -87,7 +87,7 @@ def test_document_drop_area_is_neutral_until_dragging(qtbot) -> None:
 
 
 def test_workspace_header_prioritizes_real_reviews(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.set_jobs((make_review_job("one"),))
 
@@ -96,7 +96,7 @@ def test_workspace_header_prioritizes_real_reviews(qtbot) -> None:
 
 
 def test_wide_queue_summary_stays_as_a_content_heading(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(1440, 800)
     workspace.set_jobs(tuple(make_review_job(f"review-{index}", index) for index in range(5)))
@@ -110,7 +110,7 @@ def test_wide_queue_summary_stays_as_a_content_heading(qtbot) -> None:
 
 
 def test_workspace_emits_current_primary_mode(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.set_jobs((make_job("one", 0),))
     modes: list[str] = []
@@ -123,7 +123,7 @@ def test_workspace_emits_current_primary_mode(qtbot) -> None:
 
 
 def test_workspace_summarizes_the_predicted_automatic_time(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     job = make_job("one", 0)
     forecast = DocumentPreflight(
@@ -148,7 +148,7 @@ def test_workspace_summarizes_the_predicted_automatic_time(qtbot) -> None:
 
 
 def test_workspace_shows_preparing_during_execution_preflight(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.set_jobs((make_job("one", 0),))
 
@@ -164,7 +164,7 @@ def test_workspace_shows_preparing_during_execution_preflight(qtbot) -> None:
 
 
 def test_long_early_check_keeps_pause_available_while_saying_preparing(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.set_jobs((make_job("one", 0),))
 
@@ -182,7 +182,7 @@ def test_long_early_check_keeps_pause_available_while_saying_preparing(qtbot) ->
 
 
 def test_workspace_does_not_count_missing_output_as_review(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     job = DocumentJob.create(
         DocumentSource(Path("draft.pdf"), DocumentFormat.PDF, 100, 1),
@@ -196,7 +196,7 @@ def test_workspace_does_not_count_missing_output_as_review(qtbot) -> None:
 
 
 def test_workspace_shows_and_clears_recovery_warning(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
 
     workspace.set_recovery_warning("No se pudo guardar la recuperación automática.")
@@ -211,7 +211,7 @@ def test_workspace_shows_and_clears_recovery_warning(qtbot) -> None:
 
 
 def test_workspace_routes_contextual_recovery_actions(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     retries: list[str] = []
     configurations: list[tuple[str, object]] = []
@@ -253,7 +253,7 @@ def test_workspace_routes_contextual_recovery_actions(qtbot) -> None:
 
 
 def test_contextual_recovery_reflows_without_overlapping_at_320px(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(320, 700)
     workspace.show()
@@ -282,7 +282,7 @@ def test_contextual_recovery_reflows_without_overlapping_at_320px(qtbot) -> None
 
 
 def test_workspace_exposes_verified_final_integrity(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     job = make_job("verified", 0)
     completed = replace(
@@ -311,7 +311,7 @@ def test_workspace_exposes_verified_final_integrity(qtbot) -> None:
 
 
 def test_workspace_internal_views_return_to_the_page_that_opened_them(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     editor = QLabel("Configuración")
     review = QLabel("Revisión")
@@ -329,7 +329,7 @@ def test_workspace_internal_views_return_to_the_page_that_opened_them(qtbot) -> 
 
 
 def test_nested_internal_views_restore_focus_at_each_navigation_level(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.show()
     qtbot.waitExposed(workspace)
@@ -348,7 +348,7 @@ def test_nested_internal_views_restore_focus_at_each_navigation_level(qtbot) -> 
 
 
 def test_workspace_internal_view_replaces_the_global_header(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     manager = QLabel("Modelos")
 
@@ -364,7 +364,7 @@ def test_workspace_internal_view_replaces_the_global_header(qtbot) -> None:
 def test_workspace_keeps_local_ai_readiness_without_a_permanent_header_action(
     qtbot,
 ) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
 
     workspace.set_local_ai_status(OllamaStatus.READY, "qwen3:4b-instruct")
@@ -375,7 +375,7 @@ def test_workspace_keeps_local_ai_readiness_without_a_permanent_header_action(
 
 
 def test_workspace_does_not_reserve_header_space_for_an_unknown_ai_state(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
 
     workspace.set_local_ai_status(None, None)
@@ -385,7 +385,7 @@ def test_workspace_does_not_reserve_header_space_for_an_unknown_ai_state(qtbot) 
 
 
 def test_workspace_exposes_the_global_destination_compactly(qtbot, tmp_path: Path) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
 
     workspace.set_output_directory(tmp_path / "Resultados")
@@ -395,7 +395,7 @@ def test_workspace_exposes_the_global_destination_compactly(qtbot, tmp_path: Pat
 
 
 def test_populated_queue_exposes_add_action_in_the_single_header(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.set_jobs((make_job("one", 0), make_job("two", 1)))
     queue_layout = workspace.queue_pane.layout()
@@ -418,7 +418,7 @@ def test_populated_queue_exposes_add_action_in_the_single_header(qtbot) -> None:
 
 
 def test_workspace_drop_emits_each_local_document(qtbot, tmp_path: Path) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     first = tmp_path / "one.pdf"
     second = tmp_path / "two.epub"
@@ -440,7 +440,7 @@ def test_workspace_drop_emits_each_local_document(qtbot, tmp_path: Path) -> None
 
 
 def test_workspace_uses_one_bounded_rail_without_a_redundant_inspector(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(1380, 800)
     workspace.set_jobs((make_job("one", 0), make_job("two", 1)))
@@ -461,7 +461,7 @@ def test_workspace_uses_one_bounded_rail_without_a_redundant_inspector(qtbot) ->
 
 
 def test_internal_titles_share_the_centered_outer_rail(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(2160, 1280)
     workspace.show()
@@ -478,7 +478,7 @@ def test_internal_titles_share_the_centered_outer_rail(qtbot) -> None:
 
 
 def test_contextual_messages_expand_and_disappear_with_their_document(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(320, 700)
     workspace.set_jobs((make_job("one", 0),))
@@ -504,7 +504,7 @@ def test_contextual_messages_expand_and_disappear_with_their_document(qtbot) -> 
 
 
 def test_empty_workspace_anchors_its_only_task_near_the_header(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(2160, 1280)
     workspace.show()
@@ -539,7 +539,7 @@ def test_empty_workspace_anchors_its_only_task_near_the_header(qtbot) -> None:
 
 
 def test_empty_workspace_picker_uses_the_same_add_signal(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     additions: list[str] = []
     workspace.add_requested.connect(lambda: additions.append("add"))
@@ -551,7 +551,7 @@ def test_empty_workspace_picker_uses_the_same_add_signal(qtbot) -> None:
 
 @pytest.mark.parametrize("job_count", [1, 3, 8])
 def test_wide_tall_workspace_hugs_one_or_many_queue_rows(qtbot, job_count: int) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(2160, 1280)
     workspace.set_jobs(tuple(make_job(f"job-{index}", index) for index in range(job_count)))
@@ -574,7 +574,7 @@ def test_wide_tall_workspace_hugs_one_or_many_queue_rows(qtbot, job_count: int) 
 
 
 def test_workspace_header_exposes_queue_actions_and_one_global_menu(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     actions: list[str] = []
     workspace.add_requested.connect(lambda: actions.append("add"))
@@ -598,7 +598,7 @@ def test_workspace_header_exposes_queue_actions_and_one_global_menu(qtbot) -> No
 
 
 def test_global_menu_marks_only_actionable_document_attention(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
 
     workspace.set_jobs((make_job("queued", 0),))
@@ -612,7 +612,7 @@ def test_global_menu_marks_only_actionable_document_attention(qtbot) -> None:
 
 
 def test_workspace_reflows_at_320_without_horizontal_overflow(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(320, 720)
     workspace.set_jobs((make_job("one", 0),))
@@ -621,7 +621,13 @@ def test_workspace_reflows_at_320_without_horizontal_overflow(qtbot) -> None:
 
     assert workspace.width() == 320
     assert workspace._compact_layout is True  # noqa: SLF001
-    assert workspace.output_directory_button.y() == workspace.logo.y()
+    assert (
+        abs(
+            workspace.output_directory_button.geometry().center().y()
+            - workspace.logo.geometry().center().y()
+        )
+        <= 1
+    )
     assert workspace.primary_button.minimumWidth() == 38
     assert workspace.output_directory_button.text() == ""
     assert workspace.add_button.text() == ""
@@ -642,7 +648,7 @@ def test_workspace_reflows_at_320_without_horizontal_overflow(qtbot) -> None:
 
 
 def test_workspace_uses_intermediate_header_and_compact_table_at_768(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.resize(768, 720)
     workspace.set_jobs((make_job("one", 0),))
@@ -652,13 +658,19 @@ def test_workspace_uses_intermediate_header_and_compact_table_at_768(qtbot) -> N
     assert workspace._layout_mode == "medium"  # noqa: SLF001
     assert workspace._compact_layout is False  # noqa: SLF001
     assert workspace.job_table._compact_mode is True  # noqa: SLF001
-    assert workspace.output_directory_button.y() == workspace.settings_button.y()
-    assert workspace.add_button.y() == workspace.settings_button.y()
-    assert workspace.primary_button.y() == workspace.settings_button.y()
+    for button in (
+        workspace.output_directory_button,
+        workspace.add_button,
+        workspace.primary_button,
+    ):
+        assert (
+            abs(button.geometry().center().y() - workspace.settings_button.geometry().center().y())
+            <= 1
+        )
 
 
 def test_internal_view_hides_unrelated_global_primary_action(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     workspace.set_jobs((make_job("one", 0),))
     workspace.show()
@@ -674,7 +686,7 @@ def test_internal_view_hides_unrelated_global_primary_action(qtbot) -> None:
 
 
 def test_internal_activity_view_uses_vertical_scroll_without_horizontal_overflow(qtbot) -> None:
-    workspace = ParsezenWorkspace()
+    workspace = LiblevoWorkspace()
     qtbot.addWidget(workspace)
     activity = ActivityView(())
 

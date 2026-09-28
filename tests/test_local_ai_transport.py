@@ -9,12 +9,12 @@ from time import perf_counter
 import httpx
 import pytest
 
-import parsezen.local_ai_transport as transport_module
-from parsezen.cancellation import CancellationToken
-from parsezen.errors import ImprovementError, ProcessingCancelledError
-from parsezen.improvement_contracts import MAX_LOCAL_AI_OUTPUT_CHARACTERS
-from parsezen.local_ai_client import LocalAiClient
-from parsezen.processing_metrics import capture_batch_telemetry
+import liblevo.local_ai_transport as transport_module
+from liblevo.cancellation import CancellationToken
+from liblevo.errors import ImprovementError, ProcessingCancelledError
+from liblevo.improvement_contracts import MAX_LOCAL_AI_OUTPUT_CHARACTERS
+from liblevo.local_ai_client import LocalAiClient
+from liblevo.processing_metrics import capture_batch_telemetry
 
 
 class _PeriodicStream(httpx.AsyncByteStream):
@@ -49,7 +49,7 @@ def test_active_stream_can_outlive_the_configured_idle_timeout_within_total_dead
     with LocalAiClient(timeout=httpx.Timeout(1), transport=transport) as client:
         result = transport_module.request_local_ai(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Return the content.",
             "Content",
@@ -88,7 +88,7 @@ def test_stream_has_a_default_total_deadline_derived_from_the_read_timeout(
         with pytest.raises(ImprovementError, match="máximo total de generación"):
             transport_module.request_local_ai(
                 client,
-                "parsezen-local",
+                "liblevo-local",
                 8_192,
                 "Return the content.",
                 "Content",
@@ -109,7 +109,7 @@ def test_stream_fails_only_after_explicit_total_generation_limit(
         with pytest.raises(ImprovementError, match="máximo total de generación"):
             transport_module.request_local_ai(
                 client,
-                "parsezen-local",
+                "liblevo-local",
                 8_192,
                 "Return the content.",
                 "Content",
@@ -130,7 +130,7 @@ def test_stream_reports_only_privacy_safe_local_inference_metrics() -> None:
     with LocalAiClient(timeout=httpx.Timeout(120), transport=transport) as client:
         result = transport_module.request_local_ai(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Return the content.",
             "Private content that must not enter metrics.",
@@ -166,7 +166,7 @@ def test_chat_request_keeps_its_existing_payload_contract() -> None:
     ) as client:
         result = transport_module.request_local_ai(
             client,
-            "parsezen-local",
+            "liblevo-local",
             8_192,
             "Return the content.",
             "Private content",
@@ -179,7 +179,7 @@ def test_chat_request_keeps_its_existing_payload_contract() -> None:
     assert len(requests) == 1
     assert requests[0].url.path == "/api/chat"
     request_json = json.loads(requests[0].read())
-    assert request_json["model"] == "parsezen-local"
+    assert request_json["model"] == "liblevo-local"
     assert request_json["messages"] == [
         {"role": "system", "content": "Return the content."},
         {"role": "user", "content": "Private content", "images": ["AP8="]},

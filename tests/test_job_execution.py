@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.job_execution import JobExecutionController
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.scheduler import RunMode
-from parsezen.domain.jobs import (
+from liblevo.application.job_execution import JobExecutionController
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.scheduler import RunMode
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentSource,
     JobConfiguration,
@@ -16,7 +16,7 @@ from parsezen.domain.jobs import (
     ReviewSignal,
     TranslationConfiguration,
 )
-from parsezen.domain.stages import StageKind, StageStatus
+from liblevo.domain.stages import StageKind, StageStatus
 
 
 def add_job(

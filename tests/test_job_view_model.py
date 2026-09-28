@@ -1,9 +1,9 @@
 from dataclasses import replace
 from pathlib import Path
 
-from parsezen.application.planner import activate_next_stage
-from parsezen.application.workspace_recovery import SOURCE_UNAVAILABLE_MESSAGE
-from parsezen.domain.jobs import (
+from liblevo.application.planner import activate_next_stage
+from liblevo.application.workspace_recovery import SOURCE_UNAVAILABLE_MESSAGE
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentJob,
     DocumentSource,
@@ -12,8 +12,8 @@ from parsezen.domain.jobs import (
     ProcessingPlan,
     TranslationConfiguration,
 )
-from parsezen.domain.stages import StageKind, StageStatus
-from parsezen.presentation.job_view_model import (
+from liblevo.domain.stages import StageKind, StageStatus
+from liblevo.presentation.job_view_model import (
     JobAction,
     next_step_view,
     queue_header_view,

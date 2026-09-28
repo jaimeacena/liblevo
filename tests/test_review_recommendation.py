@@ -3,13 +3,13 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.review_recommendation import (
+from liblevo.application.review_recommendation import (
     rebind_review_recommendation,
     recommend_targeted_review,
     recommendation_summary,
     reconstruct_completed_result,
 )
-from parsezen.domain.jobs import (
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentJob,
     DocumentSource,
@@ -18,14 +18,14 @@ from parsezen.domain.jobs import (
     ReviewRecommendation,
     ReviewSignal,
 )
-from parsezen.epub_builder import EpubBookMetadata, build_epub
-from parsezen.pdf_conversion import PdfQualityReport, PdfReviewIssue
-from parsezen.pipeline.contracts import ProcessResult
-from parsezen.pipeline.transform import (
+from liblevo.epub_builder import EpubBookMetadata, build_epub
+from liblevo.pdf_conversion import PdfQualityReport, PdfReviewIssue
+from liblevo.pipeline.contracts import ProcessResult
+from liblevo.pipeline.transform import (
     review_block_fingerprint,
     review_scope_fingerprint,
 )
-from parsezen.translation_quality import (
+from liblevo.translation_quality import (
     TranslationIssueKind,
     TranslationQualityIssue,
     TranslationQualityReport,

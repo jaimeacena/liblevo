@@ -1,12 +1,12 @@
-# IA local en Parsezen
+# IA local en Liblevo
 
-Los trabajos nuevos usan modelos integrados en Parsezen. No necesitas instalar, abrir ni mantener
+Los trabajos nuevos usan modelos integrados en Liblevo. No necesitas instalar, abrir ni mantener
 Ollama. La app no ofrece proveedores, cuentas ni direcciones configurables. Los documentos se
 procesan en el PC; al preparar un componente puede descargarse su archivo público del modelo.
 
 Conversión, EPUB, OCR, traducción y revisión de trabajos nuevos pueden usarse sin Ollama.
 La traducción nueva usa IA local por defecto; Argos permanece como elección manual y nunca actúa como
-alternativa silenciosa. Parsezen fija Hy-MT2 Q4_K_M para traducir y LFM Q6_K para generar propuestas
+alternativa silenciosa. Liblevo fija Hy-MT2 Q4_K_M para traducir y LFM Q6_K para generar propuestas
 de revisión protegidas por guardas y confirmación humana; no pide a la persona elegir un modelo
 conversacional.
 
@@ -33,7 +33,7 @@ El usuario no necesita abrir una consola, una aplicación de chat ni un navegado
 ## Componentes fijados
 
 Cada tarjeta representa una capacidad concreta, no un modelo conversacional intercambiable. La
-preparación se decide con el catálogo versionado de Parsezen y comprobaciones locales de hardware,
+preparación se decide con el catálogo versionado de Liblevo y comprobaciones locales de hardware,
 modelo integrado y el SHA-256 del archivo GGUF local. No consulta Ollama ni envía documentos,
 prompts ni respuestas.
 
@@ -52,7 +52,7 @@ reemplazo silencioso de un componente de IA.
 
 ## Solo local
 
-El motor directo abre únicamente el modelo GGUF que Parsezen ha verificado en el equipo. No contacta
+El motor directo abre únicamente el modelo GGUF que Liblevo ha verificado en el equipo. No contacta
 un servidor de modelos. La preparación puede reutilizar una copia local antigua del mismo archivo o
 descargar el modelo público fijado; los documentos nunca forman parte de esa solicitud.
 Los trabajos antiguos que guardaron expresamente una identidad de Ollama conservan esa dependencia.
@@ -60,7 +60,7 @@ Si no quieres usarla, vuelve a configurar esos trabajos antes de reanudarlos.
 
 ## Ventana de contexto
 
-Cada manifest fija 8.192 tokens para su fase, dentro del máximo anunciado por el artefacto. Parsezen
+Cada manifest fija 8.192 tokens para su fase, dentro del máximo anunciado por el artefacto. Liblevo
 fragmenta los documentos largos y usa la ventana fijada por el perfil; la interfaz no ofrece un
 control para elevarla ni permite que una preferencia antigua sustituya el contrato especializado.
 
@@ -115,7 +115,7 @@ como referencia, no como validación del motor directo ni como pasos para el uso
 herramienta permite pedir expresamente el modelo antiguo para esa comparación:
 
 ```powershell
-Validar con IA real.cmd --model parsezen/hymt-translation:Q4_K_M --translation-engine local_ai --profile translation --pages 1 4
+Validar con IA real.cmd --model liblevo/hymt-translation:Q4_K_M --translation-engine local_ai --profile translation --pages 1 4
 ```
 
 `--profile critical` ejecuta traducción, corrección y estructura; `--profile translation` aísla la
@@ -175,5 +175,5 @@ El flujo normal aplica ahora esa conclusión de forma progresiva: las comprobaci
 pueden recomendar una revisión posterior limitada a los bloques con señales, pero no inician Ollama.
 La persona decide si ejecutarla y confirma cualquier cambio. La revisión adicional proactiva sigue
 disponible desde la configuración cuando el valor o la
-dificultad del documento justifican ampliar la cobertura; Parsezen informa los bloques realmente
+dificultad del documento justifican ampliar la cobertura; Liblevo informa los bloques realmente
 revisados y no la presenta como verificación completa por el mero hecho de solicitarla.

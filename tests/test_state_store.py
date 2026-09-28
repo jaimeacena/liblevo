@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-import parsezen.infrastructure.state_store as state_store_module
-from parsezen.application.planner import activate_next_stage
-from parsezen.domain.books import BookDocument, BookMetadata, BookSection
-from parsezen.domain.estimates import ProcessingMetric, WorkloadProfile
-from parsezen.domain.job_events import JobEvent, JobEventKind
-from parsezen.domain.jobs import (
+import liblevo.infrastructure.state_store as state_store_module
+from liblevo.application.planner import activate_next_stage
+from liblevo.domain.books import BookDocument, BookMetadata, BookSection
+from liblevo.domain.estimates import ProcessingMetric, WorkloadProfile
+from liblevo.domain.job_events import JobEvent, JobEventKind
+from liblevo.domain.jobs import (
     AIProfileConfiguration,
     DocumentFormat,
     DocumentJob,
@@ -25,15 +25,15 @@ from parsezen.domain.jobs import (
     TranslationConfiguration,
     TranslationMethod,
 )
-from parsezen.domain.reviews import (
+from liblevo.domain.reviews import (
     ReviewChoice,
     ReviewKind,
     ReviewSession,
     ReviewSeverity,
     ReviewUnit,
 )
-from parsezen.domain.stages import StageKind, StageStatus
-from parsezen.infrastructure.state_store import StateStore, StateStoreError
+from liblevo.domain.stages import StageKind, StageStatus
+from liblevo.infrastructure.state_store import StateStore, StateStoreError
 
 
 def make_job(identifier: str, order: int) -> DocumentJob:

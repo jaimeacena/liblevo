@@ -8,18 +8,18 @@ from threading import Event
 
 import pytest
 
-from parsezen.cancellation import CancellationToken
-from parsezen.domain.attempt_activity import (
+from liblevo.cancellation import CancellationToken
+from liblevo.domain.attempt_activity import (
     AttemptEventStatus,
     AttemptPhase,
     durable_failure_message,
 )
-from parsezen.domain.outcomes import EarlyCheckReport
-from parsezen.errors import ConversionError, ProcessingCancelledError
-from parsezen.failure_recovery import FailureKind, ProcessingFailure
-from parsezen.presentation.processing_runner import ProcessingRunner, ProcessingWorker
-from parsezen.processing import ProcessRequest, ProcessResult, ProcessStage
-from parsezen.settings import AppSettings
+from liblevo.domain.outcomes import EarlyCheckReport
+from liblevo.errors import ConversionError, ProcessingCancelledError
+from liblevo.failure_recovery import FailureKind, ProcessingFailure
+from liblevo.presentation.processing_runner import ProcessingRunner, ProcessingWorker
+from liblevo.processing import ProcessRequest, ProcessResult, ProcessStage
+from liblevo.settings import AppSettings
 
 
 def test_runner_forwards_events_and_releases_the_worker(qtbot, tmp_path: Path) -> None:
@@ -335,7 +335,7 @@ def test_blocking_early_check_prevents_the_full_processor(
         processor_called.append(True)
         return ProcessResult(tmp_path / "unexpected.md")
 
-    with caplog.at_level(logging.INFO, logger="parsezen.presentation.processing_runner"):
+    with caplog.at_level(logging.INFO, logger="liblevo.presentation.processing_runner"):
         runner.start(
             ProcessRequest(source, convert_to_markdown=True),
             AppSettings(),

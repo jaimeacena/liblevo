@@ -5,9 +5,9 @@ import json
 import httpx
 import pytest
 
-import parsezen.visual_ocr as visual_ocr_module
-from parsezen.local_models import OllamaModel
-from parsezen.visual_ocr import LocalVisualTextArbiter, build_local_visual_text_arbiter
+import liblevo.visual_ocr as visual_ocr_module
+from liblevo.local_models import OllamaModel
+from liblevo.visual_ocr import LocalVisualTextArbiter, build_local_visual_text_arbiter
 
 
 def test_selects_the_smallest_installed_vision_model_after_tags_discovery() -> None:

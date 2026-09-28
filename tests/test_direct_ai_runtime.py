@@ -6,10 +6,10 @@ from types import SimpleNamespace
 
 import pytest
 
-import parsezen.direct_ai_runtime as direct_runtime
-from parsezen.cancellation import CancellationToken
-from parsezen.direct_models import DIRECT_TRANSLATION_MODEL_ID
-from parsezen.errors import ImprovementError, ProcessingCancelledError
+import liblevo.direct_ai_runtime as direct_runtime
+from liblevo.cancellation import CancellationToken
+from liblevo.direct_models import DIRECT_TRANSLATION_MODEL_ID
+from liblevo.errors import ImprovementError, ProcessingCancelledError
 
 
 def test_direct_runtime_accepts_only_a_complete_bounded_response(monkeypatch, tmp_path) -> None:

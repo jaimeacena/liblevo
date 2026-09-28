@@ -4,9 +4,9 @@ import threading
 from multiprocessing import Pipe
 from pathlib import Path
 
-from parsezen.errors import ProcessingCancelledError
-from parsezen.ocr_protocol import PROTOCOL_VERSION, receive_message, send_message
-from parsezen.ocr_worker import serve_connection
+from liblevo.errors import ProcessingCancelledError
+from liblevo.ocr_protocol import PROTOCOL_VERSION, receive_message, send_message
+from liblevo.ocr_worker import serve_connection
 
 
 def _request(source: Path, job_id: str) -> dict[str, object]:

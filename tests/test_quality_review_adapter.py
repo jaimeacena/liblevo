@@ -4,19 +4,19 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.quality_review_adapter import (
+from liblevo.application.quality_review_adapter import (
     apply_pdf_review,
     apply_translation_review,
     create_pdf_review,
     create_translation_review,
     ensure_quality_reviews_applied,
 )
-from parsezen.domain.reviews import ReviewChoice, ReviewKind, ReviewSession, ReviewUnit
-from parsezen.domain.stages import StageKind
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.pdf_conversion import PdfQualityReport, PdfReviewIssue
-from parsezen.review_projection import project_review_text
-from parsezen.translation_quality import (
+from liblevo.domain.reviews import ReviewChoice, ReviewKind, ReviewSession, ReviewUnit
+from liblevo.domain.stages import StageKind
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.pdf_conversion import PdfQualityReport, PdfReviewIssue
+from liblevo.review_projection import project_review_text
+from liblevo.translation_quality import (
     TranslationIssueKind,
     TranslationQualityIssue,
     TranslationQualityReport,
@@ -437,7 +437,7 @@ def test_unanchored_translation_issue_logs_only_a_sanitized_count(
             ),
         ),
     )
-    caplog.set_level(logging.WARNING, logger="parsezen.application.quality_review_adapter")
+    caplog.set_level(logging.WARNING, logger="liblevo.application.quality_review_adapter")
 
     review = create_translation_review(
         report,
@@ -478,7 +478,7 @@ def test_unanchored_high_severity_translation_issue_blocks_review_materializatio
             ),
         ),
     )
-    caplog.set_level(logging.WARNING, logger="parsezen.application.quality_review_adapter")
+    caplog.set_level(logging.WARNING, logger="liblevo.application.quality_review_adapter")
 
     with pytest.raises(ValueError, match="incidencia importante"):
         create_translation_review(
@@ -542,7 +542,7 @@ def test_pdf_review_uses_page_image_and_applies_edited_text(
         ),
     )
     monkeypatch.setattr(
-        "parsezen.application.quality_review_adapter.render_pdf_page_cover",
+        "liblevo.application.quality_review_adapter.render_pdf_page_cover",
         lambda *_args: b"jpeg-page",
     )
 
@@ -678,7 +678,7 @@ def test_pdf_review_anchors_multiple_issues_to_the_transformed_pages(
         "<!-- PZDOC PDF PAGE 1 -->\n\n"
         "Texto ya traducido.\n\n"
         "<!-- PZDOC PDF PAGE 2 -->\n\n"
-        "![](<__parsezen_resources__/pdf/page-0002-image-01.jpg>)\n"
+        "![](<__liblevo_resources__/pdf/page-0002-image-01.jpg>)\n"
     )
     input_record = store.put_text(job_id="job", text=document)
     report = PdfQualityReport(
@@ -704,7 +704,7 @@ def test_pdf_review_anchors_multiple_issues_to_the_transformed_pages(
         ),
     )
     monkeypatch.setattr(
-        "parsezen.application.quality_review_adapter.render_pdf_page_cover",
+        "liblevo.application.quality_review_adapter.render_pdf_page_cover",
         lambda *_args: b"jpeg-page",
     )
 

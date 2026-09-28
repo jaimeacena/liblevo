@@ -1,13 +1,13 @@
 from pathlib import Path
 
-from parsezen.domain.process_lifecycle import ProcessStage
-from parsezen.pipeline.contracts import (
+from liblevo.domain.process_lifecycle import ProcessStage
+from liblevo.pipeline.contracts import (
     PreparedDocument,
     ProcessRequest,
     TransformedDocument,
 )
-from parsezen.pipeline.publish import publish_transformed_document
-from parsezen.semantic_blocks import analyze_markdown
+from liblevo.pipeline.publish import publish_transformed_document
+from liblevo.semantic_blocks import analyze_markdown
 
 
 def test_publication_writes_a_prepared_transformation_without_transforming_it(

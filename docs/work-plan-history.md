@@ -593,11 +593,11 @@ Verificación ejecutada con `.codex-e1-eval-venv/Scripts/python.exe` (Python 3.1
 PySide6/Qt 6.11.2), `PYTHONDONTWRITEBYTECODE=1`, Qt offscreen y cobertura fuera del checkout:
 
 - reproducción y contratos focales: correctos; contratos vecinos: 484 pruebas superadas;
-- `pytest -p no:cacheprovider -q --cov=parsezen --cov-report=term:skip-covered --cov-fail-under=88`:
+- `pytest -p no:cacheprovider -q --cov=liblevo --cov-report=term:skip-covered --cov-fail-under=88`:
   **2 267 superadas, 4 omitidas; cobertura 88,70 %**, en 243,44 segundos;
 - `ruff check . --no-cache`, `ruff format --check . --no-cache`, `sync_version.py --check` y
   `git diff --check`: correctos;
-- `mypy src/parsezen`: persisten los mismos **30 errores en siete archivos** de la auditoría,
+- `mypy src/liblevo`: persisten los mismos **30 errores en siete archivos** de la auditoría,
   ninguno en los tres módulos de producto modificados. La comprobación focal de esos módulos pasó.
 
 Las omisiones corresponden a permisos de symlink, dos comprobaciones con EPUBCheck externo y el

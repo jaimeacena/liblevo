@@ -1,4 +1,4 @@
-# Evaluación mínima de Parsezen
+# Evaluación mínima de Liblevo
 
 La evaluación tiene tres piezas: contratos automáticos, banco abierto para depurar y muestra nueva
 para una decisión importante. El ejecutor no decide fidelidad semántica ni modifica los criterios de
@@ -43,7 +43,7 @@ información sensible en los comentarios.
 El PDF muestra hasta seis páginas del intervalo; una vista parcial lo indica. Los EPUB y DOCX siguen
 abriéndose en un lector del dispositivo. Si no puedes abrirlos o no tienes contexto,
 marca **Necesito ayuda**. Una práctica marcada como sintética sirve para aprender el recorrido;
-no valida la calidad real de Parsezen. El agente prepara después una muestra con documentos reales,
+no valida la calidad real de Liblevo. El agente prepara después una muestra con documentos reales,
 sin aceptar automáticamente el banco anterior.
 
 ## Empezar con un catálogo vacío
@@ -143,7 +143,7 @@ en cada brazo; cambiar código o identidad de modelo durante la ejecución impid
 Las variantes de entorno deben corresponder al propósito declarado de la comparación.
 
 La traducción inicial admite destinos `es` y `en`, exclusivamente con el componente fijo local de
-Parsezen, cuya protección local, manifest y digest se comprueban antes de enviar contenido. No hay
+Liblevo, cuya protección local, manifest y digest se comprueban antes de enviar contenido. No hay
 descargas, proveedores alternativos, juez automático ni revisión semántica adicional. La revisión
 compleja sigue haciéndose en el flujo humano. Probar otros idiomas o perfiles necesita un incremento
 explícito; no se infiere soporte universal de este instrumento inicial.

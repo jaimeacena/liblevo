@@ -1,13 +1,13 @@
-from parsezen.domain.attempt_activity import AttemptPhase
-from parsezen.domain.process_lifecycle import (
+from liblevo.domain.attempt_activity import AttemptPhase
+from liblevo.domain.process_lifecycle import (
     PROCESS_STAGE_LIFECYCLE,
     ProcessStage,
     diagnostic_label_for_process_stage,
     phase_for_process_stage,
     stage_kind_from_process_stage,
 )
-from parsezen.domain.stages import StageKind
-from parsezen.processing import ProcessStage as FacadeProcessStage
+from liblevo.domain.stages import StageKind
+from liblevo.processing import ProcessStage as FacadeProcessStage
 
 
 def test_every_physical_stage_has_one_complete_lifecycle_mapping() -> None:

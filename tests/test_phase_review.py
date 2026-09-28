@@ -5,25 +5,25 @@ from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QSize, Qt
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QMessageBox, QSplitter
 
-from parsezen.application.review_coordinator import apply_phase_review
-from parsezen.domain.jobs import (
+from liblevo.application.review_coordinator import apply_phase_review
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentJob,
     DocumentSource,
     JobConfiguration,
     ProcessingPlan,
 )
-from parsezen.domain.reviews import (
+from liblevo.domain.reviews import (
     ReviewChoice,
     ReviewKind,
     ReviewSession,
     ReviewSeverity,
     ReviewUnit,
 )
-from parsezen.domain.stages import StageKind, StageStatus
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.presentation.phase_review_dialog import PhaseReviewDialog
-from parsezen.review_projection import project_review_text
+from liblevo.domain.stages import StageKind, StageStatus
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.presentation.phase_review_dialog import PhaseReviewDialog
+from liblevo.review_projection import project_review_text
 
 
 def reversible(payload: bytes) -> bytes:
@@ -556,13 +556,13 @@ def test_correction_projects_private_syntax_in_both_panes_and_restores_exactly(
         "Original.\n\n"
         "PZDOC: 123...\n\n"
         "Comentario interno: conservar original.\n\n"
-        "![](<__parsezen_resources__/images/original.png>)\n"
+        "![](<__liblevo_resources__/images/original.png>)\n"
     )
     proposed_text = (
         "Propuesta.\n\n"
         "PZDOC: 456...\n\n"
         "Comentario interno: conservar propuesta.\n\n"
-        "![Alt](__parsezen_resources__/images/proposed.png)\n"
+        "![Alt](__liblevo_resources__/images/proposed.png)\n"
     )
     original = store.put_text(job_id="job", text=original_text)
     proposed = store.put_text(job_id="job", text=proposed_text)
@@ -580,7 +580,7 @@ def test_correction_projects_private_syntax_in_both_panes_and_restores_exactly(
     for pane in (dialog.original_pane, dialog.proposed_pane):
         assert "PZDOC" not in pane.text()
         assert "Comentario interno" not in pane.text()
-        assert "__parsezen_resources__" not in pane.text()
+        assert "__liblevo_resources__" not in pane.text()
         assert "![]" not in pane.text()
     assert project_review_text(original_text).restore(dialog.original_pane.text()) == original_text
 

@@ -9,16 +9,16 @@ de motor del 26 de septiembre conserva los artefactos Hy-MT2 y LFM, pero necesit
 lingüística en libros reales. Lo complejo o dudoso se remite a
 revisión humana, sin habilitar promoción semántica automática por superar umbrales de una muestra.
 
-Esta política fija la pila de componentes propiedad de Parsezen. El runtime consume snapshots
+Esta política fija la pila de componentes propiedad de Liblevo. El runtime consume snapshots
 locales independientes para traducción y revisión, y la interfaz activa muestra únicamente esas
 dos capacidades fijas. No existe un asistente de recomendaciones, un selector genérico ni un campo
 para tags o endpoints arbitrarios.
 
-Para trabajos nuevos el componente de traducción es `parsezen/hymt-gguf:Q4_K_M` y el de revisión
-`parsezen/lfm-gguf:Q6_K`. Se conserva el mismo archivo GGUF de cada modelo aprobado previamente,
+Para trabajos nuevos el componente de traducción es `liblevo/hymt-gguf:Q4_K_M` y el de revisión
+`liblevo/lfm-gguf:Q6_K`. Se conserva el mismo archivo GGUF de cada modelo aprobado previamente,
 con un motor integrado distinto; sus SHA-256, tamaños, contextos y adaptadores están fijados en
-`direct_models.py`. Las identidades de Ollama (`parsezen/hymt-translation:Q4_K_M` y
-`parsezen/lfm-review:Q6_K`) permanecen reconocibles para trabajos anteriores y no se mezclan con
+`direct_models.py`. Las identidades de Ollama (`liblevo/hymt-translation:Q4_K_M` y
+`liblevo/lfm-review:Q6_K`) permanecen reconocibles para trabajos anteriores y no se mezclan con
 checkpoints directos. Ninguna de estas identidades acredita corrección semántica universal.
 
 El motor integrado admitirá un LLM futuro mediante un perfil nuevo, una selección activa posterior
@@ -33,12 +33,12 @@ arbitrario:
 
 | Capacidad | Contrato objetivo | Estado |
 |---|---|---|
-| Traducción con IA | `parsezen/hymt-gguf:Q4_K_M` | mismo GGUF histórico; motor directo verificado solo en sintéticos |
-| Revisión bilingüe, revisión de contenido y estructura | `parsezen/lfm-gguf:Q6_K` | propuesta sintética ejecutada; calidad humana pendiente |
+| Traducción con IA | `liblevo/hymt-gguf:Q4_K_M` | mismo GGUF histórico; motor directo verificado solo en sintéticos |
+| Revisión bilingüe, revisión de contenido y estructura | `liblevo/lfm-gguf:Q6_K` | propuesta sintética ejecutada; calidad humana pendiente |
 | Traducción sin LLM | Argos offline | se conserva sin cambios |
 | Arbitraje OCR visual | componente visual independiente | fuera de esta selección |
 
-Los perfiles efectivos están separados por fase y Parsezen conserva una instantánea de la política
+Los perfiles efectivos están separados por fase y Liblevo conserva una instantánea de la política
 verificada en cada trabajo. Las cargas antiguas que solo contienen la pareja global conservan su
 identidad de checkpoint legacy; al volver a preparar los componentes, los trabajos editables reciben
 los perfiles especializados. La interfaz muestra capacidades y estados, no selectores de modelo.
@@ -74,7 +74,7 @@ mostrar un componente `Preparado` sin afirmar el cuarto alcance.
 
 ## Identidad reproducible
 
-Cada componente especializado aprobado tiene un manifest versionado por Parsezen con, como mínimo:
+Cada componente especializado aprobado tiene un manifest versionado por Liblevo con, como mínimo:
 
 - capacidad y versión de la política;
 - repositorio, revisión upstream y archivo exacto;
@@ -99,7 +99,7 @@ resultados idénticos bit a bit entre procesadores, controladores y versiones de
 
 No se admiten nombres `hf.co/...`, URLs o endpoints escritos por la persona. Un GGUF solo puede
 aprobarse si su procedencia y proceso de cuantización son oficiales o
-reproducibles y controlados por Parsezen. Los únicos artefactos de la política actual son los
+reproducibles y controlados por Liblevo. Los únicos artefactos de la política actual son los
 manifests aprobados de Hy-MT2 Q4_K_M y LFM Q6_K.
 
 ## Contratos de petición
@@ -118,7 +118,7 @@ heredados usan loopback. Los contratos de contenido y prompt fijados por la eval
   del antiguo modelo general;
 - prompts, respuestas y contenido documental nunca se registran.
 
-Parsezen libera explícitamente el componente anterior al cambiar de fase, siempre después de completar
+Liblevo libera explícitamente el componente anterior al cambiar de fase, siempre después de completar
 todos sus fragmentos y nunca entre peticiones del mismo lote. El pico de memoria se mide con el
 pipeline completo —incluidos conversión y OCR—, no solo con el tamaño de los pesos.
 
@@ -133,7 +133,7 @@ referencia histórica de evaluación y no aparecen como opciones instalables o s
 | Revisión | LFM Q6_K | LFM Q8/QAD y Qwen3.5-9B |
 
 El benchmark no descarga implícitamente comparadores ni recurre a artefactos comunitarios. La
-selección consideró la calidad después de las guardas de Parsezen, memoria, tiempo, reintentos y
+selección consideró la calidad después de las guardas de Liblevo, memoria, tiempo, reintentos y
 tamaño instalado. Hy-MT2 superó 27/27 gates, frente a 24/27 de MiLMMT y TranslateGemma. LFM Q6
 igualó la calidad de Q8 con menor tamaño y superó a Qwen en precisión monolingüe; la comprobación
 bilingüe repetida terminó 9/9 sin falsos positivos ni falsos negativos. Esta fue una criba de
@@ -243,7 +243,7 @@ que el modelo o el corpus no cubren.
 ## Corpus privado
 
 Los documentos privados permanecen fuera del repositorio y del contexto de servicios remotos. Los
-procesa únicamente Parsezen con sus herramientas locales y Ollama en `127.0.0.1`. Los informes no
+procesa únicamente Liblevo con sus herramientas locales y Ollama en `127.0.0.1`. Los informes no
 incluyen títulos, rutas, prompts, respuestas ni texto documental.
 
 El piloto usa de tres a cuatro páginas por documento largo:

@@ -52,8 +52,8 @@ jobs:
           python scripts/sync_version.py --check
           python -m ruff check .
           python -m ruff format --check .
-          python -m mypy src/parsezen
-          python -m pytest --cov=parsezen --cov-report=term-missing --cov-fail-under=88
+          python -m mypy src/liblevo
+          python -m pytest --cov=liblevo --cov-report=term-missing --cov-fail-under=88
       - name: Construir aplicación e instalador
         shell: pwsh
         run: .\distribution\windows\build.ps1 -InstallInnoSetup
@@ -67,9 +67,9 @@ jobs:
         shell: pwsh
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          $installers = @(Get-ChildItem -Path "outputs" -Filter "Parsezen-Setup-*.exe" -File)
+          $installers = @(Get-ChildItem -Path "outputs" -Filter "Liblevo-Setup-*.exe" -File)
           if ($installers.Count -ne 1) {
-            throw "Se esperaba exactamente un instalador de Parsezen."
+            throw "Se esperaba exactamente un instalador de Liblevo."
           }
           $installer = $installers[0]
           $digest = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -77,10 +77,10 @@ jobs:
             Out-File -Encoding ascii -NoNewline "$($installer.FullName).sha256"
       - uses: actions/upload-artifact@v7
         with:
-          name: Parsezen-Windows
+          name: Liblevo-Windows
           path: |
-            outputs/Parsezen-Setup-*.exe
-            outputs/Parsezen-Setup-*.exe.sha256
+            outputs/Liblevo-Setup-*.exe
+            outputs/Liblevo-Setup-*.exe.sha256
             outputs/python-environment.json
           if-no-files-found: error
 
@@ -96,21 +96,21 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          name: Parsezen-Windows
+          name: Liblevo-Windows
           path: outputs
       - name: Atestar la procedencia del instalador
         uses: actions/attest-build-provenance@v4
         with:
-          subject-path: outputs/Parsezen-Setup-*.exe
+          subject-path: outputs/Liblevo-Setup-*.exe
       - name: Crear o actualizar la Release en borrador
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          $installer = @(Get-ChildItem -Path "outputs" -Filter "Parsezen-Setup-*.exe" -File)
+          $installer = @(Get-ChildItem -Path "outputs" -Filter "Liblevo-Setup-*.exe" -File)
           if ($installer.Count -ne 1) {
-            throw "Se esperaba exactamente un instalador de Parsezen."
+            throw "Se esperaba exactamente un instalador de Liblevo."
           }
           $releaseFiles = @(
             $installer[0].FullName,
@@ -125,5 +125,5 @@ jobs:
           if ($releaseExists) {
             gh release upload $env:GITHUB_REF_NAME @releaseFiles --clobber
           } else {
-            gh release create $env:GITHUB_REF_NAME @releaseFiles --draft --verify-tag --generate-notes --title "Parsezen $env:GITHUB_REF_NAME"
+            gh release create $env:GITHUB_REF_NAME @releaseFiles --draft --verify-tag --generate-notes --title "Liblevo $env:GITHUB_REF_NAME"
           }

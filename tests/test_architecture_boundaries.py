@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-_PACKAGE_ROOT = Path(__file__).parents[1] / "src" / "parsezen"
+_PACKAGE_ROOT = Path(__file__).parents[1] / "src" / "liblevo"
 _QT_COMPOSITION_ROOTS = frozenset({"__main__.py"})
 
 
@@ -36,14 +36,14 @@ def test_domain_depends_only_on_domain_modules() -> None:
     violations: list[str] = []
     for path in (_PACKAGE_ROOT / "domain").glob("*.py"):
         for imported in _imports(path):
-            if imported.startswith("parsezen.") and not imported.startswith("parsezen.domain"):
+            if imported.startswith("liblevo.") and not imported.startswith("liblevo.domain"):
                 violations.append(f"{path.name}: {imported}")
 
     assert violations == []
 
 
 def test_application_does_not_import_presentation_or_infrastructure() -> None:
-    forbidden = ("parsezen.presentation", "parsezen.infrastructure")
+    forbidden = ("liblevo.presentation", "liblevo.infrastructure")
     violations = [
         f"{path.name}: {imported}"
         for path in (_PACKAGE_ROOT / "application").glob("*.py")
@@ -60,14 +60,14 @@ def test_core_root_modules_do_not_depend_back_on_application() -> None:
         for path in _PACKAGE_ROOT.glob("*.py")
         if path.name != "__main__.py"
         for imported in _imports(path)
-        if imported.startswith("parsezen.application")
+        if imported.startswith("liblevo.application")
     ]
 
     assert violations == []
 
 
 def test_infrastructure_does_not_depend_on_application_or_presentation() -> None:
-    forbidden = ("parsezen.application", "parsezen.presentation")
+    forbidden = ("liblevo.application", "liblevo.presentation")
     violations = [
         f"{path.name}: {imported}"
         for path in (_PACKAGE_ROOT / "infrastructure").glob("*.py")
@@ -84,7 +84,7 @@ def test_only_the_presentation_composition_root_imports_infrastructure() -> None
         for path in (_PACKAGE_ROOT / "presentation").glob("*.py")
         if path.name != "main_window.py"
         for imported in _imports(path)
-        if imported.startswith("parsezen.infrastructure")
+        if imported.startswith("liblevo.infrastructure")
     ]
 
     assert violations == []
@@ -108,25 +108,25 @@ def test_pdf_checkpoint_codec_does_not_depend_on_extraction_or_ocr() -> None:
     imported = _imports(_PACKAGE_ROOT / "pdf_checkpoints.py")
 
     assert "pdfplumber" not in imported
-    assert "parsezen.pdf_conversion" not in imported
-    assert "parsezen.ocr_conversion" not in imported
-    assert "parsezen.pdf_layout" in imported
+    assert "liblevo.pdf_conversion" not in imported
+    assert "liblevo.ocr_conversion" not in imported
+    assert "liblevo.pdf_layout" in imported
 
 
 def test_extracted_pdf_rules_do_not_depend_on_the_pdf_orchestrator_or_ocr_engine() -> None:
     for name in ("pdf_tables.py", "pdf_text_reconciliation.py"):
         imported = _imports(_PACKAGE_ROOT / name)
-        assert "parsezen.pdf_conversion" not in imported
-        assert "parsezen.ocr_conversion" not in imported
+        assert "liblevo.pdf_conversion" not in imported
+        assert "liblevo.ocr_conversion" not in imported
         assert "httpx" not in imported
 
 
 def test_table_and_review_patch_rules_do_not_own_model_requests() -> None:
     for name in ("table_translation.py", "translation_review_patches.py"):
         imported = _imports(_PACKAGE_ROOT / name)
-        assert "parsezen.improvement" not in imported
-        assert "parsezen.local_ai_transport" not in imported
-        assert "parsezen.local_ai_adapters" not in imported
+        assert "liblevo.improvement" not in imported
+        assert "liblevo.local_ai_transport" not in imported
+        assert "liblevo.local_ai_adapters" not in imported
         assert "httpx" not in imported
 
 
@@ -134,15 +134,15 @@ def test_markdown_safety_does_not_own_network_or_model_selection() -> None:
     imported = _imports(_PACKAGE_ROOT / "ai_markdown_safety.py")
 
     assert "httpx" not in imported
-    assert "parsezen.local_ai_transport" not in imported
-    assert "parsezen.local_models" not in imported
+    assert "liblevo.local_ai_transport" not in imported
+    assert "liblevo.local_models" not in imported
 
 
 def test_pipeline_contracts_do_not_depend_on_the_orchestrator_or_output() -> None:
     imported = _imports(_PACKAGE_ROOT / "pipeline" / "contracts.py")
 
-    assert "parsezen.processing" not in imported
-    assert "parsezen.output" not in imported
+    assert "liblevo.processing" not in imported
+    assert "liblevo.output" not in imported
 
 
 def test_importing_pipeline_contracts_does_not_load_processing_engines() -> None:
@@ -150,9 +150,9 @@ def test_importing_pipeline_contracts_does_not_load_processing_engines() -> None
         [
             sys.executable,
             "-c",
-            "import sys; from parsezen.pipeline.contracts import ProcessRequest; "
-            "assert not {'parsezen.improvement', 'parsezen.pdf_conversion', "
-            "'parsezen.epub_builder', 'pdfplumber', 'PIL'} & sys.modules.keys()",
+            "import sys; from liblevo.pipeline.contracts import ProcessRequest; "
+            "assert not {'liblevo.improvement', 'liblevo.pdf_conversion', "
+            "'liblevo.epub_builder', 'pdfplumber', 'PIL'} & sys.modules.keys()",
         ],
         check=False,
         capture_output=True,
@@ -164,27 +164,27 @@ def test_importing_pipeline_contracts_does_not_load_processing_engines() -> None
 def test_pipeline_preparation_does_not_depend_on_transform_or_publish() -> None:
     imported = _imports(_PACKAGE_ROOT / "pipeline" / "prepare.py")
 
-    assert "parsezen.processing" not in imported
-    assert "parsezen.improvement" not in imported
-    assert "parsezen.output" not in imported
+    assert "liblevo.processing" not in imported
+    assert "liblevo.improvement" not in imported
+    assert "liblevo.output" not in imported
 
 
 def test_pipeline_publication_does_not_depend_on_transform_implementations() -> None:
     imported = _imports(_PACKAGE_ROOT / "pipeline" / "publish.py")
 
-    assert "parsezen.processing" not in imported
-    assert "parsezen.local_ai_transport" not in imported
-    assert "parsezen.offline_translation" not in imported
+    assert "liblevo.processing" not in imported
+    assert "liblevo.local_ai_transport" not in imported
+    assert "liblevo.offline_translation" not in imported
 
 
 def test_private_worker_channel_remains_protocol_agnostic() -> None:
     imported = _imports(_PACKAGE_ROOT / "workers" / "private_channel.py")
 
     assert not any(
-        name.startswith(("parsezen.ocr", "parsezen.offline_translation")) for name in imported
+        name.startswith(("liblevo.ocr", "liblevo.offline_translation")) for name in imported
     )
-    assert "parsezen.workers.private_channel" in _imports(_PACKAGE_ROOT / "ocr_executor.py")
-    assert "parsezen.workers.private_channel" in _imports(
+    assert "liblevo.workers.private_channel" in _imports(_PACKAGE_ROOT / "ocr_executor.py")
+    assert "liblevo.workers.private_channel" in _imports(
         _PACKAGE_ROOT / "offline_translation_executor.py"
     )
 
@@ -196,7 +196,7 @@ def test_main_window_delegates_the_local_ai_workflow() -> None:
     )
     window_methods = _class_methods(
         _PACKAGE_ROOT / "presentation" / "main_window.py",
-        "ParsezenMainWindow",
+        "LiblevoMainWindow",
     )
 
     assert {"show_component_setup", "start_model_discovery"} <= delegated

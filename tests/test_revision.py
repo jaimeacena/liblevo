@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from parsezen.errors import ImprovementError
-from parsezen.revision import (
+from liblevo.errors import ImprovementError
+from liblevo.revision import (
     RevisionDecision,
     RevisionKind,
     RevisionRisk,
@@ -114,7 +114,7 @@ def test_revision_input_limits_and_empty_documents_are_safe(monkeypatch) -> None
     with pytest.raises(ImprovementError, match="no es válido"):
         split_markdown_blocks("bad\0text")
 
-    monkeypatch.setattr("parsezen.revision._MAX_REVIEW_MARKDOWN_CHARACTERS", 3)
+    monkeypatch.setattr("liblevo.revision._MAX_REVIEW_MARKDOWN_CHARACTERS", 3)
     with pytest.raises(ImprovementError, match="demasiado grande"):
         split_markdown_blocks("four")
     assert [
@@ -255,7 +255,7 @@ def test_heading_helpers_ignore_fences_and_invalid_edits() -> None:
 
 @pytest.mark.parametrize("position", [0, 4000, 7999])
 def test_nearly_identical_repeated_paragraphs_have_one_selectable_change(position, monkeypatch):
-    import parsezen.revision as module
+    import liblevo.revision as module
 
     real_matcher = module.SequenceMatcher
 
@@ -279,7 +279,7 @@ def test_nearly_identical_repeated_paragraphs_have_one_selectable_change(positio
 
 
 def test_large_alignment_keeps_every_block_in_order_with_bounded_work(monkeypatch):
-    import parsezen.revision as module
+    import liblevo.revision as module
 
     real_matcher = module.SequenceMatcher
 
@@ -306,7 +306,7 @@ def test_large_alignment_keeps_every_block_in_order_with_bounded_work(monkeypatc
 
 
 def test_large_repetitive_single_paragraph_uses_bounded_word_comparison(monkeypatch):
-    import parsezen.revision as module
+    import liblevo.revision as module
 
     real_matcher = module.SequenceMatcher
 

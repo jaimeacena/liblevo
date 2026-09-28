@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from parsezen.pipeline.contracts import PreparedDocument, ProcessRequest
-from parsezen.pipeline.transform import transform_prepared_document
-from parsezen.semantic_blocks import analyze_markdown
+from liblevo.pipeline.contracts import PreparedDocument, ProcessRequest
+from liblevo.pipeline.transform import transform_prepared_document
+from liblevo.semantic_blocks import analyze_markdown
 
 
 def test_transformation_keeps_identity_without_publishing(tmp_path: Path) -> None:

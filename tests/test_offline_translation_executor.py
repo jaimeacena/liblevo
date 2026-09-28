@@ -7,17 +7,17 @@ from multiprocessing import Pipe
 
 import pytest
 
-import parsezen.offline_translation_executor as executor
-from parsezen.cancellation import CancellationToken
-from parsezen.errors import ProcessingCancelledError, TranslationError
-from parsezen.offline_translation_executor import (
+import liblevo.offline_translation_executor as executor
+from liblevo.cancellation import CancellationToken
+from liblevo.errors import ProcessingCancelledError, TranslationError
+from liblevo.offline_translation_executor import (
     OfflineTranslationSession,
     _accept_worker,
     _private_listener,
     _start_worker_process,
     _stop_worker,
 )
-from parsezen.offline_translation_protocol import (
+from liblevo.offline_translation_protocol import (
     PROTOCOL_VERSION,
     OfflineTranslationProtocolError,
     receive_message,
@@ -445,9 +445,9 @@ def test_start_translation_worker_builds_source_and_frozen_commands(
     assert executor._start_worker_process("address", "family", b"a" * 32) is process
     assert captured["command"][1:3] == [  # type: ignore[index]
         "-m",
-        "parsezen.offline_translation_worker",
+        "liblevo.offline_translation_worker",
     ]
-    assert "PARSEZEN_TRANSLATION_AUTH" in captured["env"]  # type: ignore[operator]
+    assert "LIBLEVO_TRANSLATION_AUTH" in captured["env"]  # type: ignore[operator]
 
     monkeypatch.setattr(executor.sys, "frozen", True)
     executor._start_worker_process("address", "family", b"b" * 32)

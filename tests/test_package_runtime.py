@@ -10,7 +10,7 @@ from types import SimpleNamespace
 
 def _runtime_module():
     path = Path(__file__).parents[1] / "distribution" / "windows" / "check_runtime.py"
-    spec = importlib.util.spec_from_file_location("parsezen_package_runtime_check", path)
+    spec = importlib.util.spec_from_file_location("liblevo_package_runtime_check", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

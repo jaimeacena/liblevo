@@ -1,14 +1,14 @@
 from pathlib import Path
 
-import parsezen.application.early_check as early_check_module
-from parsezen.application.early_check import (
+import liblevo.application.early_check as early_check_module
+from liblevo.application.early_check import (
     representative_pdf_pages,
     run_early_check,
 )
-from parsezen.cancellation import CancellationToken
-from parsezen.pdf_conversion import PdfPageRange, PdfQualityReport, PdfReviewIssue
-from parsezen.processing import OutputFormat, ProcessRequest, ProcessResult
-from parsezen.settings import AppSettings
+from liblevo.cancellation import CancellationToken
+from liblevo.pdf_conversion import PdfPageRange, PdfQualityReport, PdfReviewIssue
+from liblevo.processing import OutputFormat, ProcessRequest, ProcessResult
+from liblevo.settings import AppSettings
 
 
 def test_representative_pages_cover_the_selected_interval(

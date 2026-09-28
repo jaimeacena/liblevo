@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.infrastructure.artifact_store import ArtifactStore
+from liblevo.infrastructure.artifact_store import ArtifactStore
 
 
 def reversible(payload: bytes) -> bytes:

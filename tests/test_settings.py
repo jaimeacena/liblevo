@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-import parsezen.settings as settings_module
-from parsezen.errors import SettingsError
-from parsezen.settings import (
+import liblevo.settings as settings_module
+from liblevo.errors import SettingsError
+from liblevo.settings import (
     AppSettings,
     load_settings,
     save_settings,
@@ -52,7 +52,7 @@ def test_settings_round_trip_through_atomic_json(tmp_path: Path) -> None:
         "timeout_seconds",
         "checkpoint_retention_days",
     }
-    assert list(path.parent.glob(".parsezen-settings-*.tmp")) == []
+    assert list(path.parent.glob(".liblevo-settings-*.tmp")) == []
 
 
 def test_phase_settings_fall_back_to_the_legacy_global_pair() -> None:
@@ -192,4 +192,4 @@ def test_failed_atomic_save_keeps_previous_settings(
         save_settings(AppSettings(model="second"), path)
 
     assert load_settings(path) == original
-    assert list(tmp_path.glob(".parsezen-settings-*.tmp")) == []
+    assert list(tmp_path.glob(".liblevo-settings-*.tmp")) == []

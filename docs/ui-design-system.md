@@ -1,4 +1,4 @@
-# Sistema de interfaz de Parsezen
+# Sistema de interfaz de Liblevo
 
 Este documento registra la auditoría, las decisiones y el contrato visual de la interfaz nativa
 PySide6. La referencia funcional continúa siendo el dominio y la arquitectura descritos en
@@ -12,8 +12,8 @@ PySide6. La referencia funcional continúa siendo el dominio y la arquitectura d
   prioridad sobre la reducción de pasos.
 - La aplicación es nativa, no una web: las “rutas” son páginas de la pila de la ventana principal y
   diálogos integrados.
-- La marca teal y la tipografía Inter se conservan, pero los colores de marca se usan mediante
-  roles semánticos.
+- La identidad Liblevo utiliza una L con forma de libro, nombre en minúsculas e Inter semibold.
+  El lema es «Convierte. Traduce. Lee.» y los colores se consumen mediante roles semánticos.
 - No se cambian contratos de procesamiento, formatos, persistencia ni orden de fases.
 - Un ancho de 320 px es un caso de reflow y zoom, no el tamaño recomendado para editar un libro
   largo. Ninguna acción esencial puede desaparecer en ese ancho.
@@ -23,8 +23,8 @@ PySide6. La referencia funcional continúa siendo el dominio y la arquitectura d
 La presentación activa se organiza así:
 
 ```text
-ParsezenMainWindow
-└── ParsezenWorkspace
+LiblevoMainWindow
+└── LiblevoWorkspace
     ├── cola de documentos + destino + acción contextual
     ├── página de configuración: Resultado / Traducción / Revisión / PDF
     ├── componentes de IA local
@@ -87,7 +87,7 @@ Inventario visual inicial:
   dependían de un ancho de escritorio.
 
 Las capturas iniciales se conservaron fuera del repositorio en
-`%TEMP%\parsezen-ui-refactor-captures`.
+`%TEMP%\liblevo-ui-refactor-captures`.
 
 ## Problemas priorizados
 
@@ -185,29 +185,53 @@ No se anima contenido cuando Windows tiene desactivadas las animaciones de clien
 
 Los nombres describen función, no pigmento. Los componentes no contienen colores concretos.
 
+### Identidad oficial
+
+Nombre visible **Liblevo**, wordmark **liblevo** en Inter semibold y lema **Convierte. Traduce. Lee.**
+El símbolo combina una L con forma de libro y una página abierta, sin degradados. La app usa el
+wordmark sin lema en la cabecera para mantenerlo legible; el lema aparece en la bienvenida y README.
+Los archivos SVG contienen contornos, sin depender de una fuente instalada. El icono de Windows
+es blanco sobre una baldosa teal con esquinas redondeadas y exterior transparente.
+Los contornos tipográficos usan relleno por orientación para conservar los trazos superpuestos de
+Inter y los huecos naturales de cada letra. Una comparación renderizada con el texto nativo protege
+el nombre y el lema frente a cortes transparentes accidentales. El símbolo no lleva borde; se
+comprueban los colores interiores de los PNG para detectar contornos añadidos durante la generación.
+
+| Color de marca | Valor | Uso |
+| --- | --- | --- |
+| verde azulado | `#176B63` | símbolo y acción principal en claro |
+| tinta | `#172E36` | wordmark/texto en claro y fondo oscuro |
+| papel | `#F7F4EE` | lienzo claro y texto oscuro |
+| menta | `#DDEFE8` | página del símbolo, selección y detalle |
+| blanco | `#FFFFFF` | superficies claras e icono invertido |
+
+El maestro es `assets/branding/masters/liblevo-symbol.svg`; `scripts/generate_brand_assets.py`
+produce SVG, PNG, ICO y un manifiesto SHA-256. Los maestros Liblevo anteriores se conservan como
+referencia histórica y no se incluyen en la distribución. No hay cambios de datos o procesamiento.
+
 ### Tema claro
 
 | Rol | Valor |
 | --- | --- |
-| fondo / superficie / superficie sutil | `#F3F6F8` / `#FCFDFD` / `#EEF2F4` |
-| texto primario / secundario / atenuado | `#0B1F2A` / `#3D5663` / `#5F7480` |
-| divisor / borde / foco | `#D5DFE3` / `#718A95` / `#08767D` |
-| acción primaria / hover / active | `#08767D` / `#095E64` / `#064C51` |
+| fondo / superficie / superficie sutil | `#F7F4EE` / `#FFFFFF` / `#F0EDE6` |
+| texto primario / secundario / atenuado | `#172E36` / `#425B60` / `#5B6C6D` |
+| divisor / borde / foco | `#DDDCD5` / `#71847E` / `#176B63` |
+| acción primaria / hover / active | `#176B63` / `#12594F` / `#0D473F` |
+| selección / acción suave | `#DDEFE8` |
 | información / éxito / aviso / error | `#005E8A` / `#0B7548` / `#8A4B00` / `#B4232A` |
 
 ### Tema oscuro
 
 | Rol | Valor |
 | --- | --- |
-| fondo / superficie / superficie elevada | `#0C1419` / `#121D23` / `#202E35` |
-| texto primario / secundario / atenuado | `#E7F0F2` / `#B5C4CA` / `#8FA3AC` |
-| divisor / borde / foco | `#2B3D45` / `#587684` / `#5ED1D3` |
-| acción primaria / hover / active | `#35C4C8` / `#5ED1D3` / `#23A4A8` |
+| fondo / superficie / superficie elevada | `#172E36` / `#1D373E` / `#294A50` |
+| texto primario / secundario / atenuado | `#F7F4EE` / `#C1D3CE` / `#A2BBB3` |
+| divisor / borde / foco | `#36544F` / `#74968B` / `#DDEFE8` |
+| acción primaria / hover / active | `#8DD2B9` / `#B2E2D0` / `#73BDA2` |
 | información / éxito / aviso / error | `#63C3F0` / `#63D39A` / `#F6B85E` / `#FF9696` |
 
-El oscuro utiliza superficies azul-gris, no negro puro, y texto `#E7F0F2`, no blanco puro. Las
-categorías OCR, traducción, corrección y estructura tienen roles propios y no reutilizan
-éxito/error.
+El modo oscuro deriva los acentos del teal y la menta con contraste suficiente. Las categorías OCR,
+traducción, corrección y estructura conservan roles distintos de los estados de éxito/error.
 
 ### Matriz principal de contraste
 
@@ -215,13 +239,13 @@ Valores calculados con luminancia WCAG:
 
 | Combinación | Claro | Oscuro |
 | --- | ---: | ---: |
-| texto primario / fondo | 15,56:1 | 16,06:1 |
-| texto secundario / fondo | 7,14:1 | 10,37:1 |
-| texto atenuado / fondo | 4,50:1 | 7,08:1 |
-| texto inverso / acción primaria | 5,39:1 | 8,04:1 |
-| borde / superficie | 3,57:1 | 3,54:1 |
-| foco / fondo | 4,96:1 | 10,21:1 |
-| texto de tooltip / overlay | 15,82:1 | 16,47:1 |
+| texto primario / fondo | 12,92:1 | 12,92:1 |
+| texto secundario / fondo | 6,60:1 | 9,10:1 |
+| texto atenuado / fondo | 5,02:1 | 6,95:1 |
+| texto inverso / acción primaria | 6,33:1 | 8,14:1 |
+| borde / superficie | 3,96:1 | 3,88:1 |
+| foco / fondo | 5,76:1 | 11,88:1 |
+| texto de tooltip / overlay | 12,92:1 | 14,78:1 |
 
 Los estados no dependen solo del color: incluyen copia, icono, borde, selección o patrón.
 
@@ -334,7 +358,7 @@ humano pendiente.
 ## Excepciones y deuda conocida
 
 - `epub_builder.py` conserva dos apariciones de `#777` dentro del CSS que se escribe en el EPUB.
-  Es contenido interoperable del documento, no interfaz de Parsezen, y no puede depender del tema
+  Es contenido interoperable del documento, no interfaz de Liblevo, y no puede depender del tema
   de la aplicación.
 - `presentation/main_window.py` sigue siendo un coordinador amplio porque reúne navegación,
   proyección de cola y apertura de revisiones. La sesión secuencial, el trabajo físico y la IA local
@@ -396,9 +420,9 @@ Al modificar un token o componente base se deben ejecutar, como mínimo:
 ```powershell
 python -m ruff check .
 python -m ruff format --check .
-python -m mypy src/parsezen
+python -m mypy src/liblevo
 python -m pytest
-python -m pytest --cov=parsezen --cov-report=term-missing --cov-fail-under=88
+python -m pytest --cov=liblevo --cov-report=term-missing --cov-fail-under=88
 ```
 
 Para una entrega de Windows se añade el build de producción y el smoke test del paquete.

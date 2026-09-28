@@ -1,10 +1,10 @@
 from pathlib import Path
 from unittest.mock import Mock
 
-from parsezen.application.review_flow import ReviewFlowCoordinator
-from parsezen.domain.jobs import DocumentFormat, DocumentJob, DocumentSource, JobConfiguration
-from parsezen.pipeline.contracts import ProcessResult
-from parsezen.revision import RevisionKind, build_revision_draft
+from liblevo.application.review_flow import ReviewFlowCoordinator
+from liblevo.domain.jobs import DocumentFormat, DocumentJob, DocumentSource, JobConfiguration
+from liblevo.pipeline.contracts import ProcessResult
+from liblevo.revision import RevisionKind, build_revision_draft
 
 
 def test_review_flow_delegates_materialization_and_rebuilds_draft() -> None:

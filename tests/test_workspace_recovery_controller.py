@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.queue_session import QueueSession
-from parsezen.application.workspace_recovery_controller import WorkspaceRecoveryController
-from parsezen.domain.jobs import DocumentJob, DocumentSource, JobConfiguration, JobStatus
-from parsezen.domain.stages import StageKind, StageStatus
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.infrastructure.result_snapshots import ResultSnapshotStore
-from parsezen.infrastructure.state_store import StateStore
-from parsezen.settings import AppSettings
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.queue_session import QueueSession
+from liblevo.application.workspace_recovery_controller import WorkspaceRecoveryController
+from liblevo.domain.jobs import DocumentJob, DocumentSource, JobConfiguration, JobStatus
+from liblevo.domain.stages import StageKind, StageStatus
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.infrastructure.result_snapshots import ResultSnapshotStore
+from liblevo.infrastructure.state_store import StateStore
+from liblevo.settings import AppSettings
 
 
 def test_workspace_recovery_controller_restores_and_pauses_interrupted_job(

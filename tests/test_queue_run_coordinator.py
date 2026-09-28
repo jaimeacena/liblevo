@@ -1,12 +1,12 @@
 from pathlib import Path
 
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.queue_run_coordinator import QueueRunCoordinator
-from parsezen.application.queue_session import QueueSession
-from parsezen.application.run_preparation import PreparedQueueRun
-from parsezen.application.scheduler import QueueRunPlan, RunMode
-from parsezen.domain.jobs import DocumentFormat, DocumentSource, JobConfiguration
-from parsezen.settings import AppSettings
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.queue_run_coordinator import QueueRunCoordinator
+from liblevo.application.queue_session import QueueSession
+from liblevo.application.run_preparation import PreparedQueueRun
+from liblevo.application.scheduler import QueueRunPlan, RunMode
+from liblevo.domain.jobs import DocumentFormat, DocumentSource, JobConfiguration
+from liblevo.settings import AppSettings
 
 
 def test_queue_run_coordinator_owns_runtime_lookup_claim_and_flags() -> None:

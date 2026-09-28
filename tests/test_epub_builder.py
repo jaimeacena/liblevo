@@ -7,8 +7,8 @@ from zipfile import ZIP_STORED, ZipFile
 
 import pytest
 
-from parsezen.document_model import ConvertedResource
-from parsezen.epub_builder import (
+from liblevo.document_model import ConvertedResource
+from liblevo.epub_builder import (
     EPUB_CHAPTER_MARKER,
     EpubBookMetadata,
     build_epub,
@@ -19,14 +19,14 @@ from parsezen.epub_builder import (
     validate_epub_archive,
     validate_epub_file,
 )
-from parsezen.errors import ConversionError
+from liblevo.errors import ConversionError
 
 
 def _build(markdown: str, resources: tuple[ConvertedResource, ...] = ()):
     return build_epub(
         markdown,
         resources,
-        EpubBookMetadata("Libro de prueba", "es", "Parsezen"),
+        EpubBookMetadata("Libro de prueba", "es", "Liblevo"),
         identifier=UUID(int=1),
         modified_at=datetime(2026, 7, 22, tzinfo=UTC),
     )
@@ -68,7 +68,7 @@ def test_epub_contains_required_package_navigation_and_reflowable_chapter() -> N
         assert "padding-top: 0.5em" in stylesheet
         assert "page-break-inside: avoid" in stylesheet
         package = archive.read("EPUB/package.opf").decode("utf-8")
-        assert "Parsezen" in package
+        assert "Liblevo" in package
         assert "2026-07-22T00:00:00Z" in package
     assert built.chapter_count == 1
     assert built.integrity_report is not None
@@ -197,8 +197,8 @@ def test_epub_renders_github_table_and_preserves_local_image() -> None:
         "image/jpeg",
     )
     markdown = (
-        "# Datos\n\n| Nombre | Valor |\n|---|---:|\n| Parsezen | 42 |\n\n"
-        "![Figura](__parsezen_resources__/pdf/figura.jpg)"
+        "# Datos\n\n| Nombre | Valor |\n|---|---:|\n| Liblevo | 42 |\n\n"
+        "![Figura](__liblevo_resources__/pdf/figura.jpg)"
     )
 
     built = _build(markdown, (resource,))
@@ -217,7 +217,7 @@ def test_epub_renders_restricted_multiline_pdf_table_html() -> None:
 
 <table>
 <thead><tr><th>Nombre</th><th>Notas</th></tr></thead>
-<tbody><tr><td>Parsezen</td><td>Primera lÃ­nea<br>Segunda lÃ­nea</td></tr></tbody>
+<tbody><tr><td>Liblevo</td><td>Primera lÃ­nea<br>Segunda lÃ­nea</td></tr></tbody>
 </table>
 """
 
@@ -1186,7 +1186,7 @@ def test_pdf_provenance_markers_never_appear_in_epub_pages() -> None:
 
 def test_epub_rejects_missing_or_unsafe_resources() -> None:
     with pytest.raises(ConversionError, match="Falta una imagen"):
-        _build("![Figura](__parsezen_resources__/missing.png)")
+        _build("![Figura](__liblevo_resources__/missing.png)")
 
     unsafe = ConvertedResource(PurePosixPath("../secret.png"), b"x", "image/png")
     with pytest.raises(ConversionError, match="ruta interna"):

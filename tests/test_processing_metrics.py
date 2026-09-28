@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from parsezen.processing_metrics import (
+from liblevo.processing_metrics import (
     AiOperationTelemetry,
     BatchTelemetry,
     capture_batch_telemetry,

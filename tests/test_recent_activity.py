@@ -4,7 +4,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from parsezen.domain.attempt_activity import (
+from liblevo.domain.attempt_activity import (
     AttemptEvent,
     AttemptEventStatus,
     AttemptPhase,
@@ -13,8 +13,8 @@ from parsezen.domain.attempt_activity import (
     ReusableWork,
     durable_failure_message,
 )
-from parsezen.domain.outcomes import OutcomeSummary
-from parsezen.recent_activity import (
+from liblevo.domain.outcomes import OutcomeSummary
+from liblevo.recent_activity import (
     MAX_RECENT_JOBS,
     RecentJob,
     RecentJobStatus,

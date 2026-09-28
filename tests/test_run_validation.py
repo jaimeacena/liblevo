@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import parsezen.application.run_validation as validation_module
-from parsezen.application.run_validation import validate_batch_requests
-from parsezen.processing import ProcessRequest
-from parsezen.settings import AppSettings
+import liblevo.application.run_validation as validation_module
+from liblevo.application.run_validation import validate_batch_requests
+from liblevo.processing import ProcessRequest
+from liblevo.settings import AppSettings
 
 
 def test_run_validation_reports_all_invalid_documents_before_work_starts(

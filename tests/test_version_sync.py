@@ -17,8 +17,8 @@ def _write_version_fixture(root: Path, version: str = "1.2.3") -> None:
         encoding="utf-8",
     )
     contents = {
-        "src/parsezen/__init__.py": '__version__ = "0.0.0"\n',
-        "distribution/windows/Parsezen.iss": '#define AppVersion "0.0.0"\n',
+        "src/liblevo/__init__.py": '__version__ = "0.0.0"\n',
+        "distribution/windows/Liblevo.iss": '#define AppVersion "0.0.0"\n',
         "distribution/windows/version_info.txt": (
             "  filevers=(0, 0, 0, 0)\n"
             "  prodvers=(0, 0, 0, 0)\n"
@@ -26,7 +26,7 @@ def _write_version_fixture(root: Path, version: str = "1.2.3") -> None:
             "  StringStruct('ProductVersion', '0.0.0')\n"
         ),
         "README.md": "**Versión 0.0.0 · Windows**\n",
-        "docs/user-guide.md": "Esta guía describe Parsezen 0.0.0. Más texto.\n",
+        "docs/user-guide.md": "Esta guía describe Liblevo 0.0.0. Más texto.\n",
     }
     for relative_path, content in contents.items():
         target = root / relative_path
@@ -42,7 +42,7 @@ def test_sync_uses_pyproject_as_the_single_version_source(tmp_path: Path) -> Non
     assert synchronize(tmp_path) == VERSIONED_FILES
     assert synchronize(tmp_path, check=True) == ()
 
-    assert '__version__ = "1.2.3"' in (tmp_path / "src/parsezen/__init__.py").read_text(
+    assert '__version__ = "1.2.3"' in (tmp_path / "src/liblevo/__init__.py").read_text(
         encoding="utf-8"
     )
     version_info = (tmp_path / "distribution/windows/version_info.txt").read_text(encoding="utf-8")

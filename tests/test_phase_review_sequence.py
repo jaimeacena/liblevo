@@ -2,29 +2,29 @@ from pathlib import Path
 
 import pytest
 
-from parsezen.application.job_execution import JobExecutionController
-from parsezen.application.job_queue import JobQueue
-from parsezen.application.phase_review_sequence import PhaseReviewSequenceCoordinator
-from parsezen.domain.jobs import (
+from liblevo.application.job_execution import JobExecutionController
+from liblevo.application.job_queue import JobQueue
+from liblevo.application.phase_review_sequence import PhaseReviewSequenceCoordinator
+from liblevo.domain.jobs import (
     DocumentFormat,
     DocumentSource,
     JobConfiguration,
     ProcessingPlan,
     TranslationConfiguration,
 )
-from parsezen.domain.reviews import (
+from liblevo.domain.reviews import (
     ReviewChoice,
     ReviewKind,
     ReviewSession,
     ReviewStatus,
     ReviewUnit,
 )
-from parsezen.domain.stages import StageKind, StageStatus
-from parsezen.infrastructure.state_store import StateStore
-from parsezen.pdf_conversion import PdfQualityReport, PdfReviewIssue
-from parsezen.processing import ProcessResult
-from parsezen.revision import RevisionChange, RevisionDraft, RevisionKind
-from parsezen.translation_quality import (
+from liblevo.domain.stages import StageKind, StageStatus
+from liblevo.infrastructure.state_store import StateStore
+from liblevo.pdf_conversion import PdfQualityReport, PdfReviewIssue
+from liblevo.processing import ProcessResult
+from liblevo.revision import RevisionChange, RevisionDraft, RevisionKind
+from liblevo.translation_quality import (
     TranslationIssueKind,
     TranslationQualityIssue,
     TranslationQualityReport,

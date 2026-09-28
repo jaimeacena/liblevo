@@ -7,24 +7,24 @@ from pathlib import Path, PurePosixPath
 
 import pytest
 
-import parsezen.infrastructure.result_snapshots as result_snapshots_module
-from parsezen.document_model import ConvertedResource
-from parsezen.domain.jobs import DocumentJob, DocumentSource, JobConfiguration
-from parsezen.domain.source_identity import SourceIdentity
-from parsezen.epub_builder import EpubBookMetadata
-from parsezen.final_integrity import FinalIntegrityReport, IntegrityLedger
-from parsezen.infrastructure.artifact_store import ArtifactStore
-from parsezen.infrastructure.result_snapshots import ResultSnapshotStore
-from parsezen.infrastructure.state_store import StateStore
-from parsezen.pdf_conversion import PdfQualityReport, PdfReviewIssue
-from parsezen.processing import (
+import liblevo.infrastructure.result_snapshots as result_snapshots_module
+from liblevo.document_model import ConvertedResource
+from liblevo.domain.jobs import DocumentJob, DocumentSource, JobConfiguration
+from liblevo.domain.source_identity import SourceIdentity
+from liblevo.epub_builder import EpubBookMetadata
+from liblevo.final_integrity import FinalIntegrityReport, IntegrityLedger
+from liblevo.infrastructure.artifact_store import ArtifactStore
+from liblevo.infrastructure.result_snapshots import ResultSnapshotStore
+from liblevo.infrastructure.state_store import StateStore
+from liblevo.pdf_conversion import PdfQualityReport, PdfReviewIssue
+from liblevo.processing import (
     ProcessResult,
     ProcessStage,
     ProcessTelemetry,
     StageTelemetry,
 )
-from parsezen.revision import RevisionKind, build_revision_draft
-from parsezen.translation_quality import (
+from liblevo.revision import RevisionKind, build_revision_draft
+from liblevo.translation_quality import (
     LinguisticReviewCoverage,
     LinguisticReviewMode,
     TranslationIssueKind,
@@ -368,7 +368,7 @@ def test_loads_a_legacy_v1_snapshot(tmp_path: Path) -> None:
     manifest = artifacts.put_text(
         job_id=job.id,
         text=json.dumps(raw),
-        media_type="application/vnd.parsezen.result+json",
+        media_type="application/vnd.liblevo.result+json",
     )
     state.save_result_snapshot(job.id, manifest.id)
 

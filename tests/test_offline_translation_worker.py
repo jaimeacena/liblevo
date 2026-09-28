@@ -5,14 +5,14 @@ from multiprocessing import Pipe
 
 import pytest
 
-import parsezen.offline_translation_worker as worker_module
-from parsezen.errors import ProcessingCancelledError, TranslationError
-from parsezen.offline_translation_protocol import (
+import liblevo.offline_translation_worker as worker_module
+from liblevo.errors import ProcessingCancelledError, TranslationError
+from liblevo.offline_translation_protocol import (
     PROTOCOL_VERSION,
     receive_message,
     send_message,
 )
-from parsezen.offline_translation_worker import serve_connection
+from liblevo.offline_translation_worker import serve_connection
 
 
 def _request(job_id: str, markdown: str = "Enough local text to translate.") -> dict[str, object]:
@@ -161,9 +161,9 @@ def test_worker_rejects_invalid_requests_and_missing_parent_credentials(
     worker.close()
     assert result == [2]
 
-    monkeypatch.delenv("PARSEZEN_TRANSLATION_AUTH", raising=False)
+    monkeypatch.delenv("LIBLEVO_TRANSLATION_AUTH", raising=False)
     assert worker_module.main(["--address", "unused", "--family", "AF_PIPE"]) == 2
-    monkeypatch.setenv("PARSEZEN_TRANSLATION_AUTH", "dGlueQ==")
+    monkeypatch.setenv("LIBLEVO_TRANSLATION_AUTH", "dGlueQ==")
     assert worker_module.main(["--address", "unused", "--family", "AF_PIPE"]) == 2
 
 

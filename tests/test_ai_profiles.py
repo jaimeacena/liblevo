@@ -1,8 +1,8 @@
 from dataclasses import replace
 
-from parsezen.application.preflight import build_workload_profile
-from parsezen.application.runtime_mapping import request_and_settings_from_job
-from parsezen.domain.jobs import (
+from liblevo.application.preflight import build_workload_profile
+from liblevo.application.runtime_mapping import request_and_settings_from_job
+from liblevo.domain.jobs import (
     AIPhase,
     AIProfileConfiguration,
     DocumentFormat,
@@ -17,9 +17,9 @@ from parsezen.domain.jobs import (
     TranslationMethod,
     resolve_ai_profile,
 )
-from parsezen.pipeline.contracts import ProcessRequest
-from parsezen.settings import AppSettings
-from parsezen.workflow import OutputFormat
+from liblevo.pipeline.contracts import ProcessRequest
+from liblevo.settings import AppSettings
+from liblevo.workflow import OutputFormat
 
 
 def _component(model: str, digest: str, context_window: int) -> LocalAIComponentSnapshot:

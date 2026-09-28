@@ -4,8 +4,8 @@ from typing import Any
 
 import httpx
 
-import parsezen.local_ai_adapters as adapters
-from parsezen.local_ai_client import LocalAiClient
+import liblevo.local_ai_adapters as adapters
+from liblevo.local_ai_client import LocalAiClient
 
 
 def test_product_lfm_alias_uses_raw_chatml_and_strips_completed_reasoning(
@@ -34,7 +34,7 @@ def test_product_lfm_alias_uses_raw_chatml_and_strips_completed_reasoning(
     try:
         result = adapters.request_adapted_local_ai(
             client,
-            "parsezen/lfm-review:Q6_K",
+            "liblevo/lfm-review:Q6_K",
             8192,
             "Transform exactly.",
             "Synthetic fragment 51.",
@@ -46,7 +46,7 @@ def test_product_lfm_alias_uses_raw_chatml_and_strips_completed_reasoning(
         client.close()
 
     assert result == "Final text."
-    assert captured["model"] == "parsezen/lfm-review:Q6_K"
+    assert captured["model"] == "liblevo/lfm-review:Q6_K"
     assert captured["context_window"] == 8192
     prompt = captured["prompt"]
     assert isinstance(prompt, str)
@@ -111,15 +111,15 @@ def test_only_product_specialized_alias_is_explicitly_released(monkeypatch: Any)
         assert (
             adapters.release_adapted_local_ai_model(
                 client,
-                "parsezen/lfm-review:Q6_K",
+                "liblevo/lfm-review:Q6_K",
             )
             is True
         )
-        assert adapters.release_adapted_local_ai_model(client, "parsezen/lfm-review:Q8_0") is False
+        assert adapters.release_adapted_local_ai_model(client, "liblevo/lfm-review:Q8_0") is False
         assert (
             adapters.release_adapted_local_ai_model(
                 client,
-                "parsezen/hymt-translation:Q4_K_M",
+                "liblevo/hymt-translation:Q4_K_M",
             )
             is True
         )
@@ -127,8 +127,8 @@ def test_only_product_specialized_alias_is_explicitly_released(monkeypatch: Any)
         client.close()
 
     assert released == [
-        "parsezen/lfm-review:Q6_K",
-        "parsezen/hymt-translation:Q4_K_M",
+        "liblevo/lfm-review:Q6_K",
+        "liblevo/hymt-translation:Q4_K_M",
     ]
 
 
@@ -147,7 +147,7 @@ def test_unapproved_specialized_alias_keeps_established_chat_transport(
     try:
         result = adapters.request_adapted_local_ai(
             client,
-            "parsezen/hymt-translation:tampered",
+            "liblevo/hymt-translation:tampered",
             8192,
             "These generic instructions are deliberately ignored.",
             "The report is ready.",
@@ -161,7 +161,7 @@ def test_unapproved_specialized_alias_keeps_established_chat_transport(
         client.close()
 
     assert result == "unchanged"
-    assert captured["args"][1] == "parsezen/hymt-translation:tampered"
+    assert captured["args"][1] == "liblevo/hymt-translation:tampered"
     options = captured["options"]
     assert isinstance(options, dict)
     assert options["prediction_characters"] == 64
@@ -186,7 +186,7 @@ def test_product_hymt_alias_uses_official_raw_translation_prompt(monkeypatch: An
     try:
         result = adapters.request_adapted_local_ai(
             client,
-            "parsezen/hymt-translation:Q4_K_M",
+            "liblevo/hymt-translation:Q4_K_M",
             8192,
             "These generic instructions are deliberately ignored.",
             "The report is ready.",
@@ -224,7 +224,7 @@ def test_lfm_adapter_removes_only_added_heading_before_line_marker(
     try:
         result = adapters.request_adapted_local_ai(
             client,
-            "parsezen/lfm-review:Q6_K",
+            "liblevo/lfm-review:Q6_K",
             8192,
             "Review.",
             "ZPZDOCAXZQ HEADING\n\nKeep ZPZDOCBXZQ inline.",
@@ -250,7 +250,7 @@ def test_lfm_adapter_discards_reasoning_and_one_outer_markdown_fence(
     try:
         result = adapters.request_adapted_local_ai(
             client,
-            "parsezen/lfm-review:Q6_K",
+            "liblevo/lfm-review:Q6_K",
             8192,
             "Review.",
             "Texto corregido.",
@@ -275,7 +275,7 @@ def test_lfm_adapter_extracts_complete_final_json_value(monkeypatch: Any) -> Non
     try:
         result = adapters.request_adapted_local_ai(
             client,
-            "parsezen/lfm-review:Q6_K",
+            "liblevo/lfm-review:Q6_K",
             8192,
             "Review bilingual content.",
             "Synthetic fragment.",
@@ -307,7 +307,7 @@ def test_lfm_translation_review_keeps_approved_reasoning_template(monkeypatch: A
     try:
         result = adapters.request_adapted_local_ai(
             client,
-            "parsezen/lfm-review:Q6_K",
+            "liblevo/lfm-review:Q6_K",
             8192,
             "Review bilingual content.",
             "Synthetic fragment.",
