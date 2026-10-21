@@ -1,0 +1,434 @@
+{
+ "documents": [
+  {
+   "id": "d1-gift-of-the-magi",
+   "blocks": 47,
+   "flagged_blocks": 12,
+   "planted": 15,
+   "found_top10": 5,
+   "found_top20": 9,
+   "found_top50": 12,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     3,
+     3
+    ],
+    "pegada": [
+     3,
+     3
+    ],
+    "s\u00edmbolo": [
+     3,
+     3
+    ],
+    "borrada": [
+     0,
+     3
+    ]
+   }
+  },
+  {
+   "id": "d2-heart-of-darkness",
+   "blocks": 326,
+   "flagged_blocks": 29,
+   "planted": 15,
+   "found_top10": 11,
+   "found_top20": 11,
+   "found_top50": 11,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     2,
+     3
+    ],
+    "pegada": [
+     3,
+     3
+    ],
+    "s\u00edmbolo": [
+     3,
+     3
+    ],
+    "borrada": [
+     0,
+     3
+    ]
+   }
+  },
+  {
+   "id": "d3-free-culture",
+   "blocks": 2641,
+   "flagged_blocks": 821,
+   "planted": 15,
+   "found_top10": 8,
+   "found_top20": 12,
+   "found_top50": 13,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     2,
+     3
+    ],
+    "pegada": [
+     3,
+     3
+    ],
+    "s\u00edmbolo": [
+     3,
+     3
+    ],
+    "borrada": [
+     2,
+     3
+    ]
+   }
+  },
+  {
+   "id": "d4-bert-naacl-2019",
+   "blocks": 324,
+   "flagged_blocks": 54,
+   "planted": 15,
+   "found_top10": 7,
+   "found_top20": 10,
+   "found_top50": 10,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     0,
+     3
+    ],
+    "pegada": [
+     3,
+     3
+    ],
+    "s\u00edmbolo": [
+     3,
+     3
+    ],
+    "borrada": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "id": "d5-docling-technical-report",
+   "blocks": 243,
+   "flagged_blocks": 63,
+   "planted": 15,
+   "found_top10": 2,
+   "found_top20": 8,
+   "found_top50": 12,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     1,
+     3
+    ],
+    "pegada": [
+     3,
+     3
+    ],
+    "s\u00edmbolo": [
+     3,
+     3
+    ],
+    "borrada": [
+     2,
+     3
+    ]
+   }
+  },
+  {
+   "id": "d6-boe-convenio-colectivo",
+   "blocks": 499,
+   "flagged_blocks": 47,
+   "planted": 15,
+   "found_top10": 11,
+   "found_top20": 11,
+   "found_top50": 11,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     2,
+     3
+    ],
+    "pegada": [
+     3,
+     3
+    ],
+    "s\u00edmbolo": [
+     3,
+     3
+    ],
+    "borrada": [
+     0,
+     3
+    ]
+   }
+  },
+  {
+   "id": "s1-sherlock-holmes-1892",
+   "blocks": 168,
+   "flagged_blocks": 33,
+   "planted": 15,
+   "found_top10": 7,
+   "found_top20": 12,
+   "found_top50": 12,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     3,
+     3
+    ],
+    "pegada": [
+     3,
+     3
+    ],
+    "s\u00edmbolo": [
+     3,
+     3
+    ],
+    "borrada": [
+     0,
+     3
+    ]
+   }
+  },
+  {
+   "id": "s2-marianela-1883",
+   "blocks": 188,
+   "flagged_blocks": 68,
+   "planted": 15,
+   "found_top10": 8,
+   "found_top20": 8,
+   "found_top50": 13,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     3,
+     3
+    ],
+    "pegada": [
+     3,
+     3
+    ],
+    "s\u00edmbolo": [
+     3,
+     3
+    ],
+    "borrada": [
+     1,
+     3
+    ]
+   }
+  },
+  {
+   "id": "s3-capitan-veneno-1899",
+   "blocks": 256,
+   "flagged_blocks": 180,
+   "planted": 15,
+   "found_top10": 4,
+   "found_top20": 6,
+   "found_top50": 12,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     3,
+     3
+    ],
+    "pegada": [
+     3,
+     3
+    ],
+    "s\u00edmbolo": [
+     3,
+     3
+    ],
+    "borrada": [
+     2,
+     3
+    ]
+   }
+  },
+  {
+   "id": "s4-economic-mineralogy-tables-1891",
+   "blocks": 450,
+   "flagged_blocks": 140,
+   "planted": 12,
+   "found_top10": 8,
+   "found_top20": 10,
+   "found_top50": 10,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     3,
+     3
+    ],
+    "pegada": [
+     2,
+     2
+    ],
+    "s\u00edmbolo": [
+     2,
+     2
+    ],
+    "borrada": [
+     0,
+     2
+    ]
+   }
+  },
+  {
+   "id": "s5-government-salary-tables-1916",
+   "blocks": 2935,
+   "flagged_blocks": 30,
+   "planted": 12,
+   "found_top10": 7,
+   "found_top20": 7,
+   "found_top50": 7,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     2,
+     3
+    ],
+    "partida": [
+     3,
+     3
+    ],
+    "pegada": [
+     2,
+     2
+    ],
+    "s\u00edmbolo": [
+     0,
+     2
+    ],
+    "borrada": [
+     0,
+     2
+    ]
+   }
+  },
+  {
+   "id": "s6-scientific-american-1900-11-03",
+   "blocks": 2601,
+   "flagged_blocks": 1330,
+   "planted": 15,
+   "found_top10": 3,
+   "found_top20": 5,
+   "found_top50": 10,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     3,
+     3
+    ],
+    "partida": [
+     1,
+     3
+    ],
+    "pegada": [
+     3,
+     3
+    ],
+    "s\u00edmbolo": [
+     3,
+     3
+    ],
+    "borrada": [
+     0,
+     3
+    ]
+   }
+  },
+  {
+   "id": "s7-rimas-becquer-1925",
+   "blocks": 222,
+   "flagged_blocks": 32,
+   "planted": 15,
+   "found_top10": 3,
+   "found_top20": 3,
+   "found_top50": 3,
+   "flagged_by_kind": {
+    "confusi\u00f3n": [
+     1,
+     3
+    ],
+    "partida": [
+     2,
+     3
+    ],
+    "pegada": [
+     0,
+     3
+    ],
+    "s\u00edmbolo": [
+     0,
+     3
+    ],
+    "borrada": [
+     0,
+     3
+    ]
+   }
+  }
+ ],
+ "summary": {
+  "0.1": 0.4444444444444444,
+  "0.2": 0.5925925925925926,
+  "0.5": 0.7195767195767195
+ },
+ "by_kind": {
+  "confusi\u00f3n": [
+   36,
+   39
+  ],
+  "partida": [
+   28,
+   39
+  ],
+  "pegada": [
+   34,
+   37
+  ],
+  "s\u00edmbolo": [
+   32,
+   37
+  ],
+  "borrada": [
+   8,
+   37
+  ]
+ }
+}

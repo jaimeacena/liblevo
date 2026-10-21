@@ -1,0 +1,31 @@
+[package]
+name = "liblevo-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "Aplicación de escritorio Liblevo (Tauri)"
+
+[build-dependencies]
+tauri-build = { version = "=2.7.3", features = [] }
+
+[dependencies]
+tauri = { version = "=2.12.4", features = [] }
+tauri-plugin-dialog = "=2.8.3"
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+pdfium-render = { version = "=0.9.4", default-features = false, features = ["pdfium_7881", "thread_safe", "image_025"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+rusqlite = { version = "=0.40.2", features = ["bundled"] }
+liblevo-core = { path = "../native/liblevo-core" }
+liblevo-worker = { path = "../native/liblevo-worker" }
+pulldown-cmark = { version = "=0.13.4", default-features = false, features = ["html"] }
+# Descarga de componentes del catálogo (TLS en Rust puro; MIT o Apache-2.0).
+ureq = "=3.4.2"
+zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
+
+[features]
+# La compilación de producción sirve la interfaz incluida en el ejecutable (sin servidor de desarrollo).
+custom-protocol = ["tauri/custom-protocol"]

@@ -1,0 +1,120 @@
+{
+  "candidate": "ovis-paginas",
+  "documents": [
+    {
+      "id": "s1-sherlock-holmes-1892",
+      "kind": "escaneado",
+      "status": "ok",
+      "pages_measured": 40,
+      "seconds": 45.24,
+      "peak_mib": 2044.9,
+      "words_recall": 1.0,
+      "words_precision": 0.9827288428324698,
+      "numbers_recall": 1.0,
+      "order": 1.0,
+      "cer": 0.03066337053032432,
+      "margin_leaks": 0,
+      "margin_source": 9,
+      "outline_recall": null,
+      "outline_entries": 0,
+      "headings": 0,
+      "tables": 0,
+      "images": 0,
+      "notes": [
+        "solo páginas de referencia; 23 s/página"
+      ]
+    },
+    {
+      "id": "s2-marianela-1883",
+      "kind": "escaneado",
+      "status": "ok",
+      "pages_measured": 40,
+      "seconds": 34.83,
+      "peak_mib": 2013.5,
+      "words_recall": 0.9978494623655914,
+      "words_precision": 0.9872340425531915,
+      "numbers_recall": null,
+      "order": 0.9978991596638656,
+      "cer": 0.01850408626208011,
+      "margin_leaks": 0,
+      "margin_source": 16,
+      "outline_recall": null,
+      "outline_entries": 0,
+      "headings": 0,
+      "tables": 0,
+      "images": 0,
+      "notes": [
+        "solo páginas de referencia; 17 s/página"
+      ]
+    },
+    {
+      "id": "s3-capitan-veneno-1899",
+      "kind": "escaneado",
+      "status": "ok",
+      "pages_measured": 30,
+      "seconds": 45.64,
+      "peak_mib": 2039.5,
+      "words_recall": 0.955456570155902,
+      "words_precision": 0.9069767441860465,
+      "numbers_recall": null,
+      "order": 0.9527665317139001,
+      "cer": 0.05157190291251618,
+      "margin_leaks": null,
+      "margin_source": null,
+      "outline_recall": null,
+      "outline_entries": 0,
+      "headings": 1,
+      "tables": 0,
+      "images": 0,
+      "notes": [
+        "solo páginas de referencia; 23 s/página"
+      ]
+    },
+    {
+      "id": "s4-economic-mineralogy-tables-1891",
+      "kind": "escaneado",
+      "status": "ok",
+      "pages_measured": 30,
+      "seconds": 55.85,
+      "peak_mib": 2130.3,
+      "words_recall": 0.9516129032258065,
+      "words_precision": 0.9076923076923077,
+      "numbers_recall": 0.8055555555555556,
+      "order": 0.9472195121951219,
+      "cer": 0.2010826257534915,
+      "margin_leaks": 1,
+      "margin_source": 5,
+      "outline_recall": null,
+      "outline_entries": 0,
+      "headings": 2,
+      "tables": 4,
+      "images": 0,
+      "notes": [
+        "solo páginas de referencia; 28 s/página"
+      ]
+    },
+    {
+      "id": "s7-rimas-becquer-1925",
+      "kind": "escaneado",
+      "status": "ok",
+      "pages_measured": 40,
+      "seconds": 28.12,
+      "peak_mib": 2044.0,
+      "words_recall": 0.9861751152073732,
+      "words_precision": 0.9427312775330396,
+      "numbers_recall": null,
+      "order": 0.9865591397849462,
+      "cer": 0.03479567655048841,
+      "margin_leaks": null,
+      "margin_source": null,
+      "outline_recall": null,
+      "outline_entries": 0,
+      "headings": 1,
+      "tables": 0,
+      "images": 0,
+      "notes": [
+        "solo páginas de referencia; 14 s/página"
+      ]
+    }
+  ]
+}

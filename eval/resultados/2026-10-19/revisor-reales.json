@@ -1,0 +1,60 @@
+{
+ "documents": [
+  {
+   "id": "s1-sherlock-holmes-1892",
+   "blocks": 168,
+   "reference_blocks": 5,
+   "erroneous": 1,
+   "flagged": 0,
+   "found_top10": 0,
+   "found_top20": 0,
+   "found_top50": 0
+  },
+  {
+   "id": "s2-marianela-1883",
+   "blocks": 188,
+   "reference_blocks": 6,
+   "erroneous": 3,
+   "flagged": 3,
+   "found_top10": 2,
+   "found_top20": 2,
+   "found_top50": 3
+  },
+  {
+   "id": "s3-capitan-veneno-1899",
+   "blocks": 256,
+   "reference_blocks": 21,
+   "erroneous": 12,
+   "flagged": 11,
+   "found_top10": 2,
+   "found_top20": 3,
+   "found_top50": 7
+  },
+  {
+   "id": "s4-economic-mineralogy-tables-1891",
+   "blocks": 450,
+   "reference_blocks": 47,
+   "erroneous": 5,
+   "flagged": 5,
+   "found_top10": 3,
+   "found_top20": 4,
+   "found_top50": 5
+  },
+  {
+   "id": "s7-rimas-becquer-1925",
+   "blocks": 222,
+   "reference_blocks": 13,
+   "erroneous": 4,
+   "flagged": 1,
+   "found_top10": 1,
+   "found_top20": 1,
+   "found_top50": 1
+  }
+ ],
+ "summary": {
+  "0.1": 0.32,
+  "0.2": 0.4,
+  "0.5": 0.64
+ },
+ "flagged": 0.8
+}

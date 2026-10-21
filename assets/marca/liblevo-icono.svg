@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" stroke="none">
+  <title>Liblevo</title>
+  <rect x="48" y="48" width="928" height="928" rx="160" fill="#176B63" stroke="none"/>
+  <g transform="translate(220 155) scale(2.3)">
+  <path fill="#FFFFFF" stroke="none" d="M8 33C8 20 19 14 31 19L81 40C94 45 101 55 101 70V215Q101 223 109 223H165C199 223 226 244 234 279Q238 291 226 291H52C26 291 8 273 8 247Z"/>
+  <path fill="#FFFFFF" stroke="none" d="M126 88C126 54 188 19 232 9Q246 6 246 19V227Q246 237 238 229C217 209 194 198 166 198H133Q126 198 126 191Z"/>
+  </g>
+</svg>

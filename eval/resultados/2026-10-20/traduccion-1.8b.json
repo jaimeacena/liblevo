@@ -1,0 +1,115 @@
+{
+  "modelo": "Hy-MT2-1.8B-Q4_K_M.gguf",
+  "casos": [
+    {
+      "documento": "d1-gift-of-the-magi",
+      "idioma": "es",
+      "segundos": 164.5,
+      "bloques": 56,
+      "bloques_traducidos": 56,
+      "bloques_con_otra_estructura": 0,
+      "paginas_iguales": true,
+      "enlaces_iguales": true,
+      "cifras": 12,
+      "cifras_perdidas": 0,
+      "bloques_sin_traducir": 0,
+      "palabras": 2212,
+      "avisos": {},
+      "reutilizados": 0,
+      "segundos_por_100_palabras": 7.4
+    },
+    {
+      "documento": "d4-bert-naacl-2019",
+      "idioma": "es",
+      "segundos": 227.9,
+      "bloques": 56,
+      "bloques_traducidos": 56,
+      "bloques_con_otra_estructura": 0,
+      "paginas_iguales": true,
+      "enlaces_iguales": true,
+      "cifras": 130,
+      "cifras_perdidas": 8,
+      "bloques_sin_traducir": 5,
+      "palabras": 2103,
+      "avisos": {
+        "untranslated": 5
+      },
+      "reutilizados": 1,
+      "segundos_por_100_palabras": 10.8
+    },
+    {
+      "documento": "s4-economic-mineralogy-tables-1891",
+      "idioma": "es",
+      "segundos": 122.6,
+      "bloques": 50,
+      "bloques_traducidos": 50,
+      "bloques_con_otra_estructura": 0,
+      "paginas_iguales": true,
+      "enlaces_iguales": true,
+      "cifras": 15,
+      "cifras_perdidas": 3,
+      "bloques_sin_traducir": 1,
+      "palabras": 1345,
+      "avisos": {
+        "untranslated": 1
+      },
+      "reutilizados": 1,
+      "segundos_por_100_palabras": 9.1
+    },
+    {
+      "documento": "s2-marianela-1883",
+      "idioma": "en",
+      "segundos": 53.6,
+      "bloques": 51,
+      "bloques_traducidos": 51,
+      "bloques_con_otra_estructura": 0,
+      "paginas_iguales": true,
+      "enlaces_iguales": true,
+      "cifras": 17,
+      "cifras_perdidas": 0,
+      "bloques_sin_traducir": 5,
+      "palabras": 302,
+      "avisos": {
+        "untranslated": 5
+      },
+      "reutilizados": 3,
+      "segundos_por_100_palabras": 17.5
+    },
+    {
+      "documento": "d6-boe-convenio-colectivo",
+      "idioma": "en",
+      "segundos": 84.9,
+      "bloques": 43,
+      "bloques_traducidos": 43,
+      "bloques_con_otra_estructura": 0,
+      "paginas_iguales": true,
+      "enlaces_iguales": true,
+      "cifras": 51,
+      "cifras_perdidas": 0,
+      "bloques_sin_traducir": 0,
+      "palabras": 927,
+      "avisos": {},
+      "reutilizados": 0,
+      "segundos_por_100_palabras": 9.1
+    },
+    {
+      "documento": "d3-free-culture",
+      "idioma": "es",
+      "segundos": 45.6,
+      "bloques": 48,
+      "bloques_traducidos": 48,
+      "bloques_con_otra_estructura": 0,
+      "paginas_iguales": true,
+      "enlaces_iguales": true,
+      "cifras": 132,
+      "cifras_perdidas": 0,
+      "bloques_sin_traducir": 6,
+      "palabras": 348,
+      "avisos": {
+        "untranslated": 1
+      },
+      "reutilizados": 2,
+      "segundos_por_100_palabras": 12.9
+    }
+  ]
+}

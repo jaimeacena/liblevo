@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Liblevo</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- Navegación principal -->
+      <nav class="rail" aria-label="Secciones">
+        <button id="nav-home" type="button" class="rail-logo" aria-label="Biblioteca de Liblevo">
+          <svg viewBox="0 0 1024 1024" aria-hidden="true">
+            <rect x="48" y="48" width="928" height="928" rx="220" class="logo-tile" />
+            <g class="logo-glyph" transform="translate(220 155) scale(2.3)">
+              <path d="M8 33C8 20 19 14 31 19L81 40C94 45 101 55 101 70V215Q101 223 109 223H165C199 223 226 244 234 279Q238 291 226 291H52C26 291 8 273 8 247Z" />
+              <path d="M126 88C126 54 188 19 232 9Q246 6 246 19V227Q246 237 238 229C217 209 194 198 166 198H133Q126 198 126 191Z" />
+            </g>
+          </svg>
+        </button>
+        <button id="nav-library" type="button" class="rail-item" aria-current="page">
+          <i data-icon="library"></i><span>Biblioteca</span>
+        </button>
+        <button id="nav-activity" type="button" class="rail-item" aria-expanded="false" aria-controls="activity">
+          <i data-icon="activity"></i><span>Actividad</span>
+          <span id="activity-badge" class="rail-badge" hidden></span>
+        </button>
+        <button id="nav-components" type="button" class="rail-item" aria-haspopup="dialog">
+          <i data-icon="box"></i><span>Componentes</span>
+          <span id="components-dot" class="rail-dot" hidden></span>
+        </button>
+        <span class="rail-spacer"></span>
+        <button id="nav-palette" type="button" class="rail-item compact" aria-haspopup="dialog" data-tip="Buscar y ejecutar (Ctrl+K)" data-tip-side="right">
+          <i data-icon="command"></i><span>Órdenes</span>
+        </button>
+        <button id="nav-settings" type="button" class="rail-item compact" aria-haspopup="dialog">
+          <i data-icon="settings"></i><span>Ajustes</span>
+        </button>
+      </nav>
+
+      <main class="main">
+        <!-- Biblioteca -->
+        <section id="view-library" class="view library-view" aria-labelledby="library-title">
+          <header class="page-head">
+            <div class="page-title">
+              <h1 id="library-title">Biblioteca</h1>
+              <p id="library-count" class="subtle"></p>
+            </div>
+            <div class="page-actions">
+              <label class="search" id="library-search-wrap">
+                <i data-icon="search"></i>
+                <input id="library-search" type="search" placeholder="Buscar" aria-label="Buscar documentos" autocomplete="off" />
+                <kbd class="search-kbd">Ctrl F</kbd>
+              </label>
+              <button id="library-add" type="button" class="primary"><i data-icon="plus"></i>Añadir documentos</button>
+            </div>
+          </header>
+
+          <div id="setup-callout" class="callout warning" hidden>
+            <i data-icon="warn"></i>
+            <div><strong>Falta el componente de lectura</strong><p>Es necesario para convertir. Se descarga una vez desde su origen oficial y se comprueba antes de usarlo.</p></div>
+            <button id="setup-open" type="button" class="primary">Descargar</button>
+          </div>
+
+          <div id="library-filters" class="chips" role="tablist" aria-label="Filtrar documentos">
+            <button type="button" role="tab" data-filter="all" aria-selected="true">Todos <span></span></button>
+            <button type="button" role="tab" data-filter="pending">Por convertir <span></span></button>
+            <button type="button" role="tab" data-filter="review">Con avisos <span></span></button>
+            <button type="button" role="tab" data-filter="translated">Traducidos <span></span></button>
+            <button type="button" role="tab" data-filter="busy">En curso <span></span></button>
+          </div>
+
+          <div id="library-body" class="library-body">
+            <div class="table" role="grid" aria-labelledby="library-title">
+              <div class="table-head" role="row">
+                <button type="button" role="columnheader" data-sort="name">Documento<i data-icon="sort"></i></button>
+                <button type="button" role="columnheader" data-sort="pages" class="num">Páginas<i data-icon="sort"></i></button>
+                <button type="button" role="columnheader" data-sort="state">Estado<i data-icon="sort"></i></button>
+                <button type="button" role="columnheader" data-sort="review">Revisión<i data-icon="sort"></i></button>
+                <span role="columnheader">Traducción</span>
+                <span role="columnheader" class="sr-only">Acciones</span>
+              </div>
+              <ul id="library" class="table-body" role="rowgroup"></ul>
+              <p id="library-nomatch" class="empty-note" hidden>Ningún documento coincide. <button id="clear-search" type="button" class="link">Mostrar todos</button></p>
+            </div>
+            <aside id="inspector" class="inspector" aria-label="Resumen del documento"></aside>
+          </div>
+
+          <div id="library-empty" class="welcome" hidden>
+            <div class="welcome-drop">
+              <svg class="welcome-symbol" viewBox="0 0 1024 1024" aria-hidden="true">
+                <rect x="48" y="48" width="928" height="928" rx="220" class="logo-tile" />
+                <g class="logo-glyph" transform="translate(220 155) scale(2.3)">
+                  <path d="M8 33C8 20 19 14 31 19L81 40C94 45 101 55 101 70V215Q101 223 109 223H165C199 223 226 244 234 279Q238 291 226 291H52C26 291 8 273 8 247Z" />
+                  <path d="M126 88C126 54 188 19 232 9Q246 6 246 19V227Q246 237 238 229C217 209 194 198 166 198H133Q126 198 126 191Z" />
+                </g>
+              </svg>
+              <h2>Tu biblioteca está vacía</h2>
+              <p>Arrastra documentos a esta ventana o elígelos en tu equipo. Ninguno sale de él.</p>
+              <button id="empty-add" type="button" class="primary large"><i data-icon="plus"></i>Añadir documentos</button>
+              <p class="formats"><span>PDF</span><span>Escaneos</span><span>EPUB</span><span>Word</span><span>HTML</span><span>Texto</span><span>Markdown</span></p>
+            </div>
+            <ol class="steps">
+              <li><span class="step-icon"><i data-icon="convert"></i></span><div><h3>Convertir</h3><p>Capítulos, tablas, notas e imágenes, sin cabeceras ni pies repetidos. Los escaneos se leen con OCR y un modelo visual.</p></div></li>
+              <li><span class="step-icon"><i data-icon="review"></i></span><div><h3>Revisar</h3><p>Cada página junto a su texto y una lista de lo dudoso, ordenada por riesgo.</p></div></li>
+              <li><span class="step-icon"><i data-icon="translate"></i></span><div><h3>Traducir y exportar</h3><p>Traducción local por bloques y exportación a Markdown o EPUB.</p></div></li>
+            </ol>
+          </div>
+        </section>
+
+        <!-- Documento -->
+        <section id="view-doc" class="view doc-view" hidden aria-labelledby="doc-name">
+          <header class="doc-head">
+            <button id="doc-back" type="button" class="ghost back" data-tip="Volver a la biblioteca (Alt+←)"><i data-icon="back"></i>Biblioteca</button>
+            <span class="head-divider" aria-hidden="true"></span>
+            <div class="doc-identity">
+              <span id="doc-format" class="badge"></span>
+              <div class="doc-titles">
+                <h1 id="doc-name"></h1>
+                <p id="doc-meta" class="subtle"></p>
+              </div>
+            </div>
+            <div class="doc-actions">
+              <button id="doc-primary" type="button" class="primary"></button>
+              <div class="menu-wrap">
+                <button id="doc-more" type="button" class="icon-button outline" aria-haspopup="menu" aria-expanded="false" aria-label="Más acciones" data-tip-align="end" data-tip="Más acciones"><i data-icon="more"></i></button>
+                <div id="doc-menu" class="menu" role="menu" hidden>
+                  <button id="menu-reconvert" type="button" role="menuitem"><i data-icon="convert"></i><span>Volver a convertir</span></button>
+                  <label id="menu-visual" class="menu-check" role="menuitemcheckbox">
+                    <input id="visual-full" type="checkbox" />
+                    <span><strong>Lectura visual completa</strong><small>Relee todas las páginas de un escaneo con el modelo visual. Más lento.</small></span>
+                  </label>
+                  <button id="menu-reveal" type="button" role="menuitem"><i data-icon="folder"></i><span>Mostrar el original en su carpeta</span></button>
+                  <hr />
+                  <button id="menu-remove" type="button" role="menuitem" class="danger-text"><i data-icon="trash"></i><span>Quitar de la biblioteca…</span></button>
+                </div>
+              </div>
+            </div>
+          </header>
+          <div id="doc-missing" class="callout warning doc-banner" hidden>
+            <i data-icon="warn"></i>
+            <p><strong>No se encuentra el original en su carpeta.</strong> El resultado guardado sigue disponible para leer, revisar y exportar.</p>
+          </div>
+
+          <nav class="tabs" role="tablist" aria-label="Vistas del documento">
+            <button type="button" role="tab" data-tab="leer" data-step="convert" aria-selected="true"><span class="tdot"></span>Leer<span class="tdetail"></span></button>
+            <button type="button" role="tab" data-tab="revisar" data-step="review"><span class="tdot"></span>Revisar<span class="tdetail"></span></button>
+            <button type="button" role="tab" data-tab="traducir" data-step="translate"><span class="tdot"></span>Traducir<span class="tdetail"></span></button>
+            <button type="button" role="tab" data-tab="exportar" data-step="export"><span class="tdot"></span>Exportar</button>
+            <button type="button" role="tab" data-tab="epub">EPUB original</button>
+            <span class="tabs-hint" aria-hidden="true"><kbd>Ctrl</kbd> <kbd>1</kbd>–<kbd>5</kbd></span>
+          </nav>
+
+          <!-- Leer -->
+          <div class="panel read" data-panel="leer" role="tabpanel">
+            <div class="toolbar">
+              <div class="toolbar-group">
+                <button id="toggle-outline" type="button" class="icon-button outline" aria-pressed="false" aria-label="Índice" data-tip="Índice (I)"><i data-icon="outline"></i></button>
+                <div id="pager" class="pager">
+                  <button id="prev" type="button" class="icon-button" aria-label="Página anterior" data-tip="Anterior (←)"><i data-icon="left"></i></button>
+                  <label class="page-jump">
+                    <input id="page-input" type="number" min="1" inputmode="numeric" aria-label="Página" />
+                    <span id="page-total"></span>
+                  </label>
+                  <button id="next" type="button" class="icon-button" aria-label="Página siguiente" data-tip="Siguiente (→)"><i data-icon="right"></i></button>
+                </div>
+              </div>
+              <div class="toolbar-group">
+                <div id="layout" class="segmented" role="radiogroup" aria-label="Disposición">
+                  <button type="button" role="radio" data-layout="original" aria-checked="true" data-tip="Original junto al texto"><i data-icon="split"></i>Original</button>
+                  <button type="button" role="radio" data-layout="text" aria-checked="false" data-tip="Solo el texto"><i data-icon="text"></i>Texto</button>
+                  <button type="button" role="radio" data-layout="compare" aria-checked="false" data-tip="Texto junto a su traducción"><i data-icon="translate"></i>Comparar</button>
+                </div>
+                <select id="view-select" aria-label="Texto que se muestra"></select>
+                <div id="zoom" class="zoom" role="group" aria-label="Tamaño del original">
+                  <button id="zoom-out" type="button" class="icon-button" aria-label="Alejar" data-tip="Alejar (−)"><i data-icon="minus"></i></button>
+                  <span id="zoom-value">Ancho</span>
+                  <button id="zoom-in" type="button" class="icon-button" aria-label="Acercar" data-tip="Acercar (+)"><i data-icon="plus"></i></button>
+                  <button id="zoom-fit" type="button" class="icon-button" aria-pressed="false" aria-label="Página completa" data-tip="Página completa (0)"><i data-icon="fit"></i></button>
+                </div>
+                <button id="edit-page" type="button" class="ghost"><i data-icon="edit"></i>Editar</button>
+              </div>
+            </div>
+            <div id="scrubber" class="scrubber" aria-label="Páginas del documento">
+              <div id="scrubber-track" class="scrubber-track">
+                <span id="scrubber-ticks" class="scrubber-ticks"></span>
+                <span id="scrubber-thumb" class="scrubber-thumb"></span>
+                <span id="scrubber-tip" class="scrubber-tip" hidden></span>
+              </div>
+              <span id="scrubber-legend" class="scrubber-legend"></span>
+            </div>
+            <div id="read-body" class="read-body" data-layout="original">
+              <nav id="outline" class="toc" aria-label="Índice del documento" hidden>
+                <h3>Índice</h3>
+                <ol id="outline-list"></ol>
+              </nav>
+              <section id="pane-a" class="pane" aria-label="Original">
+                <h3 id="pane-a-title" class="pane-title">Original</h3>
+                <div id="page" class="page"></div>
+                <article id="result-a" class="result" hidden></article>
+              </section>
+              <section id="pane-b" class="pane" aria-label="Texto">
+                <div class="pane-column">
+                  <h3 id="pane-b-title" class="pane-title">Resultado</h3>
+                  <article id="result" class="result"></article>
+                  <div id="not-converted" class="empty-card" hidden>
+                    <span class="empty-icon"><i data-icon="convert"></i></span>
+                    <h3>Todavía no hay texto</h3>
+                    <p>Convierte el documento para leer su texto aquí, junto al original.</p>
+                    <button id="convert-inline" type="button" class="primary">Convertir</button>
+                  </div>
+                </div>
+              </section>
+              <section id="editor" class="editor" hidden aria-label="Editor de página">
+                <header class="editor-head">
+                  <div>
+                    <h3 id="editor-title">Editar página</h3>
+                    <p class="subtle">Markdown: <code># título</code> <code>**negrita**</code> <code>*cursiva*</code> <code>- lista</code> <code>| tabla |</code></p>
+                  </div>
+                  <div class="row">
+                    <button id="editor-cancel" type="button" class="ghost">Cancelar <kbd>Esc</kbd></button>
+                    <button id="editor-save" type="button" class="primary">Guardar <kbd>Ctrl S</kbd></button>
+                  </div>
+                </header>
+                <div class="editor-split">
+                  <textarea id="editor-text" aria-label="Texto de la página en Markdown" spellcheck="false"></textarea>
+                  <article id="editor-preview" class="result preview" aria-label="Vista previa"></article>
+                </div>
+              </section>
+            </div>
+          </div>
+
+          <!-- Revisar -->
+          <div class="panel review" data-panel="revisar" role="tabpanel" hidden>
+            <div id="review-done" class="done-state" hidden>
+              <span class="done-icon"><i data-icon="check"></i></span>
+              <h2 id="review-done-title">Todo revisado</h2>
+              <p id="review-done-text" class="subtle"></p>
+              <div class="row center">
+                <button id="review-done-read" type="button">Leer el resultado</button>
+                <button id="review-done-all" type="button" class="ghost">Ver los decididos</button>
+                <button id="review-done-export" type="button" class="primary"><i data-icon="export"></i>Exportar</button>
+              </div>
+            </div>
+            <aside id="review-queue" class="queue">
+              <div class="queue-head">
+                <div class="row spread">
+                  <p id="review-summary" class="queue-summary"></p>
+                  <span id="review-risk" class="subtle"></span>
+                </div>
+                <div class="meter" aria-hidden="true"><span id="review-meter"></span></div>
+                <div id="review-filter" class="segmented small full" role="radiogroup" aria-label="Qué avisos mostrar">
+                  <button type="button" role="radio" data-filter="pending" aria-checked="true">Pendientes</button>
+                  <button type="button" role="radio" data-filter="all" aria-checked="false">Todos</button>
+                  <button type="button" role="radio" data-filter="done" aria-checked="false">Decididos</button>
+                </div>
+              </div>
+              <ol id="review-list" class="queue-list" aria-label="Avisos"></ol>
+              <footer class="queue-foot"><kbd>J</kbd><kbd>K</kbd> moverse · <kbd>C</kbd> correcto · <kbd>E</kbd> corregir · <kbd>D</kbd> después</footer>
+            </aside>
+            <section id="review-detail" class="detail" aria-live="polite">
+              <div id="review-item">
+                <header class="detail-head">
+                  <div>
+                    <p id="review-position" class="eyebrow"></p>
+                    <h2 id="review-title"></h2>
+                  </div>
+                  <div class="row">
+                    <button id="review-prev" type="button" class="icon-button outline" aria-label="Aviso anterior" data-tip="Anterior (K)"><i data-icon="up"></i></button>
+                    <button id="review-next" type="button" class="icon-button outline" aria-label="Aviso siguiente" data-tip-align="end" data-tip="Siguiente (J)"><i data-icon="down"></i></button>
+                  </div>
+                </header>
+                <ul id="review-reasons" class="reasons"></ul>
+                <div class="detail-grid">
+                  <figure class="detail-original">
+                    <figcaption>Original · página <span id="review-page-number"></span></figcaption>
+                    <div id="review-page" class="page framed"></div>
+                  </figure>
+                  <div class="detail-text">
+                    <p class="figcaption">En el resultado</p>
+                    <div id="review-text" class="excerpt-box"></div>
+                    <textarea id="review-edit" aria-label="Texto corregido" spellcheck="false" hidden></textarea>
+                  </div>
+                </div>
+                <div class="detail-actions">
+                  <button id="review-ok" type="button" class="primary"><i data-icon="check"></i>Correcto <kbd>C</kbd></button>
+                  <button id="review-fix" type="button"><i data-icon="edit"></i>Corregir <kbd>E</kbd></button>
+                  <button id="review-save" type="button" class="primary" hidden>Guardar corrección <kbd>Ctrl S</kbd></button>
+                  <button id="review-cancel-edit" type="button" hidden>Cancelar <kbd>Esc</kbd></button>
+                  <button id="review-later" type="button">Después <kbd>D</kbd></button>
+                  <span class="spacer"></span>
+                  <button id="review-open" type="button" class="ghost">Ver en Leer <kbd>L</kbd></button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Traducir -->
+          <div class="panel translate" data-panel="traducir" role="tabpanel" hidden>
+            <div class="columns">
+              <div class="column">
+                <section id="translate-progress" class="card progress-card" hidden>
+                  <div class="row spread">
+                    <div>
+                      <p class="eyebrow">Traduciendo</p>
+                      <h2 id="translate-progress-title"></h2>
+                    </div>
+                    <span id="translate-percent" class="big-number"></span>
+                  </div>
+                  <progress id="translate-bar" max="1"></progress>
+                  <div class="row spread">
+                    <p id="translate-progress-text" class="subtle"></p>
+                    <button id="translate-cancel" type="button" class="danger">Cancelar</button>
+                  </div>
+                </section>
+                <form id="translate-form" class="card form-grid">
+                  <div class="card-head wide">
+                    <h2>Nueva traducción</h2>
+                    <p class="subtle">Se traduce en este equipo, bloque a bloque, sin tocar títulos, tablas ni imágenes.</p>
+                  </div>
+                  <label class="wide">Idioma de destino <select id="translate-language"></select></label>
+                  <fieldset class="wide model-cards" id="translate-models">
+                    <legend>Modelo</legend>
+                    <label class="model-card" data-model="fast">
+                      <input type="radio" name="translate-model" value="fast" checked />
+                      <span class="model-name">Rápido</span>
+                      <span class="model-sub">Hy-MT2 1,8B · unos 30 s por página</span>
+                      <span class="bars"><span>Velocidad</span><i class="b on"></i><i class="b on"></i><i class="b on"></i></span>
+                      <span class="bars"><span>Calidad</span><i class="b on"></i><i class="b on"></i><i class="b"></i></span>
+                      <span class="model-state"></span>
+                    </label>
+                    <label class="model-card" data-model="quality">
+                      <input type="radio" name="translate-model" value="quality" />
+                      <span class="model-name">Más calidad</span>
+                      <span class="model-sub">Hy-MT2 7B · unos 90 s por página</span>
+                      <span class="bars"><span>Velocidad</span><i class="b on"></i><i class="b"></i><i class="b"></i></span>
+                      <span class="bars"><span>Calidad</span><i class="b on"></i><i class="b on"></i><i class="b on"></i></span>
+                      <span class="model-state"></span>
+                    </label>
+                  </fieldset>
+                  <label class="check wide" id="translate-epub-option" hidden>
+                    <input id="translate-epub" type="checkbox" />
+                    <span><strong>Traducir el EPUB original</strong><small>Conserva su maquetación; los párrafos con formato interno quedan sin traducir.</small></span>
+                  </label>
+                  <label class="wide">
+                    <span class="label-row">Glosario <span class="subtle">opcional · <span id="glossary-count">0 términos</span></span></span>
+                    <textarea id="translate-glossary" rows="3" spellcheck="false" placeholder="Una línea por término, por ejemplo:&#10;printing press = imprenta"></textarea>
+                  </label>
+                  <div class="form-foot wide">
+                    <p id="translate-estimate" class="subtle"></p>
+                    <button id="translate-start" type="submit" class="primary"><i data-icon="translate"></i>Traducir</button>
+                  </div>
+                  <div id="translate-missing" class="callout warning wide" hidden>
+                    <i data-icon="warn"></i>
+                    <div><strong>Falta el componente «Traducción»</strong><p>Se descarga una vez (1,15 GB) y funciona sin conexión.</p></div>
+                    <button id="translate-get" type="button" class="primary">Descargar</button>
+                  </div>
+                </form>
+              </div>
+              <div class="column">
+                <section class="card" id="translations-card">
+                  <div class="card-head">
+                    <h2>Traducciones</h2>
+                    <p class="subtle">Se guardan aparte del resultado y se pueden leer, comparar y exportar.</p>
+                  </div>
+                  <ul id="translations" class="translations"></ul>
+                  <div id="translations-empty" class="mini-empty"><i data-icon="translate"></i><span>Todavía no hay traducciones.</span></div>
+                </section>
+                <section class="card" id="translation-review" hidden>
+                  <div class="row spread">
+                    <h2 id="translation-review-title">Avisos</h2>
+                    <button id="translation-review-close" type="button" class="icon-button" aria-label="Cerrar avisos" data-tip-align="end" data-tip="Cerrar"><i data-icon="close"></i></button>
+                  </div>
+                  <p id="translation-summary" class="subtle"></p>
+                  <ol id="translation-doubts" class="doubts"></ol>
+                </section>
+              </div>
+            </div>
+          </div>
+
+          <!-- Exportar -->
+          <div class="panel export" data-panel="exportar" role="tabpanel" hidden>
+            <section class="card export-source">
+              <label>Texto <select id="export-source"></select></label>
+              <div id="range" class="range">
+                <span class="range-label">Páginas</span>
+                <div class="segmented small" id="range-mode" role="radiogroup" aria-label="Qué páginas">
+                  <button type="button" role="radio" data-range="all" aria-checked="true">Todas</button>
+                  <button type="button" role="radio" data-range="some" aria-checked="false">Intervalo</button>
+                </div>
+                <span id="range-inputs" class="range-inputs" hidden>
+                  <input id="range-from" type="number" min="1" inputmode="numeric" placeholder="1" aria-label="Desde la página" />
+                  <span>a</span>
+                  <input id="range-to" type="number" min="1" inputmode="numeric" aria-label="Hasta la página" />
+                </span>
+              </div>
+              <p id="export-summary" class="export-summary"></p>
+              <div id="export-warning" class="callout warning" hidden><i data-icon="warn"></i><p id="export-warning-text"></p></div>
+            </section>
+            <div class="export-grid">
+              <section class="card format-card">
+                <div class="format-head">
+                  <div class="format-icon md">MD</div>
+                  <div>
+                    <h2>Markdown</h2>
+                    <p class="subtle">Texto con títulos, listas y tablas; las imágenes van en una carpeta al lado. Ideal para editar o procesar.</p>
+                  </div>
+                </div>
+                <p class="file-preview"><i data-icon="file"></i><span id="md-name"></span></p>
+                <button id="export-md" type="button" class="primary"><i data-icon="export"></i>Exportar Markdown…</button>
+              </section>
+              <form id="epub-form" class="card format-card form-grid">
+                <div class="format-head wide">
+                  <div class="format-icon epub">EPUB</div>
+                  <div>
+                    <h2>EPUB</h2>
+                    <p class="subtle">Libro electrónico válido (EPUB 3) con índice, para cualquier lector.</p>
+                  </div>
+                </div>
+                <label class="wide">Título <input id="epub-title" required /></label>
+                <label>Autor <input id="epub-author" placeholder="Opcional" /></label>
+                <label>Idioma
+                  <select id="epub-language">
+                    <option value="es">Español</option>
+                    <option value="en">Inglés</option>
+                    <option value="fr">Francés</option>
+                    <option value="de">Alemán</option>
+                    <option value="it">Italiano</option>
+                    <option value="pt">Portugués</option>
+                    <option value="und">Otro</option>
+                  </select>
+                </label>
+                <label class="check wide" id="epub-cover-option"><input id="epub-cover" type="checkbox" checked /><span><strong>Primera página como portada</strong></span></label>
+                <label class="check wide"><input id="epub-open" type="checkbox" /><span><strong>Abrir en Sigil o Calibre al guardar</strong></span></label>
+                <p class="file-preview wide"><i data-icon="file"></i><span id="epub-name"></span></p>
+                <div class="row wide"><button type="submit" class="primary"><i data-icon="export"></i>Exportar EPUB…</button></div>
+              </form>
+            </div>
+          </div>
+
+          <!-- EPUB original -->
+          <div class="panel epub" data-panel="epub" role="tabpanel" hidden>
+            <div class="epub-column">
+              <div class="toolbar epub-bar">
+                <div class="pager">
+                  <button id="epub-prev" type="button" class="icon-button" aria-label="Capítulo anterior" data-tip="Capítulo anterior (←)"><i data-icon="left"></i></button>
+                  <select id="epub-chapter" aria-label="Capítulo"></select>
+                  <button id="epub-next" type="button" class="icon-button" aria-label="Capítulo siguiente" data-tip="Capítulo siguiente (→)"><i data-icon="right"></i></button>
+                </div>
+                <div class="toolbar-group">
+                  <span id="epub-status" class="pill muted"></span>
+                  <button id="epub-discard" type="button" class="danger">Descartar ediciones…</button>
+                  <button id="epub-save" type="button" class="primary"><i data-icon="export"></i>Guardar EPUB editado…</button>
+                </div>
+              </div>
+              <p class="epub-note"><i data-icon="info"></i><span>Aquí se corrige el texto de los párrafos y títulos sencillos, directamente sobre el EPUB. Todo lo demás se conserva tal cual; para cambiarlo, usa Sigil o Calibre. El EPUB original nunca se modifica: los cambios van a una copia de trabajo que guardas como EPUB nuevo.</span></p>
+              <p id="epub-count" class="epub-count"></p>
+              <ol id="epub-blocks" class="epub-blocks" aria-label="Bloques del capítulo"></ol>
+              <div id="epub-empty" class="empty-card" hidden>
+                <span class="empty-icon"><i data-icon="page"></i></span>
+                <h3>Este capítulo no tiene texto editable</h3>
+                <p>Suele ser la portada, una página de imágenes o un índice generado.</p>
+                <button id="epub-empty-next" type="button">Ir al capítulo siguiente<i data-icon="right"></i></button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Actividad -->
+    <aside id="activity" class="drawer" hidden aria-labelledby="activity-title">
+      <header class="drawer-head">
+        <h2 id="activity-title">Actividad</h2>
+        <button id="activity-close" type="button" class="icon-button" aria-label="Cerrar actividad" data-tip-align="end" data-tip="Cerrar (Esc)"><i data-icon="close"></i></button>
+      </header>
+      <h3 class="drawer-section">En curso</h3>
+      <ul id="activity-running" class="activity-list"></ul>
+      <div id="activity-idle" class="mini-empty"><i data-icon="check"></i><span>No hay nada en marcha.</span></div>
+      <h3 class="drawer-section">Recientes</h3>
+      <ul id="activity-history" class="history-list"></ul>
+    </aside>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <div id="drop-overlay" class="drop-overlay" hidden><div><i data-icon="plus"></i><p>Suelta para añadir a la biblioteca</p><span>PDF · EPUB · DOCX · HTML · TXT · Markdown</span></div></div>
+
+    <dialog id="components" class="wide-dialog" aria-labelledby="components-title">
+      <header class="dialog-head">
+        <div>
+          <h2 id="components-title" tabindex="-1" autofocus>Componentes</h2>
+          <p class="subtle">Se descargan solo de su origen oficial y se comprueban (huella y tamaño) antes de usarlos. Ningún documento sale del equipo.</p>
+        </div>
+        <button type="button" class="icon-button" data-close aria-label="Cerrar" data-tip-align="end" data-tip="Cerrar (Esc)"><i data-icon="close"></i></button>
+      </header>
+      <ul id="component-list" class="component-list"></ul>
+    </dialog>
+
+    <dialog id="settings" class="wide-dialog" aria-labelledby="settings-title">
+      <header class="dialog-head">
+        <h2 id="settings-title" tabindex="-1" autofocus>Ajustes</h2>
+        <button type="button" class="icon-button" data-close aria-label="Cerrar" data-tip-align="end" data-tip="Cerrar (Esc)"><i data-icon="close"></i></button>
+      </header>
+      <section class="settings-row">
+        <div><h3>Apariencia</h3><p class="subtle">Sigue al sistema o elige un tema fijo.</p></div>
+        <div id="theme" class="theme-picker" role="radiogroup" aria-label="Tema">
+          <button type="button" role="radio" data-theme-choice="system" aria-checked="true"><span class="swatch system"></span>Sistema</button>
+          <button type="button" role="radio" data-theme-choice="light" aria-checked="false"><span class="swatch light"></span>Claro</button>
+          <button type="button" role="radio" data-theme-choice="dark" aria-checked="false"><span class="swatch dark"></span>Oscuro</button>
+        </div>
+      </section>
+      <section class="settings-row">
+        <div><h3>Datos de la app</h3><p class="subtle">Resultados, traducciones y componentes. Sin cifrar, protegidos por tu cuenta de Windows.</p></div>
+        <button id="settings-data" type="button"><i data-icon="folder"></i>Abrir carpeta</button>
+      </section>
+      <section class="settings-row column">
+        <h3>Atajos de teclado</h3>
+        <dl class="shortcuts">
+          <dt><kbd>Ctrl</kbd> <kbd>K</kbd></dt><dd>Buscar documentos y órdenes</dd>
+          <dt><kbd>Ctrl</kbd> <kbd>O</kbd></dt><dd>Añadir documentos</dd>
+          <dt><kbd>Ctrl</kbd> <kbd>F</kbd></dt><dd>Buscar en la biblioteca</dd>
+          <dt><kbd>Ctrl</kbd> <kbd>1</kbd>–<kbd>5</kbd></dt><dd>Leer, Revisar, Traducir, Exportar, EPUB</dd>
+          <dt><kbd>Alt</kbd> <kbd>←</kbd></dt><dd>Volver a la biblioteca</dd>
+          <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>Inicio</kbd> <kbd>Fin</kbd></dt><dd>Cambiar de página (Leer)</dd>
+          <dt><kbd>I</kbd> · <kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd></dt><dd>Índice y tamaño del original (Leer)</dd>
+          <dt><kbd>J</kbd> <kbd>K</kbd> · <kbd>C</kbd> <kbd>E</kbd> <kbd>D</kbd> <kbd>L</kbd></dt><dd>Moverse, correcto, corregir, después, ver en Leer (Revisar)</dd>
+          <dt><kbd>Ctrl</kbd> <kbd>S</kbd> · <kbd>Esc</kbd></dt><dd>Guardar o cancelar una edición</dd>
+        </dl>
+      </section>
+      <section class="settings-row">
+        <div><h3>Privacidad</h3><p class="subtle">Todo se procesa en este equipo. Liblevo no envía documentos ni datos de uso; solo se conecta para descargar los componentes que pidas.</p></div>
+      </section>
+      <p class="subtle about">Liblevo 0.1.0 · código MIT · los componentes conservan sus licencias</p>
+    </dialog>
+
+    <dialog id="confirm" class="small-dialog" aria-labelledby="confirm-title">
+      <h2 id="confirm-title"></h2>
+      <p id="confirm-text" class="subtle"></p>
+      <div class="row end">
+        <button id="confirm-cancel" type="button" autofocus>Cancelar</button>
+        <button id="confirm-ok" type="button" class="danger-solid"></button>
+      </div>
+    </dialog>
+
+    <dialog id="palette" class="palette" aria-label="Buscar documentos y órdenes">
+      <div class="palette-input">
+        <i data-icon="search"></i>
+        <input id="palette-input" type="text" placeholder="Busca un documento o una orden…" autocomplete="off" spellcheck="false" aria-controls="palette-list" />
+        <kbd>Esc</kbd>
+      </div>
+      <ul id="palette-list" class="palette-list" role="listbox"></ul>
+      <footer class="palette-foot"><span><kbd>↑</kbd> <kbd>↓</kbd> moverse</span><span><kbd>Enter</kbd> abrir</span><span>Escribe un número para ir a esa página</span></footer>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

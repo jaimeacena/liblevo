@@ -1,0 +1,47 @@
+{
+  "idioma": "es",
+  "candidatos": [
+    {
+      "candidato": "sin-traducir",
+      "documentos": {
+        "d1-gift-of-the-magi": {
+          "bloques": 10,
+          "chrf": 22.0
+        },
+        "d4-bert-naacl-2019": {
+          "bloques": 5,
+          "chrf": 39.5
+        }
+      },
+      "chrf_total": 32.9
+    },
+    {
+      "candidato": "1.8b",
+      "documentos": {
+        "d1-gift-of-the-magi": {
+          "bloques": 10,
+          "chrf": 61.4
+        },
+        "d4-bert-naacl-2019": {
+          "bloques": 5,
+          "chrf": 82.8
+        }
+      },
+      "chrf_total": 74.8
+    },
+    {
+      "candidato": "7b",
+      "documentos": {
+        "d1-gift-of-the-magi": {
+          "bloques": 10,
+          "chrf": 68.5
+        },
+        "d4-bert-naacl-2019": {
+          "bloques": 5,
+          "chrf": 85.4
+        }
+      },
+      "chrf_total": 79.1
+    }
+  ]
+}

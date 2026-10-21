@@ -1,0 +1,194 @@
+{
+  "schema": 1,
+  "documents": [
+    {
+      "id": "d1-gift-of-the-magi",
+      "title": "The Gift of the Magi (O. Henry)",
+      "url": "https://www.ibiblio.org/ebooks/Henry/Gift_Magi.pdf",
+      "sha256": "637e2cf35c2fb62f99b1152ebbb8b6cb16344786b665c573436f1f7d8c44075c",
+      "bytes": 47528,
+      "license": "Dominio público",
+      "kind": "digital",
+      "language": "en",
+      "tests": "Cuento corto; portada con fuente sin mapa Unicode que producía un título basura"
+    },
+    {
+      "id": "d2-heart-of-darkness",
+      "title": "Heart of Darkness (Joseph Conrad)",
+      "url": "https://www.ibiblio.org/ebooks/Conrad/Heart_Darkness.pdf",
+      "sha256": "0fb5767567544009b111e80a6204e7bf1879336b275bef52f0fd1d52456856c0",
+      "bytes": 738778,
+      "license": "Dominio público",
+      "kind": "digital",
+      "language": "en",
+      "tests": "Novela a una columna con capítulos, cabeceras y pies repetidos"
+    },
+    {
+      "id": "d3-free-culture",
+      "title": "Free Culture (Lawrence Lessig)",
+      "url": "https://archive.org/download/free_culture/freeculture.pdf",
+      "sha256": "753441c619c529c8d0fc3e7e470f07c9547838fc7229bea8c1dcf854acee03b4",
+      "bytes": 2598727,
+      "license": "CC BY-NC 3.0",
+      "kind": "digital",
+      "language": "en",
+      "tests": "Libro largo con notas, índice analítico y marcadores"
+    },
+    {
+      "id": "d4-bert-naacl-2019",
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers (NAACL 2019)",
+      "url": "https://aclanthology.org/N19-1423.pdf",
+      "sha256": "987545ffb087f1ece898142c403a516baeabeb70ce19089397fac6f7db12c3d4",
+      "bytes": 786279,
+      "license": "CC BY 4.0",
+      "kind": "digital",
+      "language": "en",
+      "tests": "Artículo a dos columnas con tablas, figuras, fórmulas y notas al pie"
+    },
+    {
+      "id": "d5-docling-technical-report",
+      "title": "Docling Technical Report (arXiv 2408.09869v5)",
+      "url": "https://arxiv.org/pdf/2408.09869v5",
+      "sha256": "82dd470712ce8389f19f20eb9330475e2166a281f8c7990a9f1d0763d73b4d22",
+      "bytes": 5566575,
+      "license": "CC BY 4.0",
+      "kind": "digital",
+      "language": "en",
+      "tests": "Informe técnico con figuras, tablas y marcadores"
+    },
+    {
+      "id": "d6-boe-convenio-colectivo",
+      "title": "BOE-A-2025-2114, convenio colectivo",
+      "url": "https://www.boe.es/boe/dias/2025/02/05/pdfs/BOE-A-2025-2114.pdf",
+      "sha256": "817285d3c335ab021ee09ed67eb81af5ab772e914d0a187b1f01d471aa113f16",
+      "bytes": 763176,
+      "license": "Texto legal sin derechos de autor (art. 13 LPI)",
+      "kind": "digital",
+      "language": "es",
+      "tests": "Español, artículos numerados, tablas salariales, cabecera y pie oficiales del BOE"
+    },
+    {
+      "id": "s1-sherlock-holmes-1892",
+      "title": "The Adventures of Sherlock Holmes (1892)",
+      "url": "https://archive.org/download/adventuresofsher00doylrich/adventuresofsher00doylrich.pdf",
+      "sha256": "93f2209e8f95dfd0f8d74e827534d112e7a243db73faa1d92022504c6b1a25bc",
+      "bytes": 26124425,
+      "license": "Dominio público",
+      "kind": "scanned",
+      "language": "en",
+      "tests": "Escaneo limpio en inglés con diálogos, cabeceras corridas e ilustraciones",
+      "pages": [
+        1,
+        40
+      ],
+      "reference_pages": [
+        20,
+        27
+      ]
+    },
+    {
+      "id": "s2-marianela-1883",
+      "title": "Marianela, traducción inglesa (1883)",
+      "url": "https://archive.org/download/marianela00pereiala/marianela00pereiala.pdf",
+      "sha256": "ea3baa66a411685fd6ea1c591ddd3a7401fefb2efab553ae48b4fbe7c8de8d42",
+      "bytes": 8969660,
+      "license": "Dominio público",
+      "kind": "scanned",
+      "language": "en",
+      "tests": "Escaneo antiguo con manchas y guiones de fin de línea",
+      "pages": [
+        1,
+        40
+      ],
+      "reference_pages": [
+        20,
+        30
+      ]
+    },
+    {
+      "id": "s3-capitan-veneno-1899",
+      "title": "El capitán Veneno (Pedro Antonio de Alarcón, 1899)",
+      "url": "https://archive.org/download/elcapitanvenen00alar/elcapitanvenen00alar.pdf",
+      "sha256": "4d8b9ad10a5b6a87bc10228cf681ba4c2165162d18dc63baed9661b092468237",
+      "bytes": 13736996,
+      "license": "Dominio público",
+      "kind": "scanned",
+      "language": "es",
+      "tests": "Español antiguo con anotaciones a lápiz, números de línea en el margen y llamadas a nota",
+      "pages": [
+        1,
+        30
+      ],
+      "reference_pages": [
+        20,
+        25
+      ]
+    },
+    {
+      "id": "s4-economic-mineralogy-tables-1891",
+      "title": "Tables of Economic Mineralogy (1891)",
+      "url": "https://archive.org/download/tablesofeconomic00sadt/tablesofeconomic00sadt.pdf",
+      "sha256": "d3b8e08b58ee8bccdf761d93f008a9f6331683f76eee50aa61d164cd010dd1d2",
+      "bytes": 3429704,
+      "license": "Dominio público",
+      "kind": "scanned",
+      "language": "en",
+      "tests": "Tablas escaneadas con fórmulas químicas, subíndices y texto entre tablas",
+      "pages": [
+        1,
+        30
+      ],
+      "reference_pages": [
+        12,
+        20
+      ]
+    },
+    {
+      "id": "s5-government-salary-tables-1916",
+      "title": "Supplement to the Government Salary Tables (1916)",
+      "url": "https://archive.org/download/supplementtogov00treagoog/supplementtogov00treagoog.pdf",
+      "sha256": "84579e83bb15861597c96c51f8dd15bc50e97b8ffcd6cefab7cb2fbc274c01cb",
+      "bytes": 1410177,
+      "license": "Dominio público",
+      "kind": "scanned",
+      "language": "en",
+      "tests": "Tablas numéricas solo como imagen, páginas en blanco y marca de digitalización",
+      "pages": [
+        1,
+        30
+      ],
+      "reference_pages": []
+    },
+    {
+      "id": "s6-scientific-american-1900-11-03",
+      "title": "Scientific American, 3 de noviembre de 1900",
+      "url": "https://archive.org/download/sim_scientific-american_1900-11-03_83_18/sim_scientific-american_1900-11-03_83_18.pdf",
+      "sha256": "57117e56f023177b2a9fd29c3c0d9225aed1139dcac1c37c20a21fb75ebe8ed9",
+      "bytes": 11200042,
+      "license": "Dominio público",
+      "kind": "scanned",
+      "language": "en",
+      "tests": "Tres columnas, microfilm de baja calidad, grabados y pies de foto",
+      "reference_pages": []
+    },
+    {
+      "id": "s7-rimas-becquer-1925",
+      "title": "Rimas (Gustavo Adolfo Bécquer, Claridad 1925)",
+      "url": "https://upload.wikimedia.org/wikipedia/commons/6/69/Rimas_-_Los_Poetas_Vol._32.pdf",
+      "sha256": "91b00116f895a489e94c026253202008cff4b37f2b51be9c5fb6fa5d30222fe3",
+      "bytes": 51043074,
+      "license": "Dominio público",
+      "kind": "scanned",
+      "language": "es",
+      "tests": "Poesía en español con sangrías de verso, papel dañado y sin capa de texto; referencia validada en Wikisource",
+      "pages": [
+        1,
+        40
+      ],
+      "reference_pages": [
+        20,
+        21
+      ]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "candidate": "liblevo-f3-presupuesto",
+  "documents": [
+    {
+      "id": "s4-economic-mineralogy-tables-1891",
+      "kind": "escaneado",
+      "status": "ok",
+      "pages_measured": 30,
+      "seconds": 547.29,
+      "peak_mib": 2149.7,
+      "words_recall": 0.9758064516129032,
+      "words_precision": 0.9718875502008032,
+      "numbers_recall": 0.9166666666666666,
+      "order": 0.9512845528455285,
+      "cer": 0.23473000125820215,
+      "margin_leaks": 0,
+      "margin_source": 5,
+      "outline_recall": null,
+      "outline_entries": 0,
+      "headings": 3,
+      "tables": 36,
+      "images": 0,
+      "notes": []
+    },
+    {
+      "id": "s6-scientific-american-1900-11-03",
+      "kind": "escaneado",
+      "status": "ok",
+      "pages_measured": 16,
+      "seconds": 395.78,
+      "peak_mib": 2361.2,
+      "words_recall": null,
+      "words_precision": null,
+      "numbers_recall": null,
+      "order": null,
+      "cer": null,
+      "margin_leaks": 12,
+      "margin_source": 11,
+      "outline_recall": null,
+      "outline_entries": 0,
+      "headings": 0,
+      "tables": 0,
+      "images": 0,
+      "notes": []
+    }
+  ]
+}

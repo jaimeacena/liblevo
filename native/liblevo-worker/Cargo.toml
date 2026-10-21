@@ -1,0 +1,22 @@
+[package]
+name = "liblevo-worker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+liblevo-core = { path = "../liblevo-core" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+pdfium-render = { version = "=0.9.4", default-features = false, features = ["pdfium_7881", "thread_safe", "image_025"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+html5gum = { version = "=0.8.4", default-features = false }
+zip = { version = "=2.4.2", default-features = false, features = ["deflate"] }
+# Solo para hablar con el servidor de traducción en 127.0.0.1 (sin TLS).
+ureq = { version = "=3.4.2", default-features = false }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }

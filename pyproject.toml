@@ -1,0 +1,23 @@
+# Herramientas de desarrollo (medición con el conjunto público e instalador); no forman parte de la
+# app, que es Rust + Tauri.
+
+[project]
+name = "liblevo-herramientas"
+version = "0.1.0"
+description = "Herramientas de medición y empaquetado de Liblevo (no forman parte de la app)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "psutil==7.2.2",
+    "pypdfium2==5.12.1",
+]
+
+[project.optional-dependencies]
+dev = ["ruff==0.15.22"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["scripts"]
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP"]
